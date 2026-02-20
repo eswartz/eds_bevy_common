@@ -1,0 +1,20 @@
+[build]
+rustflags = ["-Z", "threads=8",
+ # (Nightly) Make the current crate share its generic instantiations
+  "-Zshare-generics=y",
+]
+
+[unstable]
+codegen-backend = true
+
+[profile.dev]
+codegen-backend = "cranelift"
+
+[profile.dev.package."*"]
+codegen-backend = "llvm"
+
+[patch.crates-io]
+# avian3d = { git = "https://github.com/Jondolf/avian.git", branch = "main" }
+# avian3d = { path = "../avian/crates/avian3d" }
+# bevy = { path = "../bevy-fork" }
+# gltf = { git = "https://github.com/gltf-rs/gltf.git", branch = "main" }
