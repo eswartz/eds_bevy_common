@@ -5,15 +5,7 @@ use avian3d::math::*;
 use avian3d::prelude::*;
 use bevy::prelude::*;
 
-use crate::AreaContent;
-use crate::GameLayer;
-use crate::GameplayState;
-use crate::OverlayState;
-use crate::PlayerInput;
-use crate::Saveable;
-use crate::Speed;
-use crate::is_paused;
-use crate::player_client::Player;
+use crate::*;
 
 pub struct PlayerMovementPlugin;
 
@@ -47,7 +39,7 @@ impl Plugin for PlayerMovementPlugin {
                 .run_if(not(is_paused))
                 .run_if(in_state(GameplayState::Playing))
             )
-            ;
+        ;
     }
 }
 

@@ -96,6 +96,11 @@ bytemuck = "1.25.0"
 anyhow = "1.0.101"
 bevy_tweening = "0.15.0"
 
+bevy_trenchbroom = { optional = true, version = "0.12", default-features = false, features = [ "bsp", "client", "physics-integration" ] }
+bevy_trenchbroom_avian = { optional = true, version = "0.12", default-features = false }
+
+bevy_skein = { optional = true, version = "0.5.0" }
+
 # Idiomatic Bevy code often triggers these lints, and the CI workflow treats them as errors.
 # In some cases they may still signal poor code quality however, so consider commenting out these lines.
 [lints.clippy]
@@ -125,3 +130,11 @@ debug-assertions = false
 # Slows compile times, marginal improvements.
 lto = "thin"
 # opt-level = 1
+
+[features]
+default = []
+trenchbroom = ["bevy_trenchbroom"]
+skein = ["bevy_skein"]
+
+[[example]]
+name = "game_menu"

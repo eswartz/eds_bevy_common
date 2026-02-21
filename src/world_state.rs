@@ -29,27 +29,6 @@ impl Plugin for WorldStatePlugin {
     }
 }
 
-#[derive(Component, Default, Reflect, Debug, Clone, Copy, PartialEq, Eq, Hash)]
-#[reflect(Default)]
-#[type_path = "game"]
-// #[number_key]
-pub enum AreaContent {
-    /// Air.
-    #[default]
-    Air = 0,
-    /// Water.
-    Water = 1,
-}
-
-impl AreaContent {
-    pub fn in_liquid(&self) -> bool {
-        match self {
-            AreaContent::Air => false,
-            AreaContent::Water => true,
-        }
-    }
-}
-
 /// Mark entities that are specific to the gameplay world.
 /// This only needs to be placed on toplevel parent entities.
 ///

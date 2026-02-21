@@ -1,53 +1,123 @@
 use std::collections::BTreeMap;
 
-use bevy::prelude::*;
-use bevy_egui::{EguiContext, EguiContexts, EguiPrimaryContextPass, PrimaryEguiContext};
+use bevy::{ecs::system::SystemParam, prelude::*};
+use bevy_egui::{EguiContext, EguiGlobalSettings, EguiPlugin, EguiPrimaryContextPass, PrimaryEguiContext};
+use bevy_inspector_egui::DefaultInspectorConfigPlugin;
 
 use crate::*;
 
 use super::{gui::GuiState, states_sets::OverlayState};
 
+/// You need to manually add EguiPlugin and DefaultInspectorConfigPlugin.
 pub struct DebugPlugin;
 
 impl Plugin for DebugPlugin {
     fn build(&self, app: &mut App) {
+        if !app.is_plugin_added::<EguiPlugin>() {
+            app.add_plugins(EguiPlugin::default());
+            app.insert_resource(EguiGlobalSettings {
+                auto_create_primary_context: false,
+                ..default()
+            });
+        }
+        if !app.is_plugin_added::<DefaultInspectorConfigPlugin>() {
+            app.add_plugins(DefaultInspectorConfigPlugin);
+        }
+
         app
+            .init_resource::<DebugEguiCamera>()
+
             .add_systems(
                 PreUpdate,
                 (setup_egui_style, ensure_egui_context)
                     .chain()
-                    .run_if(egui_not_initialized)
-                    .run_if(in_state(GameplayState::Playing)),
+                    .run_if(not(egui_initialized))
+                    .run_if(in_state(GameplayState::Playing))
+                    ,
             )
 
             .add_systems(
                 EguiPrimaryContextPass,
                 (
-                    update_egui_inspector_ui.run_if(|gui_state: Res<GuiState>, ovl_state: Res<State<OverlayState>>|
-                        gui_state.show_inspector_always ||
-                        (gui_state.show_inspector && ovl_state.get().is_debug())),
+                    update_egui_inspector_ui
+                    .run_if(
+                        |gui_state: Res<GuiState>, ovl_state: Res<State<OverlayState>>|
+                            gui_state.show_inspector_always ||
+                            (gui_state.show_inspector && ovl_state.get().is_debug())
+                        )
+                    ,
                 ),
             )
         ;
     }
 }
 
-pub fn egui_not_initialized(camera_q: Query<Entity, (With<Camera3d>, With<ViewerCamera>, With<PrimaryEguiContext>)>) -> bool
-{
-    camera_q.single().is_err()
+/// Which 3D camera hosts egui UI?
+#[derive(Resource, Reflect, Default, PartialEq, Debug)]
+#[reflect(Resource)]
+pub enum DebugEguiCamera {
+    WorldCamera,
+    #[default]
+    ViewerCamera,
 }
 
-pub fn ensure_egui_context(mut commands: Commands, camera_q: Query<Entity, (With<Camera3d>, With<ViewerCamera>, Without<PrimaryEguiContext>)>)      {
-    for camera_ent in camera_q.iter() {
-        commands.entity(camera_ent).insert(
-            PrimaryEguiContext,
-        );
+// Define a custom `SystemParam` for our collision hooks.
+// It can have read-only access to queries, resources, and other system parameters.
+#[derive(SystemParam)]
+pub struct DebugEguiCameraQuery<'w, 's> {
+    debug_camera: Res<'w, DebugEguiCamera>,
+    camera_q: Query<'w, 's, (Has<WorldCamera>, Has<ViewerCamera>), With<Camera3d>>,
+}
+
+impl<'w, 's> DebugEguiCameraQuery<'w, 's> {
+    /// Is this camera the one matching [DebugEguiCamera]?
+    pub fn is_debug_camera(&self, camera: Entity) -> bool {
+        if let Ok((is_world, is_view)) = self.camera_q.get(camera) {
+            match &*self.debug_camera {
+                DebugEguiCamera::WorldCamera => is_world,
+                DebugEguiCamera::ViewerCamera => is_view,
+            }
+        } else {
+            false
+        }
     }
 }
 
-pub fn setup_egui_style(mut contexts: EguiContexts) {
-    let Ok(ctx) = contexts.ctx_mut() else { return };
+pub fn egui_initialized(
+    camera_q: Query<Entity, (With<Camera3d>, With<PrimaryEguiContext>)>,
+    debug: DebugEguiCameraQuery,
+) -> bool
+{
+    for ent in camera_q.iter() {
+        if debug.is_debug_camera(ent) {
+            return true;
+        }
+    }
 
+    false
+}
+
+pub fn ensure_egui_context(
+    mut commands: Commands,
+    camera_q: Query<Entity, (With<Camera3d>, Without<PrimaryEguiContext>)>,
+    debug: DebugEguiCameraQuery,
+) {
+    for camera_ent in camera_q.iter() {
+        if debug.is_debug_camera(camera_ent) {
+            dbg!(camera_ent);
+            commands.entity(camera_ent).insert(
+                PrimaryEguiContext,
+            );
+        }
+    }
+}
+
+pub fn setup_egui_style(
+    mut q: Query<(&mut EguiContext, Option<&PrimaryEguiContext>)>,
+) {
+    let Ok((mut ctx, Some(_))) = q.single_mut() else { return };
+    dbg!("got");
+    let ctx = ctx.get_mut();
     {
         use egui::FontFamily::Proportional;
         use egui::FontId;
@@ -99,7 +169,6 @@ pub fn update_egui_inspector_ui(
                         .default_open(false)
                         .show(ui, |ui| {
                             ui_for_entities_filtered(world, ui, false, &filter);
-                            // ui_for_entities(world, ui);
                         });
                 } else {
                     let filter: Filter<(Without<Observer>, Without<ChildOf>)> =

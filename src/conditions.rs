@@ -1,9 +1,5 @@
 use bevy::prelude::*;
-
-use crate::LevelState;
-use crate::OverlayState;
-use crate::PauseState;
-use crate::ProgramState;
+use crate::*;
 
 pub fn show_dev_tools() -> bool {
     if let Ok(val) = std::env::var("DEBUG") {
@@ -48,4 +44,9 @@ pub fn is_in_menu(overlay: Res<State<OverlayState>>) -> bool {
 /// Set if the level is active (i.e. player can move around).
 pub fn is_level_active(level_state: Res<State<LevelState>>) -> bool {
     matches!(*level_state.get(), LevelState::Playing | LevelState::Won | LevelState::Lost)
+}
+
+/// Tell if the [PlayerStart] component was added.
+pub fn added_player_start(q: Query<&Transform, Added<PlayerStart>>) -> bool {
+    q.iter().next().is_some()
 }

@@ -1,5 +1,7 @@
 // Client-side camera behavior.
 
+use std::any::TypeId;
+
 use avian3d::math::Quaternion;
 use avian3d::prelude::*;
 use bevy::prelude::*;
@@ -33,14 +35,17 @@ impl Plugin for PlayerCameraPlugin {
             .add_systems(PostUpdate,
                 update_player_ui
                 .run_if(|gizmo_config: Res<GizmoConfigStore>| {
-                    let (phys_gizmos, _) = gizmo_config.config::<PhysicsGizmos>();
-                    phys_gizmos.enabled
+                    // Safely access without a panic.
+                    if let Some((phys_gizmos, _)) = gizmo_config.get_config_dyn(&TypeId::of::<PhysicsGizmos>()) {
+                        phys_gizmos.enabled
+                    } else {
+                        false
+                    }
                 })
                 .run_if(not(is_menu_paused))
                 .run_if(in_state(OverlayState::Hidden).or(in_state(OverlayState::DebugGuiVisible)))
             )
-
-            ;
+        ;
     }
 }
 

@@ -488,17 +488,27 @@ fn update_mute_ui(
 }
 
 pub fn hide_instructions(
-    mut inst_q: Single<&mut Visibility, With<InstructionsArea>>,
+    mut inst_q: Query<&mut Visibility, With<InstructionsArea>>,
 ) {
-    **inst_q = Visibility::Hidden;
+    for mut vis in inst_q.iter_mut() {
+        *vis = Visibility::Hidden;
+    }
 }
 
 // Re-exports.
 
 use bevy_egui::input::egui_wants_any_input;
-pub fn debug_gui_wants_input(r: Res<EguiWantsInput>) -> bool {
-    egui_wants_any_input(r)
+pub fn debug_gui_wants_input(r: Option<Res<EguiWantsInput>>) -> bool {
+    if let Some(r) = r {
+        egui_wants_any_input(r)
+    } else {
+        false
+    }
 }
-pub fn debug_gui_wants_keyboard(r: Res<EguiWantsInput>) -> bool {
-    egui_wants_any_keyboard_input(r)
+pub fn debug_gui_wants_keyboard(r: Option<Res<EguiWantsInput>>) -> bool {
+    if let Some(r) = r {
+        egui_wants_any_keyboard_input(r)
+    } else {
+        false
+    }
 }
