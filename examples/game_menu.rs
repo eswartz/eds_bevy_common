@@ -1,16 +1,20 @@
 
 use avian3d::PhysicsPlugins;
+use avian3d::prelude::{CollidingEntities, Physics, PhysicsSystems};
 use bevy::asset::uuid::Uuid;
+use bevy::color::palettes::tailwind;
 use bevy::dev_tools::fps_overlay::FpsOverlayPlugin;
 use bevy::prelude::*;
 use bevy::camera::visibility::RenderLayers;
 use bevy::ecs::world::CommandQueue;
 use bevy::scene::SceneInstanceReady;
 use bevy::sprite::Text2dShadow;
-use bevy_tweening::lens::TextColorLens;
+use bevy_seedling::spatial::SpatialListener3D;
+use bevy_skein::SkeinPlugin;
+use bevy_tweening::lens::{TextColorLens, TransformPositionLens};
 use bevy_tweening::{AnimTarget, EaseMethod, Tween, TweenAnim};
 use eds_bevy_common::*;
-use leafwing_input_manager::prelude::InputMap;
+use leafwing_input_manager::prelude::{ActionState, InputMap};
 use strum::VariantArray;
 
 use std::time::Duration;
@@ -29,32 +33,13 @@ fn main() -> AppExit {
             )),
         })
 
-        // // Order matters!
-        // .add_plugins((
-        //     DefaultPlugins,
-        //     PhysicsPlugins::default(),
-
-        //     AppPlugin,
-
-        //     LifecyclePlugin,
-        //     ActionPlugin,
-        //     WorldStatePlugin,
-        //     LevelsPlugin,
-        //     GuiPlugin,
-
-        //     AudioCommonPlugin,
-
-        //     PlayerCameraPlugin,
-        //     PlayerInputPlugin,
-        //     PlayerClientPlugin,
-        //     PlayerMovementPlugin,
-        //     PlayerControllerPlugin,
-        // ))
-
         .add_plugins((
             DefaultPlugins,
             PhysicsPlugins::default(),
         ))
+        // .add_plugins(avian3d::debug_render::PhysicsDebugPlugin::default())
+
+        .add_plugins(SkeinPlugin::default())
 
         .add_plugins(AppPlugin)
 
@@ -66,9 +51,7 @@ fn main() -> AppExit {
         .add_plugins(WorldUiPlugin)
         .add_plugins(WorldStatePlugin)
         .add_plugins(AudioCommonPlugin)
-        .add_plugins(CrosshairPlugin)
         .add_plugins(EffectsPlugin)
-        .add_plugins(SkyboxPlugin)
         .add_plugins(LevelsPlugin)
 
         .add_plugins(PlayerCameraPlugin)
@@ -93,15 +76,38 @@ fn main() -> AppExit {
         .add_systems(Startup, (
             register_dummy_level,
         ))
+        .add_systems(
+            OnEnter(GameplayState::Playing),
+            ensure_3d_camera,
+        )
+
+        .add_systems(
+            FixedUpdate,
+            (
+                check_actions,
+            )
+                .run_if(not(is_in_menu))
+                .run_if(is_level_active)
+                .run_if(not(is_paused))
+                .run_if(not(debug_gui_wants_input))
+                .run_if(in_state(ProgramState::InGame))
+            ,
+        )
+        .add_systems(
+            FixedUpdate,
+            (
+                check_player_out_of_bounds,
+            )
+            .before(TransformSystems::Propagate)
+            .after(PhysicsSystems::Writeback)
+            .run_if(not(is_user_paused))
+            .run_if(in_state(LevelState::Playing))
+            .run_if(in_state(ProgramState::InGame)),
+        )
     ;
 
     if show_dev_tools() {
         app
-            // .add_plugins(EguiPlugin::default())
-            // .insert_resource(EguiGlobalSettings {
-            //     auto_create_primary_context: false,
-            //     ..default()
-            // })
             .add_plugins(DebugPlugin)
 
             .add_systems(
@@ -127,6 +133,20 @@ fn create_input_map() -> InputMap::<UserAction> {
     map
 }
 
+
+fn check_actions(
+    actions: Res<ActionState<UserAction>>,
+    mut commands: Commands,
+) {
+
+    if actions.just_released(&UserAction::ForceLose) {
+        commands.set_state(LevelState::Lost);
+    }
+    if actions.just_released(&UserAction::ForceWin) {
+        commands.set_state(LevelState::Won);
+    }
+}
+
 fn register_dummy_level(
     assets: Res<AssetServer>,
     mut list: ResMut<LevelList>) {
@@ -140,6 +160,56 @@ fn register_dummy_level(
         label: "Level 1 (Etc)".to_string(),
         scene: assets.load("maps/empty.glb#Scene0"),
     });
+}
+
+///////////////////////////
+
+/// Make sure Entities with Camera3d + WorldCamera and ViewCamera exist,
+/// reusing but reconfiguring any existing entities.
+pub(crate) fn ensure_3d_camera(
+    mut commands: Commands,
+    camera_q: Query<Entity, (With<Camera3d>, Without<WorldCamera>, Without<ViewerCamera>)>,
+    world_camera_q: Query<Entity, (With<Camera3d>, With<WorldCamera>)>,
+) {
+    let ent = if let Ok(ent) = world_camera_q.single() {
+        // Got one.
+        ent
+    } else if let Some(ent) = camera_q.iter().next() {
+        // Reuse.
+        ent
+    } else {
+        info!("Creating 3D camera");
+        commands.spawn_empty().id()
+    };
+
+    configure_world_camera(commands.get_entity(ent).unwrap());
+
+    // Force init.
+    commands.insert_resource(VideoCameraSettingsChanged);
+    commands.insert_resource(VideoEffectSettingsChanged);
+}
+
+fn configure_world_camera(mut ent_commands: EntityCommands) {
+    ent_commands.insert((
+        DespawnOnExit(GameplayState::Playing),
+        (
+            Name::new("WorldCamera"),
+            WorldCamera,
+            ViewerCamera,
+            Camera3d::default(),
+            RenderLayers::layer(RENDER_LAYER_DEFAULT),
+            Camera {
+                order: 1,
+                clear_color: Color::BLACK.into(),
+                ..default()
+            },
+            PlayerCamera(CameraMode::FirstPerson),
+            OurCamera::default(),
+        ),
+
+        // Audio is from the perspective of the camera.
+        SpatialListener3D::default(),
+    ));
 }
 
 ///////////////////////////
@@ -875,21 +945,12 @@ impl Plugin for MyGamePlugin {
                     spawn_level,
                 ).chain()
             )
+
             .add_systems(
                 OnExit(GameplayState::Setup),
                 (
                     level_spawn_finished,
                 ).chain()
-            )
-            .add_systems(
-                Update,
-                (
-                    init_player_settings,
-                    spawn_player_on_start,
-                )
-                .chain()
-                .run_if(added_player_start)
-                .run_if(in_state(GameplayState::Playing))
             )
 
             .add_systems(
@@ -901,6 +962,7 @@ impl Plugin for MyGamePlugin {
             )
             .add_systems(OnEnter(LevelState::LevelLoaded),
                 (
+                    add_player,
                     start_skybox_setup,
                     show_instructions,
                 ).chain()
@@ -915,8 +977,78 @@ impl Plugin for MyGamePlugin {
                 OnEnter(LevelState::Advance),
                 advance_level
             )
+
+            .add_systems(
+                Update,
+                (
+                    init_player_settings,
+                    spawn_player_on_start,
+                )
+                .chain()
+                .run_if(added_player_start)
+                .run_if(in_state(GameplayState::Playing))
+            )
+
+            .add_systems(
+                OnEnter(LevelState::Won),
+                won_level,
+            )
+            .add_systems(
+                OnEnter(LevelState::Lost),
+                lost_level
+            )
+            .add_systems(
+                Update,
+                check_end_level
+                    .run_if(resource_exists::<AutoEndLevelTimer>)
+            )
         ;
     }
+}
+
+
+const END_LEVEL_DELAY_SECS: u64 = 3;
+
+/// Countdown to next or same level.
+#[derive(Resource, Reflect, Default)]
+#[reflect(Resource, Default)]
+#[type_path = "game"]
+pub struct AutoEndLevelTimer(pub(crate) Timer);
+
+
+fn won_level(
+    mut commands: Commands,
+    mut score_q: Single<(&mut Text, &mut TextColor), With<GameStatusArea>>,
+) {
+    let (ref mut text, ref mut color) = *score_q;
+    text.0 = "Passed!".to_string();
+    color.0 = Color::Srgba(tailwind::LIME_300);
+
+    commands.insert_resource(AutoEndLevelTimer(Timer::new(Duration::from_secs(END_LEVEL_DELAY_SECS), TimerMode::Once)));
+}
+
+fn lost_level(
+    mut commands: Commands,
+    mut score_q: Single<(&mut Text, &mut TextColor), With<GameStatusArea>>,
+) {
+    let (ref mut text, ref mut color) = *score_q;
+    text.0 = "Failed...\nTry again!".to_string();
+    color.0 = Color::Srgba(tailwind::RED_700);
+
+    commands.insert_resource(AutoEndLevelTimer(Timer::new(Duration::from_secs(END_LEVEL_DELAY_SECS), TimerMode::Once)));
+}
+
+fn check_end_level(
+    mut commands: Commands,
+    mut end_timer: ResMut<AutoEndLevelTimer>,
+    time: Res<Time<Physics>>,
+) {
+    if !end_timer.0.tick(time.delta()).is_finished() {
+        return;
+    }
+
+    // Restarts level.
+    commands.set_state(LevelState::Advance);
 }
 
 /// If you have plugins registering levels in response
@@ -924,6 +1056,17 @@ impl Plugin for MyGamePlugin {
 /// This sorts them.
 pub(crate) fn ensure_levels(mut level_list: ResMut<LevelList>) {
     level_list.0.sort_by(|a, b| a.id.cmp(&b.id));
+}
+
+fn add_player(
+    mut commands: Commands,
+) {
+    // Our model doesn't have a PlayerStart, so make one.
+    commands.spawn((
+        Name::new("PlayerStart"),
+        PlayerStart,
+        Transform::IDENTITY,
+    ));
 }
 
 fn start_skybox_setup(
@@ -964,7 +1107,34 @@ pub(crate) fn level_spawn_started(mut commands: Commands, mut pause: ResMut<Paus
 
     // Prevent moving/interacting while loading UI is up.
     pause.set_menu_paused(true);
+
+    commands.remove_resource::<AutoEndLevelTimer>();
 }
+
+// fn observe_spawn_mesh(
+//     event: On<SceneInstanceReady>,
+//     child_q: Query<&Children>,
+//     meshes: Query<&Mesh3d>,
+//     mut commands: Commands,
+// ) {
+//     dbg!(event.event_target());
+//     for ent in child_q.iter_descendants(event.event_target()) {
+//         if meshes.contains(ent) {
+//             commands.entity(ent).insert((
+//                 ColliderConstructor::ConvexHullFromMesh,
+//                 CollisionLayers::new(
+//                     GameLayer::World,
+//                     [
+//                         GameLayer::Default,
+//                         GameLayer::World,
+//                         GameLayer::Player,
+//                         GameLayer::Projectiles,
+//                     ],
+//                 ),
+//             ));
+//         }
+//     }
+// }
 
 pub(crate) fn level_spawn_finished(
     mut commands: Commands,
@@ -976,7 +1146,6 @@ pub(crate) fn level_spawn_finished(
     // Go for it, user (unless they did set_user_paused)
     pause.set_menu_paused(false);
 }
-
 
 pub(crate) fn spawn_level(
     mut commands: Commands,
@@ -1031,7 +1200,6 @@ pub(crate) fn spawn_player_on_start(world: &mut World) {
         QUAKE_SCALE,
         Transform::IDENTITY,
     );
-    dbg!(player_ent);
 
     // Move to start position/orientation.
     let mut start_q = world.query_filtered::<&Transform, With<PlayerStart>>();
@@ -1076,15 +1244,17 @@ fn init_player_settings(
     mut commands: Commands,
     mut settings: ResMut<PlayerInputSettings>,
 ) {
-    if let Ok(mode) = move_q.single() {
-        match mode.0 {
-            PlayerMode::Fps => *settings = PlayerInputSettings::for_fps(),
-            PlayerMode::Space => *settings = PlayerInputSettings::for_space(),
-        }
-        commands.insert_resource(mode.0);
+    let mode = if let Ok(mode) = move_q.single() {
+        mode.clone()
     } else {
         log::warn!("no PlayerCameraMode in LevelRoot");
+        PlayerCameraMode(PlayerMode::Fps)
+    };
+    match mode.0 {
+        PlayerMode::Fps => *settings = PlayerInputSettings::for_fps(),
+        PlayerMode::Space => *settings = PlayerInputSettings::for_space(),
     }
+    commands.insert_resource(mode.0);
 }
 
 fn show_instructions(
@@ -1105,7 +1275,7 @@ fn show_instructions(
     .with_children(|builder| {
         text_ent = builder.spawn((
             DespawnOnExit(GameplayState::Playing),
-            Text::new("Move around with WSAD. `Enter` to advance level.",
+            Text::new("Move around with WSAD.",
             ),
             TextLayout::new(Justify::Center, LineBreak::WordBoundary),
             TextFont {
@@ -1164,4 +1334,48 @@ pub(crate) fn advance_level(
     }
     commands.set_state(OverlayState::Loading);
     commands.set_state(GameplayState::Setup);
+}
+
+
+/// If the player collides with the [DeathboxCollider],
+/// teleport the player back to start.
+///
+fn check_player_out_of_bounds(
+    mut commands: Commands,
+    parent_q: Query<&ChildOf>,
+    player_q: Query<&Transform, With<Player>>,
+    scene_q: Query<&SceneRoot>,
+    sensor_q: Query<&CollidingEntities, With<DeathboxCollider>>,
+    player_start_q: Query<&Transform, With<PlayerStart>>,
+) {
+    for coll in sensor_q.iter() {
+        for ent in coll.iter() {
+            let mut parent = *ent;
+            loop {
+                if let Ok(xfrm) = player_q.get(parent) {
+                    let xfrm_tween = Tween::new(
+                        EaseMethod::EaseFunction(EaseFunction::BackOut),
+                        Duration::from_secs_f32(0.5),
+                        TransformPositionLens {
+                            start: xfrm.translation,
+                            end: player_start_q.iter().next().unwrap().translation,
+                        }
+                    );
+                    commands.entity(*ent).try_insert((
+                        TweenAnim::new(xfrm_tween).with_destroy_on_completed(true),
+                    ));
+
+                    break;
+                }
+                if scene_q.contains(parent) {
+                    break;
+                }
+                if let Ok(parent0) = parent_q.get(parent) {
+                    parent = parent0.0;
+                } else {
+                    break;
+                }
+            }
+        }
+    }
 }

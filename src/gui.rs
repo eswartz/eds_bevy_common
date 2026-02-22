@@ -26,8 +26,6 @@ pub struct GuiPlugin;
 impl Plugin for GuiPlugin {
     fn build(&self, app: &mut App) {
         app
-        // .add_plugins(DefaultInspectorConfigPlugin)
-        // .register_type::<GuiState>()
         .insert_resource(GuiState::default())
         .insert_resource(StatusVisible(false))
         .init_resource::<GrabState>()
@@ -222,7 +220,6 @@ impl Default for GuiState {
     }
 }
 
-
 #[derive(Resource)]
 pub struct GrabState{ was_grabbed: bool, options: CursorOptions }
 
@@ -236,9 +233,6 @@ fn check_gui_state(
         fps.enabled = state.show_fps || overlay.is_debug();
     }
     status_visible.0 = state.show_status;
-    // for mut skybox in skybox_q.iter_mut() {
-    //     skybox.enabled = state.show_skybox;
-    // }
 }
 
 fn grab_cursor_for_game(

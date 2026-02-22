@@ -132,9 +132,8 @@ lto = "thin"
 # opt-level = 1
 
 [features]
-default = []
+default = ["bevy_skein"]
 trenchbroom = ["bevy_trenchbroom"]
-skein = ["bevy_skein"]
 
 [[example]]
 name = "game_menu"

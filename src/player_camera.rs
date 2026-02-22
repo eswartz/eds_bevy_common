@@ -22,12 +22,12 @@ impl Plugin for PlayerCameraPlugin {
             .add_systems(FixedPreUpdate,
                 (
                     handle_player_camera_actions,
-                    sync_cameras_to_player
+                    sync_world_camera_to_player,
+                    sync_view_camera_to_player,
                 )
                 .chain()
                 .after(PhysicsSystems::Writeback)
                 .before(TransformSystems::Propagate)
-                // .run_if(not(is_user_paused))
                 .run_if(not(is_menu_paused))
                 .run_if(is_game_active)
                 ,
@@ -211,11 +211,9 @@ impl OurCamera {
     }
 }
 
-pub fn sync_cameras_to_player(
+pub fn sync_world_camera_to_player(
     mut player_q: Single<(&Transform, &PlayerLook, &ColliderAabb, &mut Visibility), (With<OurPlayer>, Without<Camera3d>)>,
-    mut world_camera_q: Single<(&PlayerCamera, &mut Transform, &OurCamera), (With<Camera3d>, With<WorldCamera>, Without<ViewerCamera>)>,
-    mut view_camera_q: Single<&mut Transform, (With<Camera3d>, With<ViewerCamera>, Without<WorldCamera>)>,
-    align_rate: Res<ViewerCameraAlignRate>,
+    mut world_camera_q: Single<(&PlayerCamera, &mut Transform, &OurCamera), (With<Camera3d>, With<WorldCamera>)>,
     time: Res<Time>,
 ) {
     let (player_xfrm, look, player_aabb, ref mut model_visibility) = *player_q;
@@ -256,6 +254,18 @@ pub fn sync_cameras_to_player(
             model_visibility.set_if_neq(Visibility::Inherited);
         }
     };
+}
+
+pub fn sync_view_camera_to_player(
+    // WorldCamera + ViewerCamera can be on the same.
+    mut params: ParamSet<(
+        Single<&Transform, (With<Camera3d>, With<WorldCamera>, With<OurCamera>)>,
+        Single<&mut Transform, (With<Camera3d>, With<ViewerCamera>)>
+    )>,
+    align_rate: Res<ViewerCameraAlignRate>,
+) {
+    let camera_xfrm = params.p0().clone();
+    let mut view_camera_q = params.p1();
 
     // View camera is always aligned to world camera.
     // **view_camera_q = **camera_xfrm;
