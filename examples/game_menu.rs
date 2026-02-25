@@ -1,10 +1,11 @@
+use eds_bevy_common::*;
 
 use avian3d::PhysicsPlugins;
 use avian3d::prelude::{CollidingEntities, Physics, PhysicsSystems};
+use bevy::prelude::*;
 use bevy::asset::uuid::Uuid;
 use bevy::color::palettes::tailwind;
 use bevy::dev_tools::fps_overlay::FpsOverlayPlugin;
-use bevy::prelude::*;
 use bevy::camera::visibility::RenderLayers;
 use bevy::ecs::world::CommandQueue;
 use bevy::scene::SceneInstanceReady;
@@ -13,13 +14,12 @@ use bevy_seedling::spatial::SpatialListener3D;
 use bevy_skein::SkeinPlugin;
 use bevy_tweening::lens::{TextColorLens, TransformPositionLens};
 use bevy_tweening::{AnimTarget, EaseMethod, Tween, TweenAnim};
-use eds_bevy_common::*;
+use bevy::winit::WinitSettings;
+
 use leafwing_input_manager::prelude::{ActionState, InputMap};
 use strum::VariantArray;
-
 use std::time::Duration;
 
-use bevy::winit::WinitSettings;
 
 fn main() -> AppExit {
     let mut app = App::new();
@@ -37,8 +37,14 @@ fn main() -> AppExit {
             DefaultPlugins,
             PhysicsPlugins::default(),
         ))
-        // .add_plugins(avian3d::debug_render::PhysicsDebugPlugin::default())
-
+        .add_plugins(avian3d::debug_render::PhysicsDebugPlugin::default())
+        .insert_gizmo_config(
+            avian3d::prelude::PhysicsGizmos::default(),
+            GizmoConfig {
+                enabled: false,
+                ..default()
+            },
+        )
         .add_plugins(SkeinPlugin::default())
 
         .add_plugins(AppPlugin)
@@ -67,6 +73,8 @@ fn main() -> AppExit {
         .insert_resource(OurUser(default()))
         .insert_resource(PlayerMode::Fps)
         .insert_resource(PlayerInputSettings::for_fps())
+        // .insert_resource(PlayerMode::Space)
+        // .insert_resource(PlayerInputSettings::for_space())
 
         .add_plugins(MyMenuPlugin)
         .init_resource::<LevelDifficulty>()

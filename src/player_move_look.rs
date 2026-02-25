@@ -78,6 +78,8 @@ pub struct PlayerInputSettings {
     pub base_xz_speed: u8,
     /// Velocity scale for jump (m/s).
     pub jump_accel: u16,
+    /// Allow this many jumps.
+    pub jump_max_count: u16,
     /// Maximum speed for X/Z movement (m/s).
     pub max_xz_speed: u8,
     /// Maximum speed for +Y movement (m/s).
@@ -108,6 +110,7 @@ impl PlayerInputSettings {
 
             base_xz_speed: 8,
             jump_accel: 256,
+            jump_max_count: 1,
             max_xz_speed: 16,
             max_up_speed: 96,
             max_down_speed: 96, // b/t 55 m/s for skydiver, 150 m/s competition
@@ -132,6 +135,7 @@ impl PlayerInputSettings {
 
             base_xz_speed: 8,
             jump_accel: 256,
+            jump_max_count: 256,
             max_xz_speed: 32,
             max_up_speed: 128,
             max_down_speed: 128,
@@ -225,8 +229,9 @@ pub struct PlayerMovement {
     /// Represents how dense is the medium the player is in.
     /// I.e. 0.0 means empty space, 1.0 means encased on rock.
     pub medium_friction: f32,
-    /// When set, player issued a jump in the previous frame.
-    pub had_jump_event: bool,
+    /// Counts how many player jumps are allowed still.
+    /// (Decremented form a start [PlayerInputSettings::jump_count].
+    pub allowed_jumps: u16,
     pub jumping_out: bool,
 
     pub turn_time_secs: f32,
@@ -245,7 +250,7 @@ impl Default for PlayerMovement {
             state: MovementState::Falling,
             prev_state: MovementState::Falling,
             medium_friction: 1.0,
-            had_jump_event: false,
+            allowed_jumps: 0,
             jumping_out: false,
             turn_time_secs: 0.0,
             turn_deadline_secs: 0.0,
@@ -831,11 +836,11 @@ pub fn process_player_input_movement_for_fps(
 
                 // See if we can jump.
                 let std_jump = up_down > 0.
-                    && movement.state.is_on_surface()  // but not OnSlope
+                    && (movement.state.is_on_surface() || movement.allowed_jumps > 0)  // but not OnSlope
                     && movement.medium_friction >= MAX_JUMP_MEDIUM_FRICTION;
                 if std_jump {
-                    if !movement.had_jump_event {
-                        movement.had_jump_event = true;
+                    if movement.allowed_jumps > 0 {
+                        movement.allowed_jumps -= 1;
                         let sluggishness = move_scale.min(1.0);
                         // Jump strictly up.
                         jump_impulse = Vector::new(
@@ -848,7 +853,7 @@ pub fn process_player_input_movement_for_fps(
                     // Consume for jump or failed re-jump.
                     up_down = 0.;
                 } else if up_down <= 0. {
-                    movement.had_jump_event = false;
+                    movement.allowed_jumps = settings.jump_max_count;
                 }
 
                 if up_down == 0. && vel.y > 0. && movement.state == MovementState::Flying {
