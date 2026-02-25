@@ -110,7 +110,7 @@ impl PlayerInputSettings {
 
             base_xz_speed: 8,
             jump_accel: 256,
-            jump_max_count: 1,
+            jump_max_count: 2,
             max_xz_speed: 16,
             max_up_speed: 96,
             max_down_speed: 96, // b/t 55 m/s for skydiver, 150 m/s competition
@@ -229,6 +229,8 @@ pub struct PlayerMovement {
     /// Represents how dense is the medium the player is in.
     /// I.e. 0.0 means empty space, 1.0 means encased on rock.
     pub medium_friction: f32,
+/// When set, player issued a jump in the previous frame.
+    pub had_jump_event: bool,
     /// Counts how many player jumps are allowed still.
     /// (Decremented form a start [PlayerInputSettings::jump_count].
     pub allowed_jumps: u16,
@@ -250,6 +252,7 @@ impl Default for PlayerMovement {
             state: MovementState::Falling,
             prev_state: MovementState::Falling,
             medium_friction: 1.0,
+            had_jump_event: false,
             allowed_jumps: 0,
             jumping_out: false,
             turn_time_secs: 0.0,
@@ -772,7 +775,8 @@ pub fn process_player_input_movement_for_fps(
     >,
     mut inputs: MessageReader<PlayerInput>,
     time: Res<Time>,
-    settings: Res<PlayerInputSettings>,
+    input_settings: Res<PlayerInputSettings>,
+    camera_settings: Res<PlayerCameraSettings>,
     mode: Res<PlayerMode>,
 ) {
     if *mode != PlayerMode::Fps {
@@ -794,20 +798,22 @@ pub fn process_player_input_movement_for_fps(
         let mut jump_impulse = Vector::ZERO;
 
         let mut instant_thrust = Vec3::ZERO;
-        let mut overall_speed = settings.base_xz_speed as f32;
+        let mut overall_speed = input_settings.base_xz_speed as f32;
         match input {
             PlayerInput::Move(..) if movement.state == MovementState::Scripted => {
                 // Ignore.
             }
 
             PlayerInput::Move(_, input) => {
-                instant_thrust.x = Into::<f32>::into(input.right_left) * settings.move_scale.x;
-                instant_thrust.y = Into::<f32>::into(input.up_down) * settings.move_scale.y;
-                instant_thrust.z = Into::<f32>::into(input.forward_back) * settings.move_scale.z;
+                instant_thrust.x = Into::<f32>::into(input.right_left) * input_settings.move_scale.x;
+                instant_thrust.y = Into::<f32>::into(input.up_down) * input_settings.move_scale.y;
+                instant_thrust.z = Into::<f32>::into(input.forward_back) * input_settings.move_scale.z;
 
                 // Extract up/down.
                 let mut up_down = instant_thrust.y;
-                instant_thrust.y = 0.0;
+                if camera_settings.move_up_down_abs {
+                    instant_thrust.y = 0.0;
+                }
 
                 instant_thrust = instant_thrust.clamp_length_max(1.0);
                 let speed_type = if !look.crouching {
@@ -816,9 +822,9 @@ pub fn process_player_input_movement_for_fps(
                     input.speed.slower()
                 };
                 let move_scale = match speed_type {
-                    Speed::Fast => settings.accelerate_scale,
-                    Speed::Slow => 1.0 / settings.accelerate_scale,
-                    Speed::Crawl => 0.5 / settings.accelerate_scale,
+                    Speed::Fast => input_settings.accelerate_scale,
+                    Speed::Slow => 1.0 / input_settings.accelerate_scale,
+                    Speed::Crawl => 0.5 / input_settings.accelerate_scale,
                     Speed::Normal => 1.0,
                 };
                 overall_speed *= move_scale;
@@ -827,33 +833,41 @@ pub fn process_player_input_movement_for_fps(
                     movement.velocity_ramp = 0.0;
                 }
                 movement.velocity_ramp = (movement.velocity_ramp
-                    + settings.velocity_ramp_scale * move_scale)
+                    + input_settings.velocity_ramp_scale * move_scale)
                     .clamp(0.0, 1.0);
 
                 let mut dir_velocity = transform.rotation * instant_thrust * movement.velocity_ramp;
 
                 const MAX_JUMP_MEDIUM_FRICTION: f32 = 0.25;
 
-                // See if we can jump.
-                let std_jump = up_down > 0.
-                    && (movement.state.is_on_surface() || movement.allowed_jumps > 0)  // but not OnSlope
+                // See if we could jump.
+                let jump_grounded = movement.state.is_on_surface()   // but not OnSlope
                     && movement.medium_friction >= MAX_JUMP_MEDIUM_FRICTION;
-                if std_jump {
-                    if movement.allowed_jumps > 0 {
-                        movement.allowed_jumps -= 1;
-                        let sluggishness = move_scale.min(1.0);
-                        // Jump strictly up.
-                        jump_impulse = Vector::new(
-                            0.,
-                            settings.jump_accel as Scalar * sluggishness as Scalar,
-                            0.,
-                        );
-                        movement.state = MovementState::Jumping;
+                let extra_jump_allowed = vel.y >= 0. && input_settings.jump_max_count > 1 && movement.allowed_jumps > 0;
+
+                // Do we want to?
+                if up_down > 0. {
+                    if jump_grounded || extra_jump_allowed {
+                        if up_down > 0. && !movement.had_jump_event  {
+                            movement.had_jump_event = true;
+                            movement.allowed_jumps = movement.allowed_jumps.saturating_sub(1);
+                            let sluggishness = move_scale.min(1.0);
+                            // Jump strictly up.
+                            jump_impulse = Vector::new(
+                                0.,
+                                input_settings.jump_accel as Scalar * sluggishness as Scalar,
+                                0.,
+                            );
+                            movement.state = MovementState::Jumping;
+                        }
                     }
                     // Consume for jump or failed re-jump.
                     up_down = 0.;
-                } else if up_down <= 0. {
-                    movement.allowed_jumps = settings.jump_max_count;
+                } else {
+                    movement.had_jump_event = false;
+                    if jump_grounded {
+                        movement.allowed_jumps = input_settings.jump_max_count;
+                    }
                 }
 
                 if up_down == 0. && vel.y > 0. && movement.state == MovementState::Flying {
@@ -864,7 +878,7 @@ pub fn process_player_input_movement_for_fps(
                 }
 
                 // Apply unconsumed strict up/down movement.
-                if up_down != 0. {
+                if up_down != 0. && camera_settings.move_up_down_abs {
                     dir_velocity.y = up_down;
                 }
 
@@ -874,8 +888,8 @@ pub fn process_player_input_movement_for_fps(
                         vel.x = (vel.x + dir_velocity.x as Scalar) / 2.0;
                         vel.z = (vel.z + dir_velocity.z as Scalar) / 2.0;
                     } else {
-                        let asc = settings.air_scale as Scalar;
-                        let bs = (settings.base_xz_speed as Scalar) * asc;
+                        let asc = input_settings.air_scale as Scalar;
+                        let bs = (input_settings.base_xz_speed as Scalar) * asc;
                         if vel.x.abs() < bs {
                             vel.x = (dir_velocity.x as Scalar) * asc;
                         }
@@ -888,7 +902,7 @@ pub fn process_player_input_movement_for_fps(
                     // Apply friction while touching surface.
                     if movement.state.is_on_surface() {
                         let decay = (-0.5 * time.delta_secs()
-                            / settings.movement_decay_time_secs
+                            / input_settings.movement_decay_time_secs
                             / move_scale)
                             .exp() as Scalar;
 
@@ -915,7 +929,7 @@ pub fn process_player_input_movement_for_fps(
         // Crouch.
         look.crouch_y = look.crouch_y * 0.9
             - if look.crouching {
-                settings.crouch_depth
+                input_settings.crouch_depth
             } else {
                 0.0
             } * 0.1;
@@ -927,12 +941,12 @@ pub fn process_player_input_movement_for_fps(
             movement.velocity_ramp = 0.0;
             Vector2::splat(0.0)
         } else {
-            cur_vel_xz.clamp_length_max(settings.max_xz_speed as Scalar)
+            cur_vel_xz.clamp_length_max(input_settings.max_xz_speed as Scalar)
         };
         let clamped_y = {
             let clamped_y = vel.y.clamp(
-                -(settings.max_down_speed as Scalar), // i.e. air/fluid resistance
-                settings.max_up_speed as Scalar,      // i.e. flying/jumping
+                -(input_settings.max_down_speed as Scalar), // i.e. air/fluid resistance
+                input_settings.max_up_speed as Scalar,      // i.e. flying/jumping
             );
             clamped_y
         };
@@ -943,9 +957,9 @@ pub fn process_player_input_movement_for_fps(
 
         if movement.state.is_on_surface() {
             let eff_speed = vel.xz().length() as f32;
-            if eff_speed > settings.base_xz_speed as f32 {
+            if eff_speed > input_settings.base_xz_speed as f32 {
                 movement.state = MovementState::Running;
-            } else if eff_speed >= settings.base_xz_speed as f32 / 2.0 {
+            } else if eff_speed >= input_settings.base_xz_speed as f32 / 2.0 {
                 movement.state = MovementState::Walking;
             } else {
                 movement.state = MovementState::Grounded;
@@ -967,7 +981,8 @@ pub fn process_player_input_movement_for_space(
     >,
     mut inputs: MessageReader<PlayerInput>,
     time: Res<Time>,
-    settings: Res<PlayerInputSettings>,
+    input_settings: Res<PlayerInputSettings>,
+    camera_settings: Res<PlayerCameraSettings>,
     mode: Res<PlayerMode>,
 ) {
     if *mode != PlayerMode::Space {
@@ -988,16 +1003,21 @@ pub fn process_player_input_movement_for_space(
         let mut vel = forces.linear_velocity();
 
         let mut instant_thrust = Vec3::ZERO;
-        let mut overall_speed = settings.base_xz_speed as f32;
+        let mut overall_speed = input_settings.base_xz_speed as f32;
         match input {
             PlayerInput::Move(..) if movement.state == MovementState::Scripted => {
                 // Ignore.
             }
 
             PlayerInput::Move(_, input) => {
-                instant_thrust.x = Into::<f32>::into(input.right_left) * settings.move_scale.x;
-                instant_thrust.y = Into::<f32>::into(input.up_down) * settings.move_scale.y;
-                instant_thrust.z = Into::<f32>::into(input.forward_back) * settings.move_scale.z;
+                instant_thrust.x = Into::<f32>::into(input.right_left) * input_settings.move_scale.x;
+                instant_thrust.y = Into::<f32>::into(input.up_down) * input_settings.move_scale.y;
+                instant_thrust.z = Into::<f32>::into(input.forward_back) * input_settings.move_scale.z;
+
+                let up_down = instant_thrust.y;
+                if camera_settings.move_up_down_abs {
+                    instant_thrust.y = 0.0;
+                }
 
                 instant_thrust = instant_thrust.clamp_length_max(2.0);
 
@@ -1007,22 +1027,27 @@ pub fn process_player_input_movement_for_space(
                     input.speed.slower()
                 };
                 let accel_scale = match move_speed {
-                    Speed::Fast => settings.accelerate_scale,
-                    Speed::Slow => 1.0 / settings.accelerate_scale,
-                    Speed::Crawl => 0.5 / settings.accelerate_scale,
+                    Speed::Fast => input_settings.accelerate_scale,
+                    Speed::Slow => 1.0 / input_settings.accelerate_scale,
+                    Speed::Crawl => 0.5 / input_settings.accelerate_scale,
                     Speed::Normal => 1.0,
                 };
                 overall_speed *= accel_scale;
 
-                // let dir_velocity = transform.rotation * instant_thrust;
-                let dir_velocity = look.rotation * instant_thrust;
+                // Apply unconsumed strict up/down movement.
+                if up_down != 0. && camera_settings.move_up_down_abs {
+                    instant_thrust.y = up_down;
+                }
+
+                let dir_velocity = transform.rotation * instant_thrust;
+                // let dir_velocity = look.rotation * instant_thrust;
 
                 let delta = dir_velocity * overall_speed;
                 if delta.length_squared() > 0.01 {
                     vel = delta.adjust_precision();
                 } else {
                     let decay = (-0.5 * time.delta_secs()
-                        * settings.movement_decay_time_secs
+                        * input_settings.movement_decay_time_secs
                         / accel_scale)
                         .exp() as Scalar;
 
@@ -1051,7 +1076,7 @@ pub fn process_player_input_movement_for_space(
             movement.velocity_ramp = 0.0;
             Vector3::splat(0.0)
         } else {
-            vel.clamp_length_max(settings.max_xz_speed as Scalar)
+            vel.clamp_length_max(input_settings.max_xz_speed as Scalar)
         };
 
         *forces.linear_velocity_mut() = clamped_vel;

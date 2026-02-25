@@ -988,13 +988,9 @@ impl Plugin for MyGamePlugin {
 
             .add_systems(
                 Update,
-                (
-                    init_player_settings,
-                    spawn_player_on_start,
-                )
-                .chain()
-                .run_if(added_player_start)
-                .run_if(in_state(GameplayState::Playing))
+                spawn_player_on_start
+                    .run_if(added_player_start)
+                    .run_if(in_state(GameplayState::Playing))
             )
 
             .add_systems(
@@ -1245,24 +1241,6 @@ pub(crate) fn setup_level(
 
     let level = &level_list.0[level_index.0];
     commands.insert_resource(CurrentLevel(level.clone()));
-}
-
-fn init_player_settings(
-    move_q: Query<&PlayerCameraMode, With<LevelRoot>>,
-    mut commands: Commands,
-    mut settings: ResMut<PlayerInputSettings>,
-) {
-    let mode = if let Ok(mode) = move_q.single() {
-        mode.clone()
-    } else {
-        log::warn!("no PlayerCameraMode in LevelRoot");
-        PlayerCameraMode(PlayerMode::Fps)
-    };
-    match mode.0 {
-        PlayerMode::Fps => *settings = PlayerInputSettings::for_fps(),
-        PlayerMode::Space => *settings = PlayerInputSettings::for_space(),
-    }
-    commands.insert_resource(mode.0);
 }
 
 fn show_instructions(
