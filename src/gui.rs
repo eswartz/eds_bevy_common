@@ -299,12 +299,15 @@ pub struct InstructionsArea;
 #[derive(Component)]
 pub struct GameStatusArea;
 
+/// Where the score (if any) is presented (small, upper-right)
 #[derive(Component)]
 pub struct ScoreArea;
 
+/// Mark the Pause state icon.
 #[derive(Component)]
 struct PauseArea;
 
+/// Mark the Mute state icon.
 #[derive(Component)]
 struct MuteArea;
 
@@ -327,7 +330,7 @@ fn setup_gui_nodes(
         },
         Node {
             position_type: PositionType::Absolute,
-            top: Val::Px(12.0),
+            top: Val::Px(128.0),
             left: Val::Px(12.0),
             ..default()
         },

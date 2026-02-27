@@ -15,6 +15,7 @@ pub struct CrosshairPlugin;
 impl Plugin for CrosshairPlugin {
     fn build(&self, app: &mut App) {
         app
+        .init_resource::<CrosshairTarget>()
         .add_systems(
             OnEnter(ProgramState::InGame),
             init_crosshair
@@ -41,17 +42,19 @@ impl Plugin for CrosshairPlugin {
     }
 }
 
-/// Marker for the GUI node representing the crosshair.
+/// Marker for the GUI node representing the crosshair,
+/// providing in itself a
 ///
-/// The value indicates the "strength" of the crosshair (0..1)
-/// corresponding to how likely the user is looking at something
-/// (either, mouse movement or something clickable under it).
 #[derive(Component)]
-pub struct Crosshair(pub f32);
+pub struct Crosshair {
+    /// The current "strength" of  in the range [0..1],
+    /// 0 corresponding to no pointer movement and 1 to active motion.
+    pub current_strength: f32,
+}
 
 impl Crosshair {
     pub fn is_active(&self) -> bool {
-        self.0 >= 0.5
+        self.current_strength >= 0.5
     }
 }
 
@@ -72,7 +75,7 @@ fn init_crosshair(
         commands.spawn((
             Name::new("Crosshair"),
             DespawnOnExit(ProgramState::InGame),
-            Crosshair(0.),
+            Crosshair { current_strength: 0. },
             RenderLayers::from_layers(&[RENDER_LAYER_DEFAULT, RENDER_LAYER_VIEW]),
             Transform::from_xyz(0., 0., -10.),
             Visibility::Visible,
@@ -124,7 +127,7 @@ fn check_crosshair_activity(
     } else {
         dt
     };
-    crosshair_q.0 = (crosshair_q.0 + activity_delta).clamp(0.0, 1.0);
+    crosshair_q.current_strength = (crosshair_q.current_strength + activity_delta).clamp(0.0, 1.0);
 }
 
 fn update_crosshair(
@@ -136,24 +139,22 @@ fn update_crosshair(
         error!("no crosshair image");
         return;
     };
-    let strength = crosshair_q.1.0;
+    let strength = crosshair_q.1.current_strength;
     let mut image = image_q.get_mut(image_ent).unwrap();
     image.color = image.color.with_alpha(strength.clamp(0.0, 1.0));
 }
 
 
-/// Resource that exists when the crosshair is over a world node.
-#[derive(Resource)]
-pub struct CrosshairTarget(pub Entity);
-
-/// Resource that exists when the crosshair is removed from a world node.
-#[derive(Resource)]
-#[allow(unused)]
-pub struct CrosshairDetarget(pub Entity);
+/// This tracks the [CrosshairTargetable]s in view of a [WorldCamera]-oriented raycast.
+/// The module's systems perform a periodic scan in [FixedUpdate]
+/// which changes this value as the raycast hits change.
+#[derive(Resource, Reflect, Debug, PartialEq, Default)]
+#[reflect(Resource, Default)]
+#[type_path = "game"]
+pub struct CrosshairTarget { pub targets: Vec<Entity> }
 
 /// See if we're looking at something clickable.
 fn check_crosshair_target(
-    mut commands: Commands,
     crosshair_q: Single<&Crosshair>,
     camera_q: Single<&GlobalTransform, (With<Camera3d>, With<WorldCamera>)>,
     // level: Res<LevelMetadata>,
@@ -163,7 +164,7 @@ fn check_crosshair_target(
     // func_q: Query<(Option<&FuncButton>, Option<&FuncTile>)>,
     // level_state: Res<State<LevelState>>,
     mut raycast: MeshRayCast,
-    mut cur_target: Option<Res<CrosshairTarget>>,
+    mut cur_target_mut: ResMut<CrosshairTarget>,
 ) {
     let crosshair = *crosshair_q;
     if !crosshair.is_active() {
@@ -172,42 +173,43 @@ fn check_crosshair_target(
 
     let gxfrm = *camera_q;
     let ray = Ray3d::new(gxfrm.translation(), gxfrm.rotation() * Dir3::NEG_Z);
-    let filter = |ent| {
-        let mut step = ent;
-        loop {
-            if targetable_q.contains(step) {
-                return true
-            }
-            if scene_q.contains(step) {
-                return false
-            }
-            if let Ok(parent) = parent_q.get(step) {
-                step = parent.0
-            } else {
-                break
-            }
-        }
-        false
-    };
+    // let filter = |ent: Entity| {
+    //     let mut step = ent;
+    //     loop {
+    //         if targetable_q.contains(step) {
+    //             return true
+    //         }
+    //         if let Ok(parent) = parent_q.get(step) {
+    //             step = parent.0
+    //         } else {
+    //             break
+    //         }
+    //     }
+    //     false
+    // };
 
+    // let ctr = std::cell::RefCell::new(2u32);
+    // let gather_and_limit_seen = move |_: Entity| { *ctr.borrow_mut() -= 1; *ctr.borrow() == 0 };
     let settings = MeshRayCastSettings::default()
+        .with_visibility(RayCastVisibility::Any)    // allow for hidden controller ents
         .always_early_exit()
-        .with_filter(&filter);
+        // .with_filter(&filter)
+        ;
     let hits = raycast.cast_ray(ray, &settings);
+    // // Ignore if same targets.
+    // if cur_target.is_none_or(|cur_target| cur_target.targets != targets) {
+    //     return;
+    // }
 
-    // Ignore if same target.
-    if !hits.is_empty() && cur_target.as_ref().is_some_and(|tgt| hits[0].0 == tgt.0) {
-        return;
-    }
+    // // Clean up previous target before we overwrite the resource.
+    // if let Some(cur) = cur_target.take() {
+    //     commands.insert_resource(CrosshairDetarget(cur.0));
+    // }
 
-    // Clean up previous target before we overwrite the resource.
-    if let Some(cur) = cur_target.take() {
-        commands.insert_resource(CrosshairDetarget(cur.0));
-    }
+    let targets = hits.iter().map(|(target, _)| *target).collect::<Vec<_>>();
+    let crosshair_target = CrosshairTarget{ targets };
 
-    if !hits.is_empty() {
-        commands.insert_resource(CrosshairTarget(hits[0].0));
-    } else {
-        commands.remove_resource::<CrosshairTarget>();
-    }
+    // dbg!(&crosshair_target);
+    // cur_target_mut.set_if_neq(crosshair_target);
+    *cur_target_mut = crosshair_target;
 }

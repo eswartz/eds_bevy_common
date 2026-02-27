@@ -68,6 +68,8 @@ pub fn setup_world_marker(
             WorldMarker::default(),
             Transform::IDENTITY,
             Visibility::Inherited,
+            RigidBody::Static,
+            Collider::cuboid(0.1, 0.1, 0.1),
         )).id();
         commands.insert_resource(WorldMarkerEntity(ent));
     }
