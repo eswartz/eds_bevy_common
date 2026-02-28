@@ -160,7 +160,7 @@ fn check_crosshair_target(
     // level: Res<LevelMetadata>,
     targetable_q: Query<&CrosshairTargetable>,
     parent_q: Query<&ChildOf>,
-    scene_q: Query<&SceneRoot>,
+    // scene_q: Query<&SceneRoot>,
     // func_q: Query<(Option<&FuncButton>, Option<&FuncTile>)>,
     // level_state: Res<State<LevelState>>,
     mut raycast: MeshRayCast,
@@ -173,27 +173,27 @@ fn check_crosshair_target(
 
     let gxfrm = *camera_q;
     let ray = Ray3d::new(gxfrm.translation(), gxfrm.rotation() * Dir3::NEG_Z);
-    // let filter = |ent: Entity| {
-    //     let mut step = ent;
-    //     loop {
-    //         if targetable_q.contains(step) {
-    //             return true
-    //         }
-    //         if let Ok(parent) = parent_q.get(step) {
-    //             step = parent.0
-    //         } else {
-    //             break
-    //         }
-    //     }
-    //     false
-    // };
+    let filter = |ent: Entity| {
+        let mut step = ent;
+        loop {
+            if targetable_q.contains(step) {
+                return true
+            }
+            if let Ok(parent) = parent_q.get(step) {
+                step = parent.0
+            } else {
+                break
+            }
+        }
+        false
+    };
 
     // let ctr = std::cell::RefCell::new(2u32);
     // let gather_and_limit_seen = move |_: Entity| { *ctr.borrow_mut() -= 1; *ctr.borrow() == 0 };
     let settings = MeshRayCastSettings::default()
         .with_visibility(RayCastVisibility::Any)    // allow for hidden controller ents
         .always_early_exit()
-        // .with_filter(&filter)
+        .with_filter(&filter)
         ;
     let hits = raycast.cast_ray(ray, &settings);
     // // Ignore if same targets.
