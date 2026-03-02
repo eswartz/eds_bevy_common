@@ -116,7 +116,7 @@ impl PlayerInputSettings {
             max_down_speed: 96, // b/t 55 m/s for skydiver, 150 m/s competition
             crouch_depth: 0.5,
             grounded_y_speed: 1,
-            air_scale: 0.125,
+            air_scale: 0.25,
 
             movement_decay_time_secs: 1.0 / 30.0,
             fly_decay_time_secs: 1.0 / 8.0,
@@ -640,7 +640,7 @@ fn check_player_environment_fps(
             }
 
             if colliding {
-                if floor_steepness <= 0.125 {
+                if floor_steepness < 0.25 {
                     movement.state = movement.state.to_grounded();
                 } else {
                     // Don't allow creeping up slopes.
