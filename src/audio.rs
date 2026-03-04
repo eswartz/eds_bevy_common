@@ -46,6 +46,12 @@ pub struct UiSfx;
 #[reflect(Component)]
 pub struct Music;
 
+/// Node label for the music.
+#[derive(NodeLabel, Reflect, PartialEq, Eq, Debug, Hash, Clone)]
+#[reflect(Component)]
+pub struct MusicBus;
+
+
 pub fn initialize_audio(master: Single<Entity, With<MainBus>>, mut commands: Commands) {
     commands.entity(*master).insert(UserVolume {
         volume: Volume::Linear(0.5),
@@ -64,11 +70,15 @@ pub fn initialize_audio(master: Single<Entity, With<MainBus>>, mut commands: Com
         },
         PoolSize(2 ..= 4),
 
+        MusicBus,
+
         // So we can apply fading.
         sample_effects![
             VolumeNode::default(),
         ],
-    ));
+
+    ))
+    ;
     commands.spawn((
         Name::new("SFX"),
         SamplerPool(Sfx),
