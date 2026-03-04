@@ -77,7 +77,6 @@ pub fn check_pause_request(
     paused: ResMut<PauseState>,
     mut time: ResMut<Time<Physics>>,
     mut settings_q: Query<(Entity, &mut PlaybackSettings, Option<&PlaybackPaused>), With<SamplePlayer>>,
-    // synths_paused: Res<MidiSynthsPaused>,
     mut animator_transform_q: Query<&mut TweenAnim>,
     // mut time_runner_q: Query<&mut TimeRunner>,
 ) {
@@ -95,7 +94,6 @@ pub fn check_pause_request(
                 commands.entity(ent).insert(PlaybackPaused);
             }
         }
-        // synths_paused.0.store(true, Ordering::SeqCst);
         for mut animator in animator_transform_q.iter_mut() {
             // By our convention,
             animator.playback_state = bevy_tweening::PlaybackState::Paused;
@@ -111,7 +109,6 @@ pub fn check_pause_request(
                 commands.entity(ent).remove::<PlaybackPaused>();
             }
         }
-        // synths_paused.0.store(false, Ordering::SeqCst);
         for mut animator in animator_transform_q.iter_mut() {
             animator.playback_state = bevy_tweening::PlaybackState::Playing;
         }
