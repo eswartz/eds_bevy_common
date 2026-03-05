@@ -9,8 +9,6 @@ use std::time::Duration;
 
 use bevy::color::palettes::tailwind;
 use bevy::ecs::system::SystemId;
-use bevy::input::ButtonState;
-use bevy::input::keyboard::KeyboardInput;
 use bevy::input_focus::InputDispatchPlugin;
 use bevy::input_focus::InputFocus;
 use bevy::input_focus::InputFocusVisible;
@@ -25,9 +23,11 @@ use bevy::camera::visibility::RenderLayers;
 use bevy::text::LineHeight;
 use bevy::ui::RelativeCursorPosition;
 use bevy::window::PrimaryWindow;
+use leafwing_input_manager::prelude::ActionState;
 use rustc_hash::FxBuildHasher;
 
 use crate::RENDER_LAYER_UI;
+use crate::UserAction;
 use crate::is_in_menu;
 
 use super::states_sets::OverlayState;
@@ -57,10 +57,8 @@ impl Plugin for MenuCommonPlugin {
                 // Common handling for any menu.
                 (
                     on_added_menu_item,
-                    handle_menu_keys,
                     handle_menu_action,
                     handle_menu_item_decoration,
-                    handle_menu_keys_navigation,
                     handle_menu_mouse_drag,
                     handle_menu_mouse_click,
                     handle_menu_enums_init,
@@ -78,11 +76,18 @@ impl Plugin for MenuCommonPlugin {
             .add_systems(
                 Update,
                 (
+                    handle_focused_item_actions,
+                    handle_menu_navigation,
+                )
+                .run_if(is_in_menu)
+            )
+            .add_systems(
+                Update,
+                (
                     handle_menu_back,
                     handle_menu_into,
                 )
             )
-
         ;
     }
 }
@@ -683,87 +688,112 @@ fn on_added_menu_item(
     }
 }
 
-fn handle_menu_keys(
+fn handle_focused_item_actions(
     mut commands: Commands,
-    mut reader: MessageReader<KeyboardInput>,
+    action_state: Res<ActionState<UserAction>>,
     focus: Res<InputFocus>,
     toggle_q: Query<&MenuToggle>,
     slider_q: Query<&MenuSlider>,
     enum_q: Query<&MenuEnum>,
+    menu_item_q: Query<&MenuItem>,
+    mut left_right_ctr: Local<CountAccumulator>,
     mut writer: MessageWriter<MenuActionMessage>,
 ) {
     let Some(entity) = focus.0 else { return };
 
-    for key_event in reader.read() {
-        if key_event.state == ButtonState::Pressed {
-            if key_event.key_code == KeyCode::Escape {
-                commands.insert_resource(GoBackInMenuRequest);
-            }
-            else if key_event.key_code == KeyCode::ArrowLeft {
-                if slider_q.contains(entity) {
-                    writer.write(MenuActionMessage::Slide(
-                        entity,
-                        -1.0,
-                    ));
-                } else if toggle_q.contains(entity) || enum_q.contains(entity) {
-                    writer.write(MenuActionMessage::Previous(entity));
-                }
-            } else if key_event.key_code == KeyCode::ArrowRight {
-                if slider_q.contains(entity) {
-                    writer.write(MenuActionMessage::Slide(
-                        entity,
-                        1.0,
-                    ));
-                } else if toggle_q.contains(entity) || enum_q.contains(entity) {
-                    writer.write(MenuActionMessage::Next(entity));
-                }
+    if action_state.just_pressed(&UserAction::Interact) || action_state.just_pressed(&UserAction::Fire)  {
+        // Activate menu item?
+        if menu_item_q.contains(entity) {
+            commands.write_message(MenuActionMessage::Activate(entity));
+        } else {
+            warn!("no MenuItem");
+        }
+    }
+
+    // Reset to default?
+    if action_state.just_pressed(&UserAction::Reset) {
+        if menu_item_q.contains(entity) {
+            commands.write_message(MenuActionMessage::Reset(entity));
+        } else {
+            warn!("no MenuItem");
+        }
+    }
+
+    if let Some(dir) = left_right_ctr.add_and_test(action_state.value(&UserAction::MoveLeftRight2d)) {
+        if slider_q.contains(entity) {
+            writer.write(MenuActionMessage::Slide(
+                entity,
+                dir as f32,
+            ));
+        } else if toggle_q.contains(entity) || enum_q.contains(entity) {
+            if dir < 0 {
+                writer.write(MenuActionMessage::Previous(entity));
+            } else {
+                writer.write(MenuActionMessage::Next(entity));
             }
         }
     }
 }
 
-fn handle_menu_keys_navigation(
+fn signum_or_zero(f: f32) -> i32 {
+    if f < 0. { -1 }
+    else if f > 0. { 1 }
+    else { 0 }
+}
+
+#[derive(Default)]
+struct CountAccumulator {
+    dir: f32,
+    count: f32,
+}
+
+impl CountAccumulator {
+    fn add_and_test(&mut self, delta: f32) -> Option<i32> {
+        let was_zero = self.count == 0.;
+
+        let intent = signum_or_zero(delta);
+        if intent != signum_or_zero(self.dir) {
+            self.count = 0.;
+        }
+        self.dir = delta;
+
+        self.count += delta.abs();
+
+        let overflowed = self.count >= 1.;
+        if overflowed {
+            self.count = self.count.fract();
+        }
+
+        if (was_zero && self.count != 0.) || overflowed {
+            Some(intent)
+        } else {
+            None
+        }
+    }
+}
+
+fn handle_menu_navigation(
     mut commands: Commands,
     nav: TabNavigation,
-    mut key_reader: MessageReader<KeyboardInput>,
-    menu_item_q: Query<&MenuItem>,
+    action_state: Res<ActionState<UserAction>>,
     mut focus: ResMut<InputFocus>,
     mut visible: ResMut<InputFocusVisible>,
+    mut ctr: Local<CountAccumulator>,
 ) {
-    // Tab navigation.
-    for key_event in key_reader.read() {
-        if key_event.state == ButtonState::Pressed && !key_event.repeat {
-            // Activate menu item?
-            if key_event.key_code == KeyCode::Enter || key_event.key_code == KeyCode::Space {
-                if let Some(ent) = &focus.0
-                    && menu_item_q.contains(*ent)
-                {
-                    commands.write_message(MenuActionMessage::Activate(*ent));
-                } else {
-                    warn!("no MenuItem");
-                }
-                continue;
-            }
+    if action_state.just_pressed(&UserAction::ToggleMenu) || action_state.just_pressed(&UserAction::Back) {
+        commands.insert_resource(GoBackInMenuRequest);
+    }
 
-            // Reset to default?
-            if key_event.key_code == KeyCode::Backspace {
-                if let Some(ent) = &focus.0
-                    && menu_item_q.contains(*ent)
-                {
-                    commands.write_message(MenuActionMessage::Reset(*ent));
-                } else {
-                    warn!("no MenuItem");
-                }
-                continue;
-            }
+    let up_down = action_state.value(&UserAction::MoveUpDown2d);
 
-            // Move in menu?
-            let nav_dir = match key_event.key_code {
-                KeyCode::ArrowDown => NavAction::Next,
-                KeyCode::ArrowUp => NavAction::Previous,
-                _ => continue,
-            };
-
+    if let Some(dir) = ctr.add_and_test(up_down) {
+        // Move in menu?
+        let nav_dir = match dir {
+            -1 => Some(NavAction::Previous),
+            1 => Some(NavAction::Next),
+            _ => None,
+        };
+        if let Some(nav_dir) = nav_dir {
             let maybe_next = nav.navigate(&focus, nav_dir);
 
             match maybe_next {

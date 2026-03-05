@@ -82,7 +82,12 @@ pub enum UserAction {
     #[actionlike(Axis)]
     MoveLeftRight2d,
     #[actionlike(Axis)]
-    MoveDownUp2d,
+    MoveUpDown2d,
+    #[actionlike(DualAxis)]
+    Move2d,
+
+    /// Back in a menu.
+    Back,
 
     /// All-purpose "fire" (e.g. left-click)
     Fire,
@@ -95,6 +100,9 @@ pub enum UserAction {
 
     /// All-purpose "action".
     Interact,
+
+    /// Reset (for menus).
+    Reset,
 
     /// Tilt/roll the camera on Z axis.
     #[actionlike(Axis)]
