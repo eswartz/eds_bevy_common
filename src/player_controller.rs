@@ -109,7 +109,8 @@ fn collect_player_movement(
 
     let move_axis = action_state.axis_pair(&UserAction::MoveFlycam);
     let up_down_axis = action_state.value(&UserAction::MoveDownUp);
-    instant_thrust.x = move_axis.x * ctrl_settings.move_scale.x;
+    let left_right_axis = action_state.value(&UserAction::MoveLeftRight);
+    instant_thrust.x = (left_right_axis + move_axis.x) * ctrl_settings.move_scale.x;
     instant_thrust.y = up_down_axis * ctrl_settings.move_scale.y;
     instant_thrust.z = move_axis.y * ctrl_settings.move_scale.z;
 

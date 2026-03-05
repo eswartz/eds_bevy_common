@@ -13,24 +13,38 @@ pub fn default_gui_input_map() -> InputMap<UserAction> {
             VirtualAxis::new(KeyCode::ArrowLeft, KeyCode::ArrowRight),
         )
         .with_axis(
+            MoveLeftRight2d,
+            VirtualAxis::new(GamepadButton::DPadLeft, GamepadButton::DPadRight),
+        )
+        .with_axis(
             MoveDownUp2d,
             VirtualAxis::new(KeyCode::ArrowDown, KeyCode::ArrowUp),
-        );
+        )
+        // .with_axis(
+        //     MoveDownUp2d,
+        //     VirtualAxis::new(GamepadButton::DPadDown, GamepadButton::DPadUp),
+        // )
+        ;
 
     // Note: this usage as an action is only processed in gameplay
     // (which, being pauseable, means there'd be no way to escape),
     // but KeyCode::Escape is elsewhere handled manually in an unpauseable way.
     input_map.insert(ToggleMenu, KeyCode::Escape);
+    input_map.insert(ToggleMenu, GAMEPAD_BUTTON_MENU);
+
     input_map.insert(TogglePause, KeyCode::Pause);
     input_map.insert(
         TogglePause,
         ButtonlikeChord::new([CTRL_COMMAND, KeyCode::KeyP]),
     ); // "P"ause
+    input_map.insert(TogglePause, GamepadButton::Mode);
+
     input_map.insert(ToggleMute, KeyCode::F12);
     input_map.insert(
         ToggleMute,
         ButtonlikeChord::new([CTRL_COMMAND, KeyCode::KeyM]),
     ); // "M"ute
+
     input_map.insert(ToggleFullScreen, KeyCode::F11);
 
     input_map.insert(ToggleDebugUi, KeyCode::Backquote);
@@ -39,13 +53,35 @@ pub fn default_gui_input_map() -> InputMap<UserAction> {
 }
 
 /// This provides mappings for WASD + Space/C + mouse bindings for FPS or space controllers.
-pub fn default_wasd_input_map() -> InputMap<UserAction> {
+pub fn default_fps_input_map() -> InputMap<UserAction> {
     use actions_common::UserAction::*;
 
     let mut input_map = InputMap::default()
         .with_dual_axis(MoveFlycam, VirtualDPad::wasd().inverted_y())
+        .with_dual_axis(MoveFlycam, GamepadStick::LEFT
+            .inverted_y()
+            .with_deadzone_symmetric_unscaled(0.25)
+            .with_processor(DualAxisSensitivity::all(1.0))
+        )
+
         .with_axis(MoveDownUp, VirtualAxis::new(KeyCode::KeyC, KeyCode::Space))
+        // .with_axis(MoveDownUp, GamepadAxis::LeftZ)
+        .with_axis(
+            MoveDownUp,
+            VirtualAxis::new(GamepadButton::DPadDown, GamepadButton::DPadUp),
+        )
+        .with_axis(
+            MoveLeftRight,
+            VirtualAxis::new(GamepadButton::DPadLeft, GamepadButton::DPadRight),
+        )
+
         .with_dual_axis(Look, MouseMove::default())
+        .with_dual_axis(Look, GamepadStick::RIGHT
+            .inverted_y()
+            .with_deadzone_symmetric_unscaled(0.25)
+            .with_processor(DualAxisSensitivity::all(100.0))
+        )
+
         .with_axis(
             Tilt,
             VirtualAxis::new(KeyCode::BracketRight, KeyCode::BracketLeft),
@@ -74,9 +110,16 @@ pub fn default_wasd_input_map() -> InputMap<UserAction> {
     }
 
     input_map.insert(Accelerate, ModifierKey::Shift);
+    input_map.insert(Accelerate, GamepadButton::West);
+
     input_map.insert(ToggleCrouch, ModifierKey::Control);
+    input_map.insert(ToggleCrouch, GamepadButton::DPadDown);
+
     input_map.insert(Crouch, KeyCode::KeyC);
+    input_map.insert(Crouch, GamepadButton::LeftTrigger);
+
     input_map.insert(TurnAround, KeyCode::Backspace);
+    input_map.insert(TurnAround, GamepadButton::RightTrigger2);
 
     // Home, i.e. to reset the camera to home position.
     input_map.insert(Home, KeyCode::Backslash);
@@ -94,6 +137,7 @@ pub fn default_wasd_input_map() -> InputMap<UserAction> {
     );
 
     input_map.insert(Interact, KeyCode::KeyE);
+    input_map.insert(Interact, GamepadButton::South);
 
     input_map
 }

@@ -1,5 +1,6 @@
 use crate::*;
 use bevy::input::ButtonState;
+use bevy::input::gamepad::GamepadButtonChangedEvent;
 use bevy::input::keyboard::KeyboardInput;
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
@@ -20,6 +21,8 @@ pub const MOD_CTRL_COMMAND: ModifierKey = if cfg!(target_os = "macos") {
 } else {
     ModifierKey::Control
 };
+
+pub const GAMEPAD_BUTTON_MENU: GamepadButton = GamepadButton::Start;
 
 pub struct ActionPlugin;
 impl Plugin for ActionPlugin {
@@ -71,6 +74,9 @@ pub enum UserAction {
     /// Move up/down from camera rotation.
     #[actionlike(Axis)]
     MoveDownUp,
+    /// Move left/right from camera rotation.
+    #[actionlike(Axis)]
+    MoveLeftRight,
 
     /// UI editing.
     #[actionlike(Axis)]
@@ -131,7 +137,8 @@ fn handle_escape(
     going_back: Option<Res<GoBackInMenuRequest>>,
     mut previous_menu: ResMut<PreviousMenuStack>,
     // actions: Res<ActionState<UserAction>>,
-    mut reader: MessageReader<KeyboardInput>,
+    mut keyboard_reader: MessageReader<KeyboardInput>,
+    mut gamepad_reader: MessageReader<GamepadButtonChangedEvent>,
     mut pause: ResMut<PauseState>,
 ) {
     // // Menu logic handles this itself.
@@ -142,32 +149,44 @@ fn handle_escape(
         return;
     }
 
-    for key_event in reader.read() {
+    let mut toggle_menu = false;
+
+    for key_event in keyboard_reader.read() {
         if key_event.state == ButtonState::Pressed && key_event.key_code == KeyCode::Escape {
-            // If we reach the root, handle it here.
-            match overlay_state.get() {
-                OverlayState::Hidden => {
-                    // The one case where Escape *opens* the menu the first time.
-                    previous_menu.0.clear();
-                    commands.set_state(OverlayState::EscapeMenu);
-                }
-                OverlayState::EscapeMenu => {
-                    // commands.write_message(MenuActionMessage::ResumeGame);   // nope
+            toggle_menu = true;
+        }
+    }
 
-                    // Go back to gameplay, like the ResumeGame command.
-                    pause.set_menu_paused(false);
+    for button_event in gamepad_reader.read() {
+        if button_event.state == ButtonState::Pressed && button_event.button == GAMEPAD_BUTTON_MENU {
+            toggle_menu = true;
+        }
+    }
 
-                    commands.set_state(OverlayState::Hidden);
-                }
-                OverlayState::MainMenu => {
-                    // Ignore, since we don't leave exit via Quit (TODO: can this quit?)
-                }
-                OverlayState::GameOverScreen => {
-                    commands.set_state(OverlayState::MainMenu);
-                }
-                OverlayState::DebugGuiVisible => commands.set_state(OverlayState::Hidden),
-                _ => (),
+    if toggle_menu {
+        // If we reach the root, handle it here.
+        match overlay_state.get() {
+            OverlayState::Hidden => {
+                // The one case where Escape *opens* the menu the first time.
+                previous_menu.0.clear();
+                commands.set_state(OverlayState::EscapeMenu);
             }
+            OverlayState::EscapeMenu => {
+                // commands.write_message(MenuActionMessage::ResumeGame);   // nope
+
+                // Go back to gameplay, like the ResumeGame command.
+                pause.set_menu_paused(false);
+
+                commands.set_state(OverlayState::Hidden);
+            }
+            OverlayState::MainMenu => {
+                // Ignore, since we don't leave exit via Quit (TODO: can this quit?)
+            }
+            OverlayState::GameOverScreen => {
+                commands.set_state(OverlayState::MainMenu);
+            }
+            OverlayState::DebugGuiVisible => commands.set_state(OverlayState::Hidden),
+            _ => (),
         }
     }
 }

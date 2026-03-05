@@ -1,4 +1,5 @@
-//! Stock widgertry for handling menus.
+//! Stock widgetry for handling menus.
+//!
 use std::collections::HashMap;
 use std::hash::BuildHasher as _;
 use std::ops::RangeInclusive;

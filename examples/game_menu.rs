@@ -137,7 +137,7 @@ fn main() -> AppExit {
 fn create_input_map() -> InputMap::<UserAction> {
     let mut map = InputMap::default();
     map.merge(&stock_input_maps::default_gui_input_map());
-    map.merge(&stock_input_maps::default_wasd_input_map());
+    map.merge(&stock_input_maps::default_fps_input_map());
     map
 }
 
