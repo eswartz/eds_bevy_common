@@ -30,6 +30,7 @@ impl Plugin for PlayerControllerPlugin {
                     .run_if(
                         in_state(OverlayState::Hidden)
                         .or(in_state(OverlayState::ControlsMenu)) // allow testing control settings inside menu
+                        .or(not(debug_gui_wants_direct_input))
                     ,
                     ),
             );
@@ -146,6 +147,7 @@ fn collect_player_look(
     action_state: Res<ActionState<UserAction>>,
     // mouse_scroll: Res<bevy::input::mouse::AccumulatedMouseScroll>,
     player_q: Single<Entity, With<OurPlayer>>,
+    overlay_state: Res<State<OverlayState>>,
     mut writer: MessageWriter<PlayerInput>,
 ) {
     let Ok(mut window) = primary_window.single_mut() else {
@@ -168,7 +170,7 @@ fn collect_player_look(
     instant_head_turn.x = (if settings.invert_turn_y { 1.0 } else { -1.0 })
         * (settings.turn_scale.y * look_axis.y).to_radians();
 
-    if settings.center_mouse {
+    if settings.center_mouse && !(overlay_state.is_debug() || overlay_state.is_menu()) {
         let center = Vec2::new(window.width() / 2.0, window.height() / 2.0);
         window.set_cursor_position(Some(center));
     }

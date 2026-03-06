@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 
 use bevy::{ecs::system::SystemParam, prelude::*};
-use bevy_egui::{EguiContext, EguiGlobalSettings, EguiPlugin, EguiPrimaryContextPass, PrimaryEguiContext};
+use bevy_egui::{EguiContext, EguiGlobalSettings, EguiPlugin, EguiPrimaryContextPass, PrimaryEguiContext, input::{EguiWantsInput, egui_wants_any_keyboard_input, egui_wants_any_pointer_input}};
 use bevy_inspector_egui::DefaultInspectorConfigPlugin;
 
 use crate::*;
@@ -200,4 +200,28 @@ pub fn update_egui_inspector_ui(
 
             });
         });
+}
+
+// Re-exports.
+
+pub fn debug_gui_wants_pointer_input(r: Option<Res<EguiWantsInput>>) -> bool {
+    if let Some(r) = r {
+        egui_wants_any_pointer_input(r)
+    } else {
+        false
+    }
+}
+pub fn debug_gui_wants_keyboard_input(r: Option<Res<EguiWantsInput>>) -> bool {
+    if let Some(r) = r {
+        egui_wants_any_keyboard_input(r)
+    } else {
+        false
+    }
+}
+pub fn debug_gui_wants_direct_input(r: Option<Res<EguiWantsInput>>) -> bool {
+    if let Some(r) = r {
+        r.is_pointer_over_area() || r.is_popup_open()
+    } else {
+        false
+    }
 }

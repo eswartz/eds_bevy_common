@@ -1,7 +1,7 @@
 use eds_bevy_common::*;
 
 use avian3d::PhysicsPlugins;
-use avian3d::prelude::{CollidingEntities, Physics, PhysicsSystems};
+use avian3d::prelude::Physics;
 use bevy::prelude::*;
 use bevy::asset::uuid::Uuid;
 use bevy::color::palettes::tailwind;
@@ -12,7 +12,7 @@ use bevy::scene::SceneInstanceReady;
 use bevy::sprite::Text2dShadow;
 use bevy_seedling::spatial::SpatialListener3D;
 use bevy_skein::SkeinPlugin;
-use bevy_tweening::lens::{TextColorLens, TransformPositionLens};
+use bevy_tweening::lens::TextColorLens;
 use bevy_tweening::{AnimTarget, EaseMethod, Tween, TweenAnim};
 use bevy::winit::WinitSettings;
 
@@ -59,6 +59,9 @@ fn main() -> AppExit {
         .add_plugins(AudioCommonPlugin)
         .add_plugins(EffectsPlugin)
         .add_plugins(LevelsPlugin)
+        .add_plugins(DeathboxPlugin::default()
+            .with_move_player_to_start(true)
+            .with_despawn_items(true))
 
         .add_plugins(PlayerCameraPlugin)
         .add_plugins(PlayerInputPlugin)
@@ -97,20 +100,9 @@ fn main() -> AppExit {
                 .run_if(not(is_in_menu))
                 .run_if(is_level_active)
                 .run_if(not(is_paused))
-                .run_if(not(debug_gui_wants_input))
+                .run_if(not(debug_gui_wants_direct_input))
                 .run_if(in_state(ProgramState::InGame))
             ,
-        )
-        .add_systems(
-            FixedUpdate,
-            (
-                check_player_out_of_bounds,
-            )
-            .before(TransformSystems::Propagate)
-            .after(PhysicsSystems::Writeback)
-            .run_if(not(is_user_paused))
-            .run_if(in_state(LevelState::Playing))
-            .run_if(in_state(ProgramState::InGame)),
         )
     ;
 
@@ -146,7 +138,6 @@ fn check_actions(
     actions: Res<ActionState<UserAction>>,
     mut commands: Commands,
 ) {
-
     if actions.just_released(&UserAction::ForceLose) {
         commands.set_state(LevelState::Lost);
     }
@@ -1320,48 +1311,4 @@ pub(crate) fn advance_level(
     }
     commands.set_state(OverlayState::Loading);
     commands.set_state(GameplayState::Setup);
-}
-
-
-/// If the player collides with the [DeathboxCollider],
-/// teleport the player back to start.
-///
-fn check_player_out_of_bounds(
-    mut commands: Commands,
-    parent_q: Query<&ChildOf>,
-    player_q: Query<&Transform, With<Player>>,
-    scene_q: Query<&SceneRoot>,
-    sensor_q: Query<&CollidingEntities, With<DeathboxCollider>>,
-    player_start_q: Query<&Transform, With<PlayerStart>>,
-) {
-    for coll in sensor_q.iter() {
-        for ent in coll.iter() {
-            let mut parent = *ent;
-            loop {
-                if let Ok(xfrm) = player_q.get(parent) {
-                    let xfrm_tween = Tween::new(
-                        EaseMethod::EaseFunction(EaseFunction::BackOut),
-                        Duration::from_secs_f32(0.5),
-                        TransformPositionLens {
-                            start: xfrm.translation,
-                            end: player_start_q.iter().next().unwrap().translation,
-                        }
-                    );
-                    commands.entity(*ent).try_insert((
-                        TweenAnim::new(xfrm_tween).with_destroy_on_completed(true),
-                    ));
-
-                    break;
-                }
-                if scene_q.contains(parent) {
-                    break;
-                }
-                if let Ok(parent0) = parent_q.get(parent) {
-                    parent = parent0.0;
-                } else {
-                    break;
-                }
-            }
-        }
-    }
 }

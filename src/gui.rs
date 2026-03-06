@@ -9,8 +9,6 @@ use bevy::window::CursorOptions;
 use bevy::window::PrimaryWindow;
 use bevy::window::WindowFocused;
 use bevy_asset_loader::prelude::*;
-use bevy_egui::input::EguiWantsInput;
-use bevy_egui::input::egui_wants_any_keyboard_input;
 use bevy_seedling::prelude::MainBus;
 
 use crate::assets::CommonAssets;
@@ -489,23 +487,5 @@ pub fn hide_instructions(
 ) {
     for mut vis in inst_q.iter_mut() {
         *vis = Visibility::Hidden;
-    }
-}
-
-// Re-exports.
-
-use bevy_egui::input::egui_wants_any_input;
-pub fn debug_gui_wants_input(r: Option<Res<EguiWantsInput>>) -> bool {
-    if let Some(r) = r {
-        egui_wants_any_input(r)
-    } else {
-        false
-    }
-}
-pub fn debug_gui_wants_keyboard(r: Option<Res<EguiWantsInput>>) -> bool {
-    if let Some(r) = r {
-        egui_wants_any_keyboard_input(r)
-    } else {
-        false
     }
 }
