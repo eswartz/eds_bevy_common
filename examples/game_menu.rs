@@ -59,9 +59,7 @@ fn main() -> AppExit {
         .add_plugins(AudioCommonPlugin)
         .add_plugins(EffectsPlugin)
         .add_plugins(LevelsPlugin)
-        .add_plugins(DeathboxPlugin::default()
-            .with_move_player_to_start(true)
-            .with_despawn_items(true))
+        .add_plugins(DeathboxPlugin::default())
 
         .add_plugins(PlayerCameraPlugin)
         .add_plugins(PlayerInputPlugin)

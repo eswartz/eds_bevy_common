@@ -16,11 +16,17 @@ pub struct DeathboxPlugin {
     flags: DeathboxFlags,
 }
 
-#[derive(Resource, Debug, Reflect, Default, Clone)]
-#[reflect(Resource, Default)]
+#[derive(Resource, Debug, Reflect, Clone)]
+#[reflect(Resource)]
 pub struct DeathboxFlags {
     move_players: bool,
     remove_spawns: bool,
+}
+
+impl Default for DeathboxFlags {
+    fn default() -> Self {
+        Self { move_players: true, remove_spawns: true }
+    }
 }
 
 impl DeathboxPlugin {
