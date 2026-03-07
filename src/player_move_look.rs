@@ -483,9 +483,8 @@ pub fn player_eyes(transform: &Transform, aabb: &ColliderAabb, look: &PlayerLook
 }
 
 /// Get the local position of the player's gun relative to the given player transform.
-#[allow(unused)]
-pub fn player_gun(transform: &Transform, eyes: Vec3) -> Vec3 {
-    (eyes + Vec3::new(0., -0.25, 0.)) + transform.rotation * Vec3::NEG_Z * 0.25
+pub fn player_gun(rotation: &Quat, eyes: Vec3) -> Vec3 {
+    (eyes + Vec3::new(0., -0.25, 0.)) + rotation * Vec3::NEG_Z * 0.25
 }
 
 fn check_player_environment_fps(
