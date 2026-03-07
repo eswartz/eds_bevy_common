@@ -489,3 +489,8 @@ pub fn hide_instructions(
         *vis = Visibility::Hidden;
     }
 }
+
+pub fn is_overlay_visible(gui_state: Res<GuiState>, ovl_state: Res<State<OverlayState>>) -> bool {
+    gui_state.show_inspector_always ||
+        (gui_state.show_inspector && ovl_state.get().is_debug())
+}

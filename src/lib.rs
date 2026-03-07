@@ -29,6 +29,7 @@ pub mod player_spawning;
 pub mod collision_hooks;
 pub mod areas;
 pub mod deathbox;
+pub mod fps;
 pub mod app;
 
 pub use base_dir::*;
@@ -62,4 +63,5 @@ pub use player_spawning::*;
 pub use collision_hooks::*;
 pub use areas::*;
 pub use deathbox::*;
+pub use fps::*;
 pub use app::*;

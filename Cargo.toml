@@ -101,6 +101,8 @@ bevy_trenchbroom_avian = { optional = true, version = "0.12", default-features =
 
 bevy_skein = { optional = true, version = "0.5.0" }
 
+sysinfo = { version = "0.37" }
+
 # Idiomatic Bevy code often triggers these lints, and the CI workflow treats them as errors.
 # In some cases they may still signal poor code quality however, so consider commenting out these lines.
 [lints.clippy]

@@ -901,7 +901,6 @@ fn start_game(mut commands: Commands) {
 #[derive(Resource, Default, Debug, Clone, PartialEq, Reflect)]
 #[reflect(Resource)]
 #[type_path = "game"]
-
 pub struct LevelDifficulty(pub Difficulty);
 
 /// Difficulty rating.
