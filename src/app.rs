@@ -4,7 +4,6 @@ use avian3d::prelude::Physics;
 use avian3d::prelude::PhysicsTime as _;
 use bevy::camera::visibility::RenderLayers;
 use bevy::color::palettes::tailwind;
-use bevy::dev_tools::fps_overlay::FpsOverlayConfig;
 use bevy::ecs::message::MessageUpdateSystems;
 use bevy::prelude::*;
 use bevy_asset_loader::loading_state::LoadingState;
@@ -148,15 +147,7 @@ pub fn on_enter_in_game(mut time: ResMut<Time<Physics>>) {
 }
 
 pub fn init_perf_ui(mut commands: Commands) {
-    commands.insert_resource(FpsOverlayConfig {
-        text_config: TextFont::from_font_size(10.0),
-        text_color: Color::WHITE.with_alpha(0.5),
-        refresh_interval: Duration::from_secs_f32(1.0 / 10.0),
-        ..default()
-    });
 }
-
-
 
 
 #[derive(Component)]

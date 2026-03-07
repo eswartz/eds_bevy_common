@@ -11,6 +11,7 @@ use bevy::window::WindowFocused;
 use bevy_asset_loader::prelude::*;
 use bevy_seedling::prelude::MainBus;
 
+use crate::FpsOverlayVisible;
 use crate::assets::CommonAssets;
 use crate::RENDER_LAYER_UI;
 
@@ -65,7 +66,10 @@ impl Plugin for GuiPlugin {
 
         .add_systems(
             Update,
-            check_gui_state.run_if(resource_changed::<GuiState>.or(resource_changed::<State<OverlayState>>)),
+            check_gui_state.run_if(
+                resource_changed::<GuiState>
+                .or(resource_changed::<State<OverlayState>>)
+            ),
         )
         .add_systems(
             Update,
@@ -223,12 +227,12 @@ pub struct GrabState{ was_grabbed: bool, options: CursorOptions }
 
 fn check_gui_state(
     state: Res<GuiState>,
-    fps: Option<ResMut<bevy::dev_tools::fps_overlay::FpsOverlayConfig>>,
+    fps_visible: Option<ResMut<FpsOverlayVisible>>,
     mut status_visible: ResMut<StatusVisible>,
     overlay: Res<State<OverlayState>>,
 ) {
-    if let Some(mut fps) = fps {
-        fps.enabled = state.show_fps || overlay.is_debug();
+    if let Some(mut fps_visible) = fps_visible {
+        fps_visible.0 = state.show_fps || overlay.is_debug();
     }
     status_visible.0 = state.show_status;
 }

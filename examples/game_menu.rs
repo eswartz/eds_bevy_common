@@ -5,7 +5,6 @@ use avian3d::prelude::Physics;
 use bevy::prelude::*;
 use bevy::asset::uuid::Uuid;
 use bevy::color::palettes::tailwind;
-use bevy::dev_tools::fps_overlay::FpsOverlayPlugin;
 use bevy::camera::visibility::RenderLayers;
 use bevy::ecs::world::CommandQueue;
 use bevy::scene::SceneInstanceReady;
@@ -117,7 +116,7 @@ fn main() -> AppExit {
                     bevy::dev_tools::states::log_transitions::<LevelState>,
                 ),
             )
-            .add_plugins(FpsOverlayPlugin::default())
+            .add_plugins(FpsOverlayPlugin)
         ;
     }
 

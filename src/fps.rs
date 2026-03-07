@@ -6,7 +6,6 @@ use bevy::prelude::*;
 
 use sysinfo;
 use ::core::fmt::Write;
-use crate::*;
 
 pub struct FpsOverlayPlugin;
 
@@ -14,11 +13,11 @@ impl Plugin for FpsOverlayPlugin {
     fn build(&self, app: &mut App) {
         app
             .insert_resource(FpsOverlayVisible(true))
+            .init_resource::<FpsOverlayStyle>()
             .add_systems(
                 Update,
                     update_fps_visibility
                         .run_if(resource_changed::<FpsOverlayVisible>)
-                        .run_if(is_overlay_visible),
             )
             .add_systems(
                 Update,
@@ -40,11 +39,8 @@ fn update_fps_visibility(
     visible: Res<FpsOverlayVisible>,
     mut marker_vis_q: Query<(&FpsOverlayMarker, &mut Visibility)>,
 ) {
-    dbg!("hh");
-    let new_vis = if visible.0 { Visibility::Hidden } else { Visibility::Inherited };
+    let new_vis = if !visible.0 { Visibility::Hidden } else { Visibility::Inherited };
     for (_, mut vis) in marker_vis_q.iter_mut() {
-        // *vis = Visibility::.set_if_neq(visible.0);
-        dbg!(new_vis);
         *vis = new_vis;
     }
 }
@@ -91,10 +87,31 @@ fn __entity_count(world: &World) -> usize {
     world.entities().count_spawned() as _
 }
 
+#[derive(Resource, Reflect)]
+#[reflect(Resource, Default)]
+pub struct FpsOverlayStyle {
+    pub outer_margin: f32,
+    pub inner_margin: f32,
+    pub font_size: f32,
+    pub font: Handle<Font>,
+}
+impl Default for FpsOverlayStyle {
+    fn default() -> Self {
+        Self {
+            outer_margin: 4.,
+            inner_margin: 4.,
+            font_size: 12.,
+            font: default(),
+        }
+    }
+}
+
+
 #[allow(clippy::too_many_arguments)]
 fn diagnostic_system(
     entity_count: In<usize>,
     mut commands: Commands,
+    style: Res<FpsOverlayStyle>,
     mut sys_info: Local<sysinfo::System>,
     mut refresh_timer: Local<f32>,
     mut sys_timer: Local<f32>,
@@ -105,10 +122,9 @@ fn diagnostic_system(
 ) {
     let [fps, max_ft, entities, cpu, ram] = *cached.get_or_init(|| {
         let mut result = [Entity::PLACEHOLDER; 5];
-        const OUTER_MARGIN: f32 = 4.;
-        const INNER_MARGIN: f32 = 2.;
         let font = TextFont {
-            font_size: 12.0,
+            font_size: style.font_size,
+            font: style.font.clone(),
             ..default()
         };
         commands.spawn((
@@ -116,8 +132,8 @@ fn diagnostic_system(
             Node {
                 margin: UiRect {
                     right: Val::Auto,
-                    left: Val::Px(OUTER_MARGIN),
-                    top: Val::Px(OUTER_MARGIN),
+                    left: Val::Px(style.outer_margin),
+                    top: Val::Px(style.outer_margin),
                     bottom: Val::Auto
                 },
                 ..Default::default()
@@ -128,10 +144,10 @@ fn diagnostic_system(
             c.spawn(Node {
                 flex_direction: FlexDirection::Column,
                 margin: UiRect {
-                    left: Val::Px(INNER_MARGIN),
-                    right: Val::Px(INNER_MARGIN),
-                    top: Val::Px(INNER_MARGIN),
-                    bottom: Val::Px(INNER_MARGIN)
+                    left: Val::Px(style.inner_margin),
+                    right: Val::Px(style.inner_margin),
+                    top: Val::Px(style.inner_margin),
+                    bottom: Val::Px(style.inner_margin)
                 },
                 align_items: AlignItems::FlexStart,
                 ..Default::default()
@@ -147,10 +163,10 @@ fn diagnostic_system(
             c.spawn(Node {
                 flex_direction: FlexDirection::Column,
                 margin: UiRect {
-                    left: Val::Px(INNER_MARGIN),
-                    right: Val::Px(INNER_MARGIN),
-                    top: Val::Px(INNER_MARGIN),
-                    bottom: Val::Px(INNER_MARGIN)
+                    left: Val::Px(style.inner_margin),
+                    right: Val::Px(style.inner_margin),
+                    top: Val::Px(style.inner_margin),
+                    bottom: Val::Px(style.inner_margin)
                 },
                 min_width: Val::Px(80.),
                 align_items: AlignItems::FlexEnd,
