@@ -326,6 +326,8 @@ pub struct GoIntoMenuRequest(pub OverlayState);
 /////
 
 /// Event firing a menu action.
+///
+/// For each, the Entity referenced is the one that has the action applied.
 #[derive(Message, Debug, Clone)]
 pub enum MenuActionMessage {
     /// Navigate(d) to new menu.
@@ -427,7 +429,7 @@ impl MenuToggle {
 /// Marker for menu items that act as sliders.
 #[derive(Component, Clone)]
 pub struct MenuSlider {
-    /// Current model value, cached from init.
+    /// Current model value, cached as of creation.
     pub current: Option<f32>,
     /// System that fetches the value from the model and then sets it in MenuSlider::current.
     pub get: SystemId<In<Entity>, ()>,
@@ -999,10 +1001,10 @@ fn handle_menu_slider_actions(
                     commands.run_system_with(slider.get, entity);
                 }
             }
-            MenuActionMessage::Slide(_, delta) => {
+            MenuActionMessage::Slide(entity, delta) => {
                 // Adjust value in UI space.
                 let Some(current) = slider.current.as_mut() else {
-                    error!("slider not initialized yet");
+                    error!("slider {entity} not initialized yet");
                     continue;
                 };
                 let current = *current;
@@ -1012,7 +1014,7 @@ fn handle_menu_slider_actions(
 
                 commands.run_system_with(slider.set, new);
                 // Refresh from internal value.
-                commands.run_system_with(slider.get, entity);
+                commands.run_system_with(slider.get, *entity);
             }
             MenuActionMessage::Next(_) | MenuActionMessage::Previous(_) => (),
         }
@@ -1059,7 +1061,7 @@ fn handle_menu_toggle_actions(
             continue
         }
         let Some(current) = toggle.current.as_mut() else {
-            error!("toggle not initialized yet");
+            error!("toggle {entity} not initialized yet");
             continue;
         };
 
@@ -1132,7 +1134,7 @@ fn handle_menu_enums_actions(
 
         // Adjust value in UI space.
         let Some(current) = enums.current.as_mut() else {
-            error!("enum not initialized yet");
+            error!("enum {entity} not initialized yet");
             continue;
         };
         let current = *current;

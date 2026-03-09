@@ -94,7 +94,6 @@ impl Plugin for AppPlugin {
 #[derive(Debug, Resource)]
 pub struct ExitRequest;
 
-
 pub fn check_app_exit(
     mut commands: Commands,
     exit: Option<Res<ExitRequest>>,

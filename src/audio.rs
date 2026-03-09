@@ -2,13 +2,20 @@ use bevy::prelude::*;
 use bevy_seedling::prelude::*;
 use bevy_tweening::Lens;
 
+/// Remember to schedule [initialize_audio] or a local copy
+/// (can be as early as [Startup])
 pub struct AudioCommonPlugin;
 
 impl Plugin for AudioCommonPlugin {
     fn build(&self, app: &mut App) {
         app
-            .add_plugins(SeedlingPlugin::default())
-            .add_systems(Startup, initialize_audio)
+            .add_plugins(SeedlingPlugin {
+                config: FirewheelConfig {
+                    scheduled_event_capacity: 16384,
+                    ..default()
+                },
+                ..default()
+            })
 
             .add_systems(PostUpdate,
                 (
@@ -51,7 +58,11 @@ pub struct Music;
 #[reflect(Component)]
 pub struct MusicBus;
 
-
+/// Default means for initializing the Seedling [PoolLabel]s provided here.
+///
+/// It is not scheduled by default!
+///
+/// Either use directly or copy and freely adapt per client.
 pub fn initialize_audio(master: Single<Entity, With<MainBus>>, mut commands: Commands) {
     commands.entity(*master).insert(UserVolume {
         volume: Volume::Linear(0.5),
@@ -64,37 +75,46 @@ pub fn initialize_audio(master: Single<Entity, With<MainBus>>, mut commands: Com
     commands.spawn((
         Name::new("Music"),
         SamplerPool(Music),
+
+        // This ensures a sibling VolumeNode.
         UserVolume {
             volume: DEFAULT_POOL_VOLUME,
             muted: false,
         },
-        PoolSize(2 ..= 4),
+
+        // This accounts, in theory, for two crossfading songs.
+        // Otherwise use the dynamic pool...?
+        PoolSize(2 ..= 2),
 
         MusicBus,
 
-        // So we can apply fading.
+        // Use for e.g. fading *on top of* the [VolumeNode] (fade-out, fade-in) on this node.
+        // The [UserVolume] above is for the sound channel volume.
         sample_effects![
             VolumeNode::default(),
         ],
-
     ))
     ;
+
     commands.spawn((
         Name::new("SFX"),
         SamplerPool(Sfx),
+        UserVolume {
+            volume: DEFAULT_POOL_VOLUME,
+            muted: false,
+        },
+
+        // This pool is for spatial samples.
+        PoolSize(8 ..= 256),
+
         sample_effects![(
             SpatialBasicNode {
                 panning_threshold: 0.9,
                 ..default()
             },
-            SpatialScale(Vec3::splat(50.0))
         )],
-        UserVolume {
-            volume: DEFAULT_POOL_VOLUME,
-            muted: false,
-        },
-        PoolSize(8 ..= 256),
     ));
+
     commands.spawn((
         Name::new("UI"),
         SamplerPool(UiSfx),
