@@ -108,15 +108,6 @@ impl Plugin for MenuCommonPlugin {
         );
         #[cfg(feature = "input_bei")]
         {
-            // app.add_observer(handle_focused_item_action_fire);
-            // app.add_observer(handle_focused_item_action_interact);
-            // app.add_observer(handle_focused_item_action_left_right_complete);
-            // app.add_observer(handle_focused_item_action_left_right_fire);
-            // app.add_observer(handle_focused_item_action_reset);
-            // app.add_observer(handle_action_down_up_complete);
-            // app.add_observer(handle_action_down_up_fire);
-            // app.add_observer(handle_action_reset);
-            // app.add_observer(handle_action_back);
             app.add_systems(
                 Update,
                 (
@@ -818,94 +809,6 @@ fn handle_focused_item_actions(
     }
 }
 
-// #[cfg(feature = "input_bei")]
-// fn handle_focused_item_action_interact(
-//     _event: On<Start<Interact>>,
-//     mut commands: Commands,
-//     focus: Res<InputFocus>,
-//     menu_item_q: Query<&MenuItem>,
-// ) {
-//     let Some(entity) = focus.0 else { return };
-
-//     if menu_item_q.contains(entity) {
-//         commands.write_message(MenuActionMessage::Activate(entity));
-//     } else {
-//         warn!("no MenuItem");
-//     }
-// }
-
-// #[cfg(feature = "input_bei")]
-// fn handle_focused_item_action_fire(
-//     _event: On<Start<Firing>>,
-//     mut commands: Commands,
-
-//     focus: Res<InputFocus>,
-//     menu_item_q: Query<&MenuItem>,
-// ) {
-//     let Some(entity) = focus.0 else { return };
-
-//     if menu_item_q.contains(entity) {
-//         commands.write_message(MenuActionMessage::Activate(entity));
-//     } else {
-//         warn!("no MenuItem");
-//     }
-// }
-
-// #[cfg(feature = "input_bei")]
-// fn handle_focused_item_action_reset(
-//     _event: On<Start<Reset>>,
-//     mut commands: Commands,
-
-//     focus: Res<InputFocus>,
-//     menu_item_q: Query<&MenuItem>,
-// ) {
-//     let Some(entity) = focus.0 else { return };
-
-//     // Reset to default?
-//     if menu_item_q.contains(entity) {
-//         commands.write_message(MenuActionMessage::Reset(entity));
-//     } else {
-//         warn!("no MenuItem");
-//     }
-// }
-
-// #[cfg(feature = "input_bei")]
-// fn handle_focused_item_action_left_right_complete(
-//     _event: On<Complete<MoveLeftRight>>,
-//     mut left_right_ctr: ResMut<CountAccumulator<actions::MoveLeftRight>>,
-// ) {
-//     left_right_ctr.reset();
-// }
-
-// #[cfg(feature = "input_bei")]
-// fn handle_focused_item_action_left_right_fire(
-//     event: On<Fire<MoveLeftRight>>,
-
-//     focus: Res<InputFocus>,
-//     toggle_q: Query<&MenuToggle>,
-//     slider_q: Query<&MenuSlider>,
-//     enum_q: Query<&MenuEnum>,
-//     mut left_right_ctr: ResMut<CountAccumulator<actions::MoveLeftRight>>,
-//     mut writer: MessageWriter<MenuActionMessage>,
-// ) {
-//     let Some(entity) = focus.0 else { return };
-
-//     if let Some(dir) = left_right_ctr.add_and_test(event.value) {
-//         if slider_q.contains(entity) {
-//             writer.write(MenuActionMessage::Slide(
-//                 entity,
-//                 dir as f32,
-//             ));
-//         } else if toggle_q.contains(entity) || enum_q.contains(entity) {
-//             if dir < 0 {
-//                 writer.write(MenuActionMessage::Previous(entity));
-//             } else {
-//                 writer.write(MenuActionMessage::Next(entity));
-//             }
-//         }
-//     }
-// }
-
 #[cfg(feature = "input_bei")]
 fn handle_focused_item_actions(
     mut commands: Commands,
@@ -1067,76 +970,6 @@ fn handle_menu_navigation(
         }
     }
 }
-
-// #[cfg(feature = "input_bei")]
-// fn handle_action_down_up_complete(
-//     _event: On<Complete<MoveDownUp>>,
-//     mut ctr: ResMut<CountAccumulator<actions::MoveDownUp>>,
-// ) {
-//     ctr.reset();
-// }
-
-// #[cfg(feature = "input_bei")]
-// fn handle_action_down_up_fire(
-//     event: On<Fire<MoveDownUp>>,
-
-//     mut commands: Commands,
-
-//     nav: TabNavigation,
-
-//     mut focus: ResMut<InputFocus>,
-
-//     mut visible: ResMut<InputFocusVisible>,
-//     mut ctr: ResMut<CountAccumulator<actions::MoveDownUp>>,
-// ) {
-//     let down_up = dbg!(event.value);
-
-//     if let Some(dir) = ctr.add_and_test(down_up) {
-//         // Move in menu?
-//         let nav_dir = match dir {
-//             -1 => Some(NavAction::Previous),
-//             1 => Some(NavAction::Next),
-//             _ => None,
-//         };
-//         if let Some(nav_dir) = nav_dir {
-//             let maybe_next = nav.navigate(&focus, nav_dir);
-
-//             match maybe_next {
-//                 Ok(next) => {
-//                     focus.set(next);
-//                     visible.0 = true;
-//                     commands.write_message(MenuActionMessage::Navigate(next));
-//                 }
-//                 Err(e) => {
-//                     // This failure mode is recoverable, but still indicates a problem.
-//                     // warn!("Tab navigation error: {}", e);
-//                     if let TabNavigationError::NoTabGroupForCurrentFocus { new_focus, .. } = e {
-//                         focus.set(new_focus);
-//                         visible.0 = true;
-//                         commands.write_message(MenuActionMessage::Navigate(new_focus));
-//                     }
-//                 }
-//             }
-//         }
-//     }
-// }
-
-// #[cfg(feature = "input_bei")]
-// fn handle_action_reset(
-//     _event: On<Start<actions::Reset>>,
-//     mut commands: Commands,
-// ) {
-//     commands.insert_resource(GoBackInMenuRequest);
-// }
-
-// #[cfg(feature = "input_bei")]
-// fn handle_action_back(
-//     _event: On<Start<actions::Back>>,
-//     mut commands: Commands,
-// ) {
-//     commands.insert_resource(GoBackInMenuRequest);
-// }
-
 
 #[derive(Resource)]
 struct MousePressedDuration {
