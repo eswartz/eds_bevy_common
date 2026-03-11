@@ -26,7 +26,6 @@ impl Plugin for DebugPlugin {
 
         app
             .init_resource::<DebugEguiCamera>()
-            .init_resource::<DebugUiState>()
 
             .add_systems(
                 PreUpdate,
@@ -39,16 +38,19 @@ impl Plugin for DebugPlugin {
 
             .add_systems(
                 EguiPrimaryContextPass,
-                (
-                    update_egui_inspector_ui
-                    .run_if(
-                        |gui_state: Res<GuiState>, ovl_state: Res<State<OverlayState>>|
-                            gui_state.show_inspector_always ||
-                            (gui_state.show_inspector && ovl_state.is_debug())
-                        )
-                    ,
-                    update_egui_debug_ui
-                        .run_if(|ovl_state: Res<State<OverlayState>>| ovl_state.is_debug())
+                update_egui_inspector_ui
+                .run_if(|gui_state: Res<GuiState>, ovl_state: Res<State<OverlayState>>|
+                    gui_state.enabled && (
+                        gui_state.show_inspector_always ||
+                        (gui_state.show_inspector && !ovl_state.is_menu())
+                    )
+                ),
+            )
+            .add_systems(
+                EguiPrimaryContextPass,
+                update_egui_debug_ui
+                .run_if(|gui_state: Res<GuiState>|
+                    gui_state.enabled
                 ),
             )
         ;

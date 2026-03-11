@@ -67,10 +67,7 @@ impl Plugin for GuiPlugin {
 
         .add_systems(
             Update,
-            update_gui_state.run_if(
-                resource_changed::<GuiState>
-                .or(resource_changed::<State<OverlayState>>)
-            ),
+            update_gui_state.run_if(resource_changed::<GuiState>),
         )
         .add_systems(
             Update,
@@ -207,6 +204,7 @@ pub(crate) struct StatusVisible(pub bool);
 #[reflect(Resource)]
 #[type_path = "game"]
 pub struct GuiState {
+    pub enabled: bool,
     pub show_status: bool,
     pub show_fps: bool,
     pub show_inspector: bool,
@@ -217,10 +215,11 @@ pub struct GuiState {
 impl Default for GuiState {
     fn default() -> Self {
         Self {
+            enabled: false,
             show_status: false,
             show_fps: false,
             show_inspector: true,
-            show_inspector_always: true,
+            show_inspector_always: false,
             show_physics_gizmos: false,
         }
     }
@@ -233,11 +232,10 @@ fn update_gui_state(
     state: Res<GuiState>,
     fps_visible: Option<ResMut<FpsOverlayVisible>>,
     mut status_visible: ResMut<StatusVisible>,
-    overlay: Res<State<OverlayState>>,
     mut gizmos: ResMut<GizmoConfigStore>,
 ) {
     if let Some(mut fps_visible) = fps_visible {
-        fps_visible.0 = state.show_fps || overlay.is_debug();
+        fps_visible.0 = state.show_fps || state.enabled;
     }
     status_visible.0 = state.show_status;
 
@@ -499,9 +497,4 @@ pub fn hide_instructions(
     for mut vis in inst_q.iter_mut() {
         *vis = Visibility::Hidden;
     }
-}
-
-pub fn is_overlay_visible(gui_state: Res<GuiState>, ovl_state: Res<State<OverlayState>>) -> bool {
-    gui_state.show_inspector_always ||
-        (gui_state.show_inspector && ovl_state.get().is_debug())
 }

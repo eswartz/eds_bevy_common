@@ -192,11 +192,12 @@ pub(crate) fn process_global_actions(
 
 pub(crate) fn toggle_pointer_actions(
     overlay: Res<State<OverlayState>>,
+    gui_state: Res<GuiState>,
     mut state: ResMut<ActionState<UserAction>>,
 ) {
     // Just to be safe, turn off all look actions while debug UI is open.
     let Some(look_axis) = state.action_data_mut(&UserAction::Look) else { return };
-    if overlay.is_debug() {
+    if gui_state.show_inspector {
         look_axis.disabled = true;
     } else {
         look_axis.disabled = false;

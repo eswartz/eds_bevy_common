@@ -45,7 +45,7 @@ impl Plugin for PlayerCameraPlugin {
             .add_systems(PostUpdate,
                 update_player_ui
                 .run_if(|gizmo_config: Res<GizmoConfigStore>| {
-                    // Safely access without a panic.
+                    // Safely access without a panic if no debug UI logged.
                     if let Some((phys_gizmos, _)) = gizmo_config.get_config_dyn(&TypeId::of::<PhysicsGizmos>()) {
                         phys_gizmos.enabled
                     } else {
@@ -53,7 +53,7 @@ impl Plugin for PlayerCameraPlugin {
                     }
                 })
                 .run_if(not(is_menu_paused))
-                .run_if(in_state(OverlayState::Hidden).or(in_state(OverlayState::DebugGuiVisible)))
+                .run_if(in_state(OverlayState::Hidden)) //.or(in_state(OverlayState::DebugGuiVisible)))
             )
         ;
     }

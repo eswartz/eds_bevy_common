@@ -29,8 +29,8 @@ pub enum OverlayState {
     GameOverScreen,
     /// Error is up.
     ErrorScreen,
-    /// egui controls are up
-    DebugGuiVisible,
+    // /// egui controls are up
+    // DebugGuiVisible,
 }
 
 impl OverlayState {
@@ -44,9 +44,6 @@ impl OverlayState {
             | Self::ControlsMenu
             | Self::EscapeMenu
         )
-    }
-    pub fn is_debug(&self) -> bool {
-        *self == Self::DebugGuiVisible
     }
 }
 

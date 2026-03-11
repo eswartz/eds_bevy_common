@@ -24,8 +24,6 @@ use bevy::camera::visibility::RenderLayers;
 use bevy::text::LineHeight;
 use bevy::ui::RelativeCursorPosition;
 use bevy::window::PrimaryWindow;
-#[cfg(feature = "input_bei")]
-use bevy_enhanced_input::prelude::Cancel;
 use rustc_hash::FxBuildHasher;
 #[cfg(feature = "input_lim")]
 use leafwing_input_manager::prelude::ActionState;
@@ -44,8 +42,6 @@ use crate::is_in_menu;
 
 #[cfg(feature = "input_lim")]
 use crate::UserAction;
-#[cfg(feature = "input_bei")]
-use crate::actions_common_bei::actions::*;
 
 use super::states_sets::OverlayState;
 use super::states_sets::ProgramState;
@@ -175,7 +171,6 @@ impl<T> CountAccumulator<T> {
         }
     }
 }
-
 
 fn handle_menu_back(mut commands: Commands,
     go_back_in_menu_request: Option<Res<GoBackInMenuRequest>>,
@@ -572,7 +567,7 @@ impl MenuSlider {
     }
 
     pub fn add_and_clamp(&self, delta: f32, ui_orig: f32) -> f32 {
-        let delta = if delta.abs() < self.ui_step_base { self.ui_step_base.copysign(delta) } else { (delta * self.ui_step_base).round() / self.ui_step_base };
+        let delta = if delta.abs() < self.ui_step_base { self.ui_step_base.copysign(delta) } else { (delta / self.ui_step_base).round() * self.ui_step_base };
         (ui_orig + delta).clamp(*self.ui_range.start(), *self.ui_range.end())
     }
 }
@@ -917,7 +912,7 @@ fn handle_focused_item_actions(
 
     interact_or_fire_q: Query<&ActionEvents, (Or<(With<Action<actions::Interact>>, With<Action<actions::Firing>>)>, With<MenuAction>)>,
     reset_q: Query<&ActionEvents, (With<Action<actions::Reset>>, With<MenuAction>)>,
-    left_right_q: Query<&Action<actions::MoveLeftRight>, With<MenuAction>>,
+    left_right_q: Query<(&ActionEvents, &Action<actions::MoveLeftRight>), With<MenuAction>>,
 
     focus: Res<InputFocus>,
     toggle_q: Query<&MenuToggle>,
@@ -949,7 +944,10 @@ fn handle_focused_item_actions(
         }
     }
 
-    let left_right = left_right_q.single().expect("only one MoveLeftRight needed for menu");
+    let (left_right_events, left_right) = left_right_q.single().expect("only one MoveLeftRight needed for menu");
+    if left_right_events.contains(ActionEvents::START) {
+        left_right_ctr.reset();
+    }
     if let Some(dir) = left_right_ctr.add_and_test(**left_right) {
         if slider_q.contains(entity) {
             writer.write(MenuActionMessage::Slide(
@@ -1022,7 +1020,8 @@ fn handle_menu_navigation(
     mut commands: Commands,
     nav: TabNavigation,
 
-    menu_or_back_q: Query<&ActionEvents, (Or<(With<Action<actions::Menu>>, With<Action<actions::Back>>)>, With<MenuAction>)>,
+    // menu_or_back_q: Query<&ActionEvents, (Or<(With<Action<actions::Menu>>, With<Action<actions::Back>>)>, With<MenuAction>)>,
+    menu_or_back_q: Query<&ActionEvents, (With<Action<actions::Back>>, With<MenuAction>)>,
     down_up_q: Query<(&ActionEvents, &Action<actions::MoveDownUp>), With<MenuAction>>,
 
     mut focus: ResMut<InputFocus>,
@@ -1069,58 +1068,58 @@ fn handle_menu_navigation(
     }
 }
 
-#[cfg(feature = "input_bei")]
-fn handle_action_down_up_complete(
-    _event: On<Complete<MoveDownUp>>,
-    mut ctr: ResMut<CountAccumulator<actions::MoveDownUp>>,
-) {
-    ctr.reset();
-}
+// #[cfg(feature = "input_bei")]
+// fn handle_action_down_up_complete(
+//     _event: On<Complete<MoveDownUp>>,
+//     mut ctr: ResMut<CountAccumulator<actions::MoveDownUp>>,
+// ) {
+//     ctr.reset();
+// }
 
-#[cfg(feature = "input_bei")]
-fn handle_action_down_up_fire(
-    event: On<Fire<MoveDownUp>>,
+// #[cfg(feature = "input_bei")]
+// fn handle_action_down_up_fire(
+//     event: On<Fire<MoveDownUp>>,
 
-    mut commands: Commands,
+//     mut commands: Commands,
 
-    nav: TabNavigation,
+//     nav: TabNavigation,
 
-    mut focus: ResMut<InputFocus>,
+//     mut focus: ResMut<InputFocus>,
 
-    mut visible: ResMut<InputFocusVisible>,
-    mut ctr: ResMut<CountAccumulator<actions::MoveDownUp>>,
-) {
-    let down_up = dbg!(event.value);
+//     mut visible: ResMut<InputFocusVisible>,
+//     mut ctr: ResMut<CountAccumulator<actions::MoveDownUp>>,
+// ) {
+//     let down_up = dbg!(event.value);
 
-    if let Some(dir) = ctr.add_and_test(down_up) {
-        // Move in menu?
-        let nav_dir = match dir {
-            -1 => Some(NavAction::Previous),
-            1 => Some(NavAction::Next),
-            _ => None,
-        };
-        if let Some(nav_dir) = nav_dir {
-            let maybe_next = nav.navigate(&focus, nav_dir);
+//     if let Some(dir) = ctr.add_and_test(down_up) {
+//         // Move in menu?
+//         let nav_dir = match dir {
+//             -1 => Some(NavAction::Previous),
+//             1 => Some(NavAction::Next),
+//             _ => None,
+//         };
+//         if let Some(nav_dir) = nav_dir {
+//             let maybe_next = nav.navigate(&focus, nav_dir);
 
-            match maybe_next {
-                Ok(next) => {
-                    focus.set(next);
-                    visible.0 = true;
-                    commands.write_message(MenuActionMessage::Navigate(next));
-                }
-                Err(e) => {
-                    // This failure mode is recoverable, but still indicates a problem.
-                    // warn!("Tab navigation error: {}", e);
-                    if let TabNavigationError::NoTabGroupForCurrentFocus { new_focus, .. } = e {
-                        focus.set(new_focus);
-                        visible.0 = true;
-                        commands.write_message(MenuActionMessage::Navigate(new_focus));
-                    }
-                }
-            }
-        }
-    }
-}
+//             match maybe_next {
+//                 Ok(next) => {
+//                     focus.set(next);
+//                     visible.0 = true;
+//                     commands.write_message(MenuActionMessage::Navigate(next));
+//                 }
+//                 Err(e) => {
+//                     // This failure mode is recoverable, but still indicates a problem.
+//                     // warn!("Tab navigation error: {}", e);
+//                     if let TabNavigationError::NoTabGroupForCurrentFocus { new_focus, .. } = e {
+//                         focus.set(new_focus);
+//                         visible.0 = true;
+//                         commands.write_message(MenuActionMessage::Navigate(new_focus));
+//                     }
+//                 }
+//             }
+//         }
+//     }
+// }
 
 // #[cfg(feature = "input_bei")]
 // fn handle_action_reset(

@@ -4,6 +4,7 @@ use std::time::Duration;
 use avian3d::math::*;
 use avian3d::prelude::*;
 use bevy::prelude::*;
+use bevy::window::WindowFocused;
 
 use crate::*;
 
@@ -15,14 +16,15 @@ impl Plugin for PlayerMovementPlugin {
             .register_type::<PlayerMovement>()
             .register_type::<PlayerLook>()
             .register_type::<PlayerCamera>()
-            .add_systems(
-                OnEnter(OverlayState::DebugGuiVisible),
-                clear_player_velocity
-                    .run_if(not(is_paused))
-            )
+            // .add_systems(
+            //     OnEnter(OverlayState::DebugGuiVisible),
+            //     clear_player_velocity
+            //         .run_if(not(is_paused))
+            // )
             .add_systems(
                 FixedPostUpdate,
                 (
+                    clear_player_velocity.run_if(window_changed_focus),
                     check_player_environment_fps,
                     check_player_environment_space,
                     process_player_input_movement_for_cheats.run_if(is_cheating),
@@ -451,9 +453,10 @@ impl PlayerLook {
 }
 
 /// Stop moving player, e.g. when input is going to UI.
-fn clear_player_velocity(player_q: Single<&mut LinearVelocity, With<PlayerMovement>>) {
-    let mut vel = player_q.into_inner();
-    vel.0 = Vector::ZERO;
+fn clear_player_velocity(mut player_q: Query<&mut LinearVelocity, With<PlayerMovement>>) {
+    for mut vel in player_q.iter_mut() {
+        vel.0 = Vector::ZERO;
+    }
 }
 
 /// Get the local position of the player's feet relative to the given player transform.

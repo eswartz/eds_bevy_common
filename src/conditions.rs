@@ -1,7 +1,8 @@
 use bevy::prelude::*;
+use bevy::window::WindowFocused;
 use crate::*;
 
-pub fn show_dev_tools() -> bool {
+pub fn dev_tools_enabled() -> bool {
     if let Ok(val) = std::env::var("DEBUG") {
         return val == "1" || val == "on";
     }
@@ -49,4 +50,9 @@ pub fn is_level_active(level_state: Res<State<LevelState>>) -> bool {
 /// Tell if the [PlayerStart] component was added.
 pub fn added_player_start(q: Query<&Transform, Added<PlayerStart>>) -> bool {
     q.iter().next().is_some()
+}
+
+/// Tell if the [PlayerStart] component was added.
+pub fn window_changed_focus(reader: MessageReader<WindowFocused>) -> bool {
+    !reader.is_empty()
 }

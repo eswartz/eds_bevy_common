@@ -153,11 +153,11 @@ fn collect_player_movement(
 /// We gather relevant inputs and send events indicating our intent.
 #[cfg(feature = "input_bei")]
 fn collect_player_movement(
-    accel_events: Single<&ActionEvents, With<Action<Accelerate>>>,
-    crouch_events: Single<&ActionEvents, With<Action<Crouch>>>,
-    move_flycam: Single<&Action<MoveFlycam>, With<PlayerContext>>,
-    move_down_up: Single<&Action<MoveDownUp>, With<PlayerContext>>,
-    move_left_right: Single<&Action<MoveLeftRight>, With<PlayerContext>>,
+    accel_events: Query<&ActionEvents, (With<Action<Accelerate>>, With<PlayerAction>)>,
+    crouch_events: Query<&ActionEvents, (With<Action<Crouch>>, With<PlayerAction>)>,
+    move_flycam: Query<&Action<MoveFlycam>, With<PlayerAction>>,
+    move_down_up: Query<&Action<MoveDownUp>, With<PlayerAction>>,
+    move_left_right: Query<&Action<MoveLeftRight>, With<PlayerAction>>,
 
     ctrl_settings: Res<PlayerControllerSettings>,
     input_settings: Res<PlayerInputSettings>,
@@ -170,17 +170,17 @@ fn collect_player_movement(
 ) {
     let mut instant_thrust = Vec3::ZERO;
 
-    let speed = if accel_events.contains(ActionEvents::START | ActionEvents::ONGOING) {
+    let speed = if accel_events.iter().next().unwrap().contains(ActionEvents::START | ActionEvents::ONGOING) {
         Speed::Fast
-    } else if crouch_events.contains(ActionEvents::START | ActionEvents::ONGOING) {
+    } else if crouch_events.iter().next().unwrap().contains(ActionEvents::START | ActionEvents::ONGOING) {
         Speed::Slow
     } else {
         Speed::Normal
     };
 
-    let move_axis = ***move_flycam;
-    let down_up_axis = ***move_down_up;
-    let left_right_axis = ***move_left_right;
+    let move_axis = **move_flycam.iter().next().unwrap();
+    let down_up_axis = **move_down_up.iter().next().unwrap();
+    let left_right_axis = **move_left_right.iter().next().unwrap();
     instant_thrust.x = (left_right_axis + move_axis.x) * ctrl_settings.move_scale.x;
     instant_thrust.y = down_up_axis * ctrl_settings.move_scale.y;
     instant_thrust.z = move_axis.y * ctrl_settings.move_scale.z;
@@ -199,7 +199,7 @@ fn collect_player_movement(
         actual_speed as _,
     );
 
-    if crouch_events.contains(ActionEvents::START) {
+    if crouch_events.iter().next().unwrap().contains(ActionEvents::START) {
         writer.write(PlayerInput::ToggleCrouch(*player));
     }
     writer.write(PlayerInput::Move(
@@ -219,6 +219,7 @@ fn collect_player_look(
     // mouse_scroll: Res<bevy::input::mouse::AccumulatedMouseScroll>,
     player_q: Single<Entity, With<OurPlayer>>,
     overlay_state: Res<State<OverlayState>>,
+    gui_state: Res<GuiState>,
     mut writer: MessageWriter<PlayerInput>,
 ) {
     let Ok(mut window) = primary_window.single_mut() else {
@@ -241,7 +242,7 @@ fn collect_player_look(
     instant_head_turn.x = (if settings.invert_turn_y { 1.0 } else { -1.0 })
         * (settings.turn_scale.y * look_axis.y).to_radians();
 
-    if settings.center_mouse && !(overlay_state.is_debug() || overlay_state.is_menu()) {
+    if settings.center_mouse && !(gui_state.show_inspector || overlay_state.is_menu()) {
         let center = Vec2::new(window.width() / 2.0, window.height() / 2.0);
         window.set_cursor_position(Some(center));
     }
@@ -279,12 +280,14 @@ fn collect_player_look(
 #[cfg(feature = "input_bei")]
 fn collect_player_look(
     mut primary_window: Query<&mut Window, With<PrimaryWindow>>,
-    look: Single<&Action<Look>, With<PlayerContext>>,
-    turn_around_events: Single<&ActionEvents, (With<Action<TurnAround>>, With<PlayerContext>)>,
-    reset_events: Single<&ActionEvents, (With<Action<Reset>>, With<PlayerContext>)>,
+
+    look: Query<&Action<Look>, With<PlayerAction>>,
+    turn_around_events: Query<&ActionEvents, (With<Action<TurnAround>>, With<PlayerAction>)>,
+    reset_events: Query<&ActionEvents, (With<Action<Reset>>, With<PlayerAction>)>,
 
     settings: Res<PlayerControllerSettings>,
     player_q: Single<Entity, With<OurPlayer>>,
+    gui_state: Res<GuiState>,
     overlay_state: Res<State<OverlayState>>,
     mut writer: MessageWriter<PlayerInput>,
 ) {
@@ -295,7 +298,7 @@ fn collect_player_look(
         return;
     }
 
-    let look_axis = dbg!(***look);
+    let look_axis = **look.iter().next().unwrap();
 
     let mut instant_body_turn = Vec3::ZERO;
     let mut instant_head_turn = Vec3::ZERO;
@@ -308,7 +311,7 @@ fn collect_player_look(
     instant_head_turn.x = (if settings.invert_turn_y { 1.0 } else { -1.0 })
         * (settings.turn_scale.y * look_axis.y).to_radians();
 
-    if settings.center_mouse && !(overlay_state.is_debug() || overlay_state.is_menu()) {
+    if settings.center_mouse && !(gui_state.show_inspector || overlay_state.is_menu()) {
         let center = Vec2::new(window.width() / 2.0, window.height() / 2.0);
         window.set_cursor_position(Some(center));
     }
@@ -322,10 +325,10 @@ fn collect_player_look(
     // instant_head_turn.z = tilt * settings.turn_scale.z;
 
     // Don't repeat, else it's just a 360 on the slightest lingering touch.
-    if turn_around_events.contains(ActionEvents::START) {
+    if turn_around_events.iter().next().unwrap().contains(ActionEvents::START) {
         writer.write(PlayerInput::TurnAround(*player_q));
         return;
-    } else if reset_events.contains(ActionEvents::START) {
+    } else if reset_events.iter().next().unwrap().contains(ActionEvents::START) {
         writer.write(PlayerInput::Straighten(*player_q));
         return;
     }
@@ -376,41 +379,32 @@ fn collect_player_input(
 fn collect_player_input(
     mut commands: Commands,
 
-    // player_active: Single<Entity, With<ContextActivity::<PlayerContext>>>,
-    // menu_active: Single<Entity, With<ContextActivity::<MenuContext>>>,
-    fire_events: Single<&ActionEvents, (With<Action<Firing>>, With<PlayerContext>)>,
+    fire_events: Query<&ActionEvents, (With<Action<Firing>>, With<PlayerAction>)>,
 
     player_q: Single<Entity, With<OurPlayer>>,
 
     mut focused: MessageReader<WindowFocused>,
     mut ignore_mouse: Local<bool>,
 ) {
+    // Avoid hitch when mouse moves after gaining/losing focus.
     if !focused.is_empty() {
         let focused = focused.read().any(|e| e.focused);
         *ignore_mouse = true;
         info!("focus change: {focused}");
-        // action_state.reset_all();
-        // if focused {
-        //     commands.entity(*player_active).insert(ContextActivity::<PlayerContext>::ACTIVE);
-        //     commands.entity(*menu_active).insert(ContextActivity::<MenuContext>::ACTIVE);
-        // } else {
-        //     commands.entity(*player_active).insert(ContextActivity::<PlayerContext>::INACTIVE);
-        //     commands.entity(*menu_active).insert(ContextActivity::<MenuContext>::INACTIVE);
-        // }
         return;
     }
 
     if *ignore_mouse {
-        debug!("ignoring mouse next frame");
+        debug!("ignoring mouse this frame");
         *ignore_mouse = false;
         return;
     }
 
-    if fire_events.contains(ActionEvents::START) {
+    if fire_events.iter().next().unwrap().contains(ActionEvents::START) {
         debug!("press Fire");
         commands.write_message(PlayerInput::StartFire(*player_q));
     }
-    if fire_events.contains(ActionEvents::COMPLETE) {
+    if fire_events.iter().next().unwrap().contains(ActionEvents::COMPLETE) {
         debug!("release Fire");
         commands.write_message(PlayerInput::StopFire(*player_q));
     }

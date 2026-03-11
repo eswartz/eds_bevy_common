@@ -15,10 +15,10 @@ pub struct ActionPlugin;
 impl Plugin for ActionPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(EnhancedInputPlugin)
-            // .add_input_context::<PlayerContext>()
+            .add_input_context::<PlayerContext>()
             .add_input_context::<MenuContext>()
             .add_systems(Update, handle_escape)
-            // .add_systems(Update, toggle_context.run_if(resource_changed::<State<OverlayState>>))
+            .add_systems(Update, toggle_context.run_if(resource_changed::<State<OverlayState>>))
             .add_observer(handle_pause)
             .add_observer(handle_debug_ui)
             .add_observer(handle_full_screen)
@@ -27,12 +27,24 @@ impl Plugin for ActionPlugin {
 }
 
 /// Context for gameplay.
+/// Note, this is a parent. Use PlayerAction to detect.
 #[derive(Component, Reflect)]
 pub struct PlayerContext;
 
 /// Context for menu.
+/// Note, this is a parent. Use MenuAction to detect.
 #[derive(Component, Reflect)]
 pub struct MenuContext;
+
+/// Marker for Actions on a Player.
+#[derive(Component, Reflect, Clone)]
+#[reflect(Component)]
+pub struct PlayerAction;
+
+/// Marker for Actions on a menu.
+#[derive(Component, Reflect, Clone)]
+#[reflect(Component)]
+pub struct MenuAction;
 
 pub mod actions {
     use super::*;
@@ -149,30 +161,11 @@ pub(crate) fn handle_pause(_event: On<Start<actions::Pause>>, mut pause_state: R
     pause_state.set_user_paused(paused);
 }
 
-#[derive(Resource, Default, Clone, Debug, Reflect)]
-#[reflect(Resource, Default)]
-pub struct DebugUiState {
-
-    show_debug_ui: bool,
-}
-
-impl DebugUiState {
-    pub fn toggle_debug_ui(&mut self) -> bool {
-        self.show_debug_ui ^= true;
-        self.show_debug_ui
-    }
-}
-
 pub(crate) fn handle_debug_ui(
     _event: On<Start<actions::DebugUi>>,
-    mut state: ResMut<DebugUiState>,
+    mut gui_state: ResMut<GuiState>,
 ) {
-    if !show_dev_tools() {
-        // Just reset (again), hiding all the views.
-        *state = default();
-    } else {
-        state.toggle_debug_ui();
-    }
+    gui_state.enabled = dev_tools_enabled() && !gui_state.enabled;
 }
 
 pub(crate) fn handle_full_screen(
@@ -231,25 +224,6 @@ pub fn assign_stock_common_actions(
     include: impl Bundle + Clone,
 ) {
     commands.spawn((
-        // Note: this usage as an action is only processed in gameplay
-        // (which, being pauseable, means there'd be no way to escape),
-        // but KeyCode::Escape is elsewhere handled manually in an unpauseable way.
-        include.clone(),
-        Action::<actions::Menu>::new(),
-        bindings![
-            KeyCode::Escape,
-            GAMEPAD_BUTTON_MENU,
-        ],
-    ));
-    commands.spawn((
-        include.clone(),
-        Action::<actions::Back>::new(),
-        bindings![
-            KeyCode::Escape,
-            GamepadButton::East,
-        ],
-    ));
-    commands.spawn((
         include.clone(),
         Action::<actions::Pause>::new(),
         bindings![
@@ -291,21 +265,37 @@ pub fn assign_stock_common_actions(
             GamepadButton::South,
         ],
     ));
+    commands.spawn((
+        include.clone(),
+        Action::<actions::Reset>::new(),
+        bindings![
+            KeyCode::Backspace,
+            GamepadButton::LeftTrigger,
+        ],
+    ));
+
 }
 
-
-/// Mark BEI Actions.
-#[derive(Component, Reflect, Clone)]
-#[reflect(Component)]
-pub struct MenuAction;
-
+/// include: should be at least e.g. `(ActionOf::<YourContext>::new(context_entity), {Menu,Player}Action)`
 pub fn assign_stock_menu_actions(
     mut commands: Commands,
-    context_entity: Entity,
+    include: impl Bundle + Clone,
 ) {
     commands.spawn((
-        ActionOf::<MenuContext>::new(context_entity),
-        MenuAction,
+        include.clone(),
+        Action::<actions::Back>::new(),
+        ActionSettings {
+            require_reset: true,
+            ..default()
+        },
+        bindings![
+            KeyCode::Escape,
+            GamepadButton::East,
+        ],
+    ));
+
+    commands.spawn((
+        include.clone(),
 
         Action::<actions::MoveDownUp>::new(),
         DeadZone::default(),
@@ -318,8 +308,7 @@ pub fn assign_stock_menu_actions(
         )),
     ));
     commands.spawn((
-        ActionOf::<MenuContext>::new(context_entity),
-        MenuAction,
+        include.clone(),
 
         Action::<actions::MoveLeftRight>::new(),
         DeadZone::default(),
@@ -331,77 +320,76 @@ pub fn assign_stock_menu_actions(
             Bidirectional::new(GamepadButton::DPadLeft, GamepadButton::DPadRight),
         )),
     ));
+    // commands.spawn((
+    //     // Note: this usage as an action is only processed in gameplay
+    //     // (which, being pauseable, means there'd be no way to escape),
+    //     // but KeyCode::Escape is elsewhere handled manually in an unpauseable way.
+    //     include.clone(),
+
+    //     Action::<actions::Menu>::new(),
+    //     bindings![
+    //         KeyCode::Escape,
+    //         GAMEPAD_BUTTON_MENU,
+    //     ],
+    // ));
+    // commands.spawn((
+    //     include.clone(),
+
+    //     Action::<actions::Back>::new(),
+    //     bindings![
+    //         KeyCode::Escape,
+    //         GamepadButton::East,
+    //     ],
+    // ));
+}
+
+/// include: should be at least e.g. `(ActionOf::<YourContext>::new(context_entity), {Menu,Player}Action)`
+pub fn assign_stock_player_actions(
+    mut commands: Commands,
+    include: impl Bundle + Clone,
+) {
     commands.spawn((
         // Note: this usage as an action is only processed in gameplay
         // (which, being pauseable, means there'd be no way to escape),
         // but KeyCode::Escape is elsewhere handled manually in an unpauseable way.
-        ActionOf::<MenuContext>::new(context_entity),
-        MenuAction,
+        include.clone(),
         Action::<actions::Menu>::new(),
+        ActionSettings {
+            require_reset: true,
+            ..default()
+        },
         bindings![
             KeyCode::Escape,
             GAMEPAD_BUTTON_MENU,
-        ],
-    ));
-    commands.spawn((
-        ActionOf::<MenuContext>::new(context_entity),
-        MenuAction,
-        Action::<actions::Back>::new(),
-        bindings![
-            KeyCode::Escape,
-            GamepadButton::East,
-        ],
-    ));
-    commands.spawn((
-        ActionOf::<MenuContext>::new(context_entity),
-        MenuAction,
-        Action::<actions::Reset>::new(),
-        bindings![
-            KeyCode::Backspace,
-            GamepadButton::LeftTrigger,
-        ],
-    ));
-    commands.spawn((
-        ActionOf::<MenuContext>::new(context_entity),
-        MenuAction,
-        Action::<actions::Interact>::new(),
-        bindings![
-            KeyCode::KeyE,
-            KeyCode::Enter,
-            GamepadButton::South,
-        ],
-    ));
-}
+            ],
+        ));
 
-pub fn assign_stock_fps_actions(
-    mut commands: Commands,
-    context_entity: Entity,
-) {
     commands.spawn((
-        ActionOf::<PlayerContext>::new(context_entity),
+        include.clone(),
         Action::<actions::MoveFlycam>::new(),
         // DeadZone::default(),
         // SmoothNudge::default(),
         // DeltaScale::default(),
+        Negate::y(),
         Bindings::spawn((
             Cardinal::wasd_keys(),
-            // Cardinal::dpad(),
-            // Axial::left_stick(),
+            Cardinal::dpad(),
+            Axial::left_stick(),
         )),
     ));
     commands.spawn((
-        ActionOf::<PlayerContext>::new(context_entity),
+        include.clone(),
         Action::<actions::MoveDownUp>::new(),
         // DeadZone::default(),
         // SmoothNudge::default(),
         // DeltaScale::default(),
         Bindings::spawn((
-            Bidirectional::new(KeyCode::KeyC, KeyCode::Space),
-            Bidirectional::new(GamepadButton::DPadDown, GamepadButton::DPadUp),
+            Bidirectional::new(KeyCode::Space, KeyCode::KeyC),
+            Bidirectional::new(GamepadButton::DPadUp, GamepadButton::DPadDown),
         )),
     ));
     commands.spawn((
-        ActionOf::<PlayerContext>::new(context_entity),
+        include.clone(),
         Action::<actions::MoveLeftRight>::new(),
         // DeadZone::default(),
         // SmoothNudge::default(),
@@ -411,15 +399,48 @@ pub fn assign_stock_fps_actions(
         )),
     ));
     commands.spawn((
-        ActionOf::<PlayerContext>::new(context_entity),
+        include.clone(),
         Action::<actions::Look>::new(),
+        Negate::y(),
         // DeadZone::default(),
         // SmoothNudge::default(),
         // DeltaScale::default(),
-        Scale::new(Vec3::splat(1.0)),
+        // Scale::new(Vec3::splat(1.0)),
         Bindings::spawn((
             Spawn((Binding::mouse_motion(), Negate::y())),
-            // Axial::right_stick(),
+            Axial::right_stick(),
         )),
     ));
+    commands.spawn((
+        include.clone(),
+        Action::<actions::Accelerate>::new(),
+        bindings![KeyCode::ShiftLeft, KeyCode::ShiftRight],
+    ));
+    commands.spawn((
+        include.clone(),
+        Action::<actions::Crouch>::new(),
+        bindings![
+            KeyCode::KeyC,
+            KeyCode::ControlRight,
+            GamepadButton::LeftThumb,
+        ],
+    ));
+    commands.spawn((
+        include.clone(),
+        Action::<actions::TurnAround>::new(),
+        bindings![
+            KeyCode::Backspace,
+            GamepadButton::LeftTrigger,
+        ],
+    ));
+    commands.spawn((
+        include.clone(),
+        Action::<actions::Firing>::new(),
+        bindings![
+            MouseButton::Left,
+            KeyCode::Enter,
+            GamepadButton::RightTrigger,
+        ],
+    ));
+
 }

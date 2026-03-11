@@ -61,7 +61,6 @@ pub(crate) fn handle_escape(
             OverlayState::GameOverScreen => {
                 commands.set_state(OverlayState::MainMenu);
             }
-            OverlayState::DebugGuiVisible => commands.set_state(OverlayState::Hidden),
             _ => (),
         }
     }
