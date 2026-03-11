@@ -24,7 +24,7 @@ bevy = { version = "0.18.0", default-features = false, features = [
     "bevy_dev_tools",
     # "file_watcher",   # crashes in glTF
     # "async-io", # no-go for web
-    # "bevy_remote", # not in a lib
+    # "bevy_remote", # not gonna add it from a lib, but go for it (most is Reflect'able)
     "jpeg",
     "webp",
     "exr",
@@ -77,9 +77,11 @@ bevy_seedling = { version = "0.7.0", default-features = false, features = [
 ] }
 rustc-hash = "2.1.1"
 
-leafwing-input-manager = { version = "0.20" }
 strum = { version = "0.27.2", features = ["derive", "strum_macros"] }
 strum_macros = "0.27.2"
+
+leafwing-input-manager = { version = "0.20", optional = true }
+bevy_enhanced_input = { version = "0.24", features = ["reflect", "state", "serialize"], optional = true }
 
 bevy_asset_loader = { version = "0.25.0", features = [
     "2d",
@@ -134,8 +136,12 @@ lto = "thin"
 # opt-level = 1
 
 [features]
-default = ["bevy_skein"]
+default = ["bevy_skein", "input_bei"]
 trenchbroom = ["bevy_trenchbroom"]
+input_lim = ["dep:leafwing-input-manager"]
+input_bei = ["dep:bevy_enhanced_input"]
+# input_lim = []
+# input_bei = []
 
 [[example]]
 name = "game_menu"

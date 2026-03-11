@@ -5,10 +5,20 @@ use std::any::TypeId;
 use avian3d::math::Quaternion;
 use avian3d::prelude::*;
 use bevy::prelude::*;
+
+#[cfg(feature = "input_lim")]
 use leafwing_input_manager::prelude::ActionState;
+#[cfg(feature = "input_bei")]
+use bevy_enhanced_input::prelude::*;
+
+#[cfg(feature = "input_lim")]
+use crate::UserAction;
+#[cfg(feature = "input_bei")]
+use crate::actions_common_bei::actions::*;
 
 use crate::player_client::OurPlayer;
 use crate::*;
+
 
 pub struct PlayerCameraPlugin;
 
@@ -278,11 +288,22 @@ pub fn sync_view_camera_to_player(
     view_camera_q.rotation = target_rot;
 }
 
+#[cfg(feature = "input_lim")]
 pub fn handle_player_camera_actions(
     action_state: Res<ActionState<UserAction>>,
     mut camera_q: Single<&mut PlayerCamera, (With<WorldCamera>, With<OurCamera>)>,
 ) {
     if action_state.just_pressed(&UserAction::ChangeCamera) {
+        camera_q.0 = camera_q.0.next();
+    }
+}
+
+#[cfg(feature = "input_bei")]
+pub fn handle_player_camera_actions(
+    change_camera: Single<&ActionEvents, With<Action<ChangeCamera>>>,
+    mut camera_q: Single<&mut PlayerCamera, (With<WorldCamera>, With<OurCamera>)>,
+) {
+    if change_camera.contains(ActionEvents::START) {
         camera_q.0 = camera_q.0.next();
     }
 }

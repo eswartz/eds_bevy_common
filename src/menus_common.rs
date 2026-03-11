@@ -2,6 +2,7 @@
 //!
 use std::collections::HashMap;
 use std::hash::BuildHasher as _;
+use std::marker::PhantomData;
 use std::ops::RangeInclusive;
 use std::sync::Arc;
 use std::sync::Mutex;
@@ -23,12 +24,28 @@ use bevy::camera::visibility::RenderLayers;
 use bevy::text::LineHeight;
 use bevy::ui::RelativeCursorPosition;
 use bevy::window::PrimaryWindow;
-use leafwing_input_manager::prelude::ActionState;
+#[cfg(feature = "input_bei")]
+use bevy_enhanced_input::prelude::Cancel;
 use rustc_hash::FxBuildHasher;
+#[cfg(feature = "input_lim")]
+use leafwing_input_manager::prelude::ActionState;
+#[cfg(feature = "input_bei")]
+use bevy_enhanced_input::prelude::*;
+use bevy::picking::events::Press;
 
+#[cfg(feature = "input_bei")]
+use crate::MenuAction;
+// #[cfg(feature = "input_bei")]
+// use crate::MenuContext;
 use crate::RENDER_LAYER_UI;
-use crate::UserAction;
+#[cfg(feature = "input_bei")]
+use crate::actions;
 use crate::is_in_menu;
+
+#[cfg(feature = "input_lim")]
+use crate::UserAction;
+#[cfg(feature = "input_bei")]
+use crate::actions_common_bei::actions::*;
 
 use super::states_sets::OverlayState;
 use super::states_sets::ProgramState;
@@ -51,6 +68,8 @@ impl Plugin for MenuCommonPlugin {
             .insert_resource(DraggingMenuItem(None))
             .insert_resource(MenuItemSelectionHistory::default())
             .insert_resource(PreviousMenuStack::default())
+            .insert_resource(CountAccumulator::<actions::MoveDownUp>::default())
+            .insert_resource(CountAccumulator::<actions::MoveLeftRight>::default())
             .add_message::<MenuActionMessage>()
             .add_systems(
                 PreUpdate,
@@ -76,21 +95,87 @@ impl Plugin for MenuCommonPlugin {
             .add_systems(
                 Update,
                 (
-                    handle_focused_item_actions,
-                    handle_menu_navigation,
-                )
-                .run_if(is_in_menu)
-            )
-            .add_systems(
-                Update,
-                (
                     handle_menu_back,
                     handle_menu_into,
                 )
             )
         ;
+
+        #[cfg(feature = "input_lim")]
+        app.add_systems(
+            Update,
+            (
+                handle_focused_item_actions,
+                handle_menu_navigation,
+            )
+            .run_if(is_in_menu)
+        );
+        #[cfg(feature = "input_bei")]
+        {
+            // app.add_observer(handle_focused_item_action_fire);
+            // app.add_observer(handle_focused_item_action_interact);
+            // app.add_observer(handle_focused_item_action_left_right_complete);
+            // app.add_observer(handle_focused_item_action_left_right_fire);
+            // app.add_observer(handle_focused_item_action_reset);
+            // app.add_observer(handle_action_down_up_complete);
+            // app.add_observer(handle_action_down_up_fire);
+            // app.add_observer(handle_action_reset);
+            // app.add_observer(handle_action_back);
+            app.add_systems(
+                Update,
+                (
+                    handle_focused_item_actions,
+                    handle_menu_navigation,
+                )
+                .run_if(is_in_menu)
+            );
+        }
+
     }
 }
+
+#[derive(Resource)]
+struct CountAccumulator<T> {
+    dir: f32,
+    count: f32,
+    _marker: PhantomData<T>,
+}
+
+impl<T> Default for CountAccumulator<T> {
+    fn default() -> Self {
+        Self { dir: 0., count: 0., _marker: default() }
+    }
+}
+
+impl<T> CountAccumulator<T> {
+    pub fn reset(&mut self) {
+        self.count = 0.;
+    }
+
+    pub fn add_and_test(&mut self, delta: f32) -> Option<i32> {
+        let was_zero = self.count == 0.;
+
+        let intent = signum_or_zero(delta);
+        if intent != signum_or_zero(self.dir) {
+            self.count = 0.;
+        }
+        self.dir = delta;
+
+        self.count += delta.abs();
+
+        let overflowed = self.count >= 1.;
+        if overflowed {
+            self.count = self.count.fract();
+        }
+
+        if (was_zero && self.count != 0.) || overflowed {
+            Some(intent)
+        } else {
+            None
+        }
+    }
+}
+
 
 fn handle_menu_back(mut commands: Commands,
     go_back_in_menu_request: Option<Res<GoBackInMenuRequest>>,
@@ -690,6 +775,7 @@ fn on_added_menu_item(
     }
 }
 
+#[cfg(feature = "input_lim")]
 fn handle_focused_item_actions(
     mut commands: Commands,
     action_state: Res<ActionState<UserAction>>,
@@ -737,43 +823,156 @@ fn handle_focused_item_actions(
     }
 }
 
+// #[cfg(feature = "input_bei")]
+// fn handle_focused_item_action_interact(
+//     _event: On<Start<Interact>>,
+//     mut commands: Commands,
+//     focus: Res<InputFocus>,
+//     menu_item_q: Query<&MenuItem>,
+// ) {
+//     let Some(entity) = focus.0 else { return };
+
+//     if menu_item_q.contains(entity) {
+//         commands.write_message(MenuActionMessage::Activate(entity));
+//     } else {
+//         warn!("no MenuItem");
+//     }
+// }
+
+// #[cfg(feature = "input_bei")]
+// fn handle_focused_item_action_fire(
+//     _event: On<Start<Firing>>,
+//     mut commands: Commands,
+
+//     focus: Res<InputFocus>,
+//     menu_item_q: Query<&MenuItem>,
+// ) {
+//     let Some(entity) = focus.0 else { return };
+
+//     if menu_item_q.contains(entity) {
+//         commands.write_message(MenuActionMessage::Activate(entity));
+//     } else {
+//         warn!("no MenuItem");
+//     }
+// }
+
+// #[cfg(feature = "input_bei")]
+// fn handle_focused_item_action_reset(
+//     _event: On<Start<Reset>>,
+//     mut commands: Commands,
+
+//     focus: Res<InputFocus>,
+//     menu_item_q: Query<&MenuItem>,
+// ) {
+//     let Some(entity) = focus.0 else { return };
+
+//     // Reset to default?
+//     if menu_item_q.contains(entity) {
+//         commands.write_message(MenuActionMessage::Reset(entity));
+//     } else {
+//         warn!("no MenuItem");
+//     }
+// }
+
+// #[cfg(feature = "input_bei")]
+// fn handle_focused_item_action_left_right_complete(
+//     _event: On<Complete<MoveLeftRight>>,
+//     mut left_right_ctr: ResMut<CountAccumulator<actions::MoveLeftRight>>,
+// ) {
+//     left_right_ctr.reset();
+// }
+
+// #[cfg(feature = "input_bei")]
+// fn handle_focused_item_action_left_right_fire(
+//     event: On<Fire<MoveLeftRight>>,
+
+//     focus: Res<InputFocus>,
+//     toggle_q: Query<&MenuToggle>,
+//     slider_q: Query<&MenuSlider>,
+//     enum_q: Query<&MenuEnum>,
+//     mut left_right_ctr: ResMut<CountAccumulator<actions::MoveLeftRight>>,
+//     mut writer: MessageWriter<MenuActionMessage>,
+// ) {
+//     let Some(entity) = focus.0 else { return };
+
+//     if let Some(dir) = left_right_ctr.add_and_test(event.value) {
+//         if slider_q.contains(entity) {
+//             writer.write(MenuActionMessage::Slide(
+//                 entity,
+//                 dir as f32,
+//             ));
+//         } else if toggle_q.contains(entity) || enum_q.contains(entity) {
+//             if dir < 0 {
+//                 writer.write(MenuActionMessage::Previous(entity));
+//             } else {
+//                 writer.write(MenuActionMessage::Next(entity));
+//             }
+//         }
+//     }
+// }
+
+#[cfg(feature = "input_bei")]
+fn handle_focused_item_actions(
+    mut commands: Commands,
+
+    interact_or_fire_q: Query<&ActionEvents, (Or<(With<Action<actions::Interact>>, With<Action<actions::Firing>>)>, With<MenuAction>)>,
+    reset_q: Query<&ActionEvents, (With<Action<actions::Reset>>, With<MenuAction>)>,
+    left_right_q: Query<&Action<actions::MoveLeftRight>, With<MenuAction>>,
+
+    focus: Res<InputFocus>,
+    toggle_q: Query<&MenuToggle>,
+    slider_q: Query<&MenuSlider>,
+    enum_q: Query<&MenuEnum>,
+    menu_item_q: Query<&MenuItem>,
+    mut left_right_ctr: ResMut<CountAccumulator<actions::MoveLeftRight>>,
+    mut writer: MessageWriter<MenuActionMessage>,
+) {
+    let Some(entity) = focus.0 else { return };
+
+    let interact_or_fire = interact_or_fire_q.iter().any(|e| e.contains(ActionEvents::START));
+    if interact_or_fire {
+        // Activate menu item?
+        if menu_item_q.contains(entity) {
+            commands.write_message(MenuActionMessage::Activate(entity));
+        } else {
+            warn!("no MenuItem");
+        }
+    }
+
+    // Reset to default?
+    let reset = reset_q.iter().any(|e| e.contains(ActionEvents::START));
+    if reset {
+        if menu_item_q.contains(entity) {
+            commands.write_message(MenuActionMessage::Reset(entity));
+        } else {
+            warn!("no MenuItem");
+        }
+    }
+
+    let left_right = left_right_q.single().expect("only one MoveLeftRight needed for menu");
+    if let Some(dir) = left_right_ctr.add_and_test(**left_right) {
+        if slider_q.contains(entity) {
+            writer.write(MenuActionMessage::Slide(
+                entity,
+                dir as f32,
+            ));
+        } else if toggle_q.contains(entity) || enum_q.contains(entity) {
+            if dir < 0 {
+                writer.write(MenuActionMessage::Previous(entity));
+            } else {
+                writer.write(MenuActionMessage::Next(entity));
+            }
+        }
+    }
+}
+
 fn signum_or_zero(f: f32) -> i32 {
     if f < 0. { -1 }
     else if f > 0. { 1 }
     else { 0 }
 }
 
-#[derive(Default)]
-struct CountAccumulator {
-    dir: f32,
-    count: f32,
-}
-
-impl CountAccumulator {
-    fn add_and_test(&mut self, delta: f32) -> Option<i32> {
-        let was_zero = self.count == 0.;
-
-        let intent = signum_or_zero(delta);
-        if intent != signum_or_zero(self.dir) {
-            self.count = 0.;
-        }
-        self.dir = delta;
-
-        self.count += delta.abs();
-
-        let overflowed = self.count >= 1.;
-        if overflowed {
-            self.count = self.count.fract();
-        }
-
-        if (was_zero && self.count != 0.) || overflowed {
-            Some(intent)
-        } else {
-            None
-        }
-    }
-}
-
+#[cfg(feature = "input_lim")]
 fn handle_menu_navigation(
     mut commands: Commands,
     nav: TabNavigation,
@@ -817,6 +1016,128 @@ fn handle_menu_navigation(
         }
     }
 }
+
+#[cfg(feature = "input_bei")]
+fn handle_menu_navigation(
+    mut commands: Commands,
+    nav: TabNavigation,
+
+    menu_or_back_q: Query<&ActionEvents, (Or<(With<Action<actions::Menu>>, With<Action<actions::Back>>)>, With<MenuAction>)>,
+    down_up_q: Query<(&ActionEvents, &Action<actions::MoveDownUp>), With<MenuAction>>,
+
+    mut focus: ResMut<InputFocus>,
+    mut visible: ResMut<InputFocusVisible>,
+
+    mut down_up_ctr: ResMut<CountAccumulator<actions::MoveDownUp>>,
+) {
+    let menu_or_back = menu_or_back_q.iter().any(|e| e.contains(ActionEvents::START));
+    if menu_or_back {
+        commands.insert_resource(GoBackInMenuRequest);
+    }
+
+    let (down_up_events, down_up) = down_up_q.single().expect("only one MoveDownUp needed for menu");
+    if down_up_events.contains(ActionEvents::START) {
+        down_up_ctr.reset();
+    }
+    if let Some(dir) = down_up_ctr.add_and_test(**down_up) {
+        // Move in menu?
+        let nav_dir = match dir {
+            -1 => Some(NavAction::Previous),
+            1 => Some(NavAction::Next),
+            _ => None,
+        };
+        if let Some(nav_dir) = nav_dir {
+            let maybe_next = nav.navigate(&focus, nav_dir);
+
+            match maybe_next {
+                Ok(next) => {
+                    focus.set(next);
+                    visible.0 = true;
+                    commands.write_message(MenuActionMessage::Navigate(next));
+                }
+                Err(e) => {
+                    // This failure mode is recoverable, but still indicates a problem.
+                    // warn!("Tab navigation error: {}", e);
+                    if let TabNavigationError::NoTabGroupForCurrentFocus { new_focus, .. } = e {
+                        focus.set(new_focus);
+                        visible.0 = true;
+                        commands.write_message(MenuActionMessage::Navigate(new_focus));
+                    }
+                }
+            }
+        }
+    }
+}
+
+#[cfg(feature = "input_bei")]
+fn handle_action_down_up_complete(
+    _event: On<Complete<MoveDownUp>>,
+    mut ctr: ResMut<CountAccumulator<actions::MoveDownUp>>,
+) {
+    ctr.reset();
+}
+
+#[cfg(feature = "input_bei")]
+fn handle_action_down_up_fire(
+    event: On<Fire<MoveDownUp>>,
+
+    mut commands: Commands,
+
+    nav: TabNavigation,
+
+    mut focus: ResMut<InputFocus>,
+
+    mut visible: ResMut<InputFocusVisible>,
+    mut ctr: ResMut<CountAccumulator<actions::MoveDownUp>>,
+) {
+    let down_up = dbg!(event.value);
+
+    if let Some(dir) = ctr.add_and_test(down_up) {
+        // Move in menu?
+        let nav_dir = match dir {
+            -1 => Some(NavAction::Previous),
+            1 => Some(NavAction::Next),
+            _ => None,
+        };
+        if let Some(nav_dir) = nav_dir {
+            let maybe_next = nav.navigate(&focus, nav_dir);
+
+            match maybe_next {
+                Ok(next) => {
+                    focus.set(next);
+                    visible.0 = true;
+                    commands.write_message(MenuActionMessage::Navigate(next));
+                }
+                Err(e) => {
+                    // This failure mode is recoverable, but still indicates a problem.
+                    // warn!("Tab navigation error: {}", e);
+                    if let TabNavigationError::NoTabGroupForCurrentFocus { new_focus, .. } = e {
+                        focus.set(new_focus);
+                        visible.0 = true;
+                        commands.write_message(MenuActionMessage::Navigate(new_focus));
+                    }
+                }
+            }
+        }
+    }
+}
+
+// #[cfg(feature = "input_bei")]
+// fn handle_action_reset(
+//     _event: On<Start<actions::Reset>>,
+//     mut commands: Commands,
+// ) {
+//     commands.insert_resource(GoBackInMenuRequest);
+// }
+
+// #[cfg(feature = "input_bei")]
+// fn handle_action_back(
+//     _event: On<Start<actions::Back>>,
+//     mut commands: Commands,
+// ) {
+//     commands.insert_resource(GoBackInMenuRequest);
+// }
+
 
 #[derive(Resource)]
 struct MousePressedDuration {

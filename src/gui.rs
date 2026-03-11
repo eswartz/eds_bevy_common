@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 
+use avian3d::prelude::PhysicsGizmos;
 use bevy::asset::AssetPath;
 use bevy::camera::visibility::RenderLayers;
 use bevy::color::palettes::tailwind;
@@ -42,7 +43,7 @@ impl Plugin for GuiPlugin {
         )
         .add_systems(OnEnter(ProgramState::InGame),
             (
-                check_gui_state,    // initialize
+                update_gui_state,    // initialize
                 ensure_font_assets,
                 grab_cursor_for_game,
                 setup_gui_nodes,
@@ -66,7 +67,7 @@ impl Plugin for GuiPlugin {
 
         .add_systems(
             Update,
-            check_gui_state.run_if(
+            update_gui_state.run_if(
                 resource_changed::<GuiState>
                 .or(resource_changed::<State<OverlayState>>)
             ),
@@ -199,8 +200,9 @@ pub struct GrabCursor(pub bool);
 
 /// Tells whether we're in a mode where the status area is displayed.
 #[derive(Resource, Clone, PartialEq)]
-pub struct StatusVisible(pub bool);
+pub(crate) struct StatusVisible(pub bool);
 
+/// Flags
 #[derive(Resource, Clone, PartialEq, Reflect)]
 #[reflect(Resource)]
 #[type_path = "game"]
@@ -209,6 +211,7 @@ pub struct GuiState {
     pub show_fps: bool,
     pub show_inspector: bool,
     pub show_inspector_always: bool,
+    pub show_physics_gizmos: bool,
 }
 
 impl Default for GuiState {
@@ -217,7 +220,8 @@ impl Default for GuiState {
             show_status: false,
             show_fps: false,
             show_inspector: true,
-            show_inspector_always: false,
+            show_inspector_always: true,
+            show_physics_gizmos: false,
         }
     }
 }
@@ -225,16 +229,19 @@ impl Default for GuiState {
 #[derive(Resource)]
 pub struct GrabState{ was_grabbed: bool, options: CursorOptions }
 
-fn check_gui_state(
+fn update_gui_state(
     state: Res<GuiState>,
     fps_visible: Option<ResMut<FpsOverlayVisible>>,
     mut status_visible: ResMut<StatusVisible>,
     overlay: Res<State<OverlayState>>,
+    mut gizmos: ResMut<GizmoConfigStore>,
 ) {
     if let Some(mut fps_visible) = fps_visible {
         fps_visible.0 = state.show_fps || overlay.is_debug();
     }
     status_visible.0 = state.show_status;
+
+    gizmos.config_mut::<PhysicsGizmos>().0.enabled = state.show_physics_gizmos;
 }
 
 fn grab_cursor_for_game(

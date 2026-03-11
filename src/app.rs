@@ -1,5 +1,3 @@
-use std::time::Duration;
-
 use avian3d::prelude::Physics;
 use avian3d::prelude::PhysicsTime as _;
 use bevy::camera::visibility::RenderLayers;
@@ -51,7 +49,7 @@ impl Plugin for AppPlugin {
         .add_systems(OnEnter(ProgramState::Initializing), on_enter_initializing)
         .add_systems(
             OnEnter(ProgramState::New),
-            (on_enter_loading, init_perf_ui.run_if(show_dev_tools)).chain(),
+            (on_enter_loading,).chain(),
         )
         .add_systems(
             OnEnter(ProgramState::LaunchMenu),
@@ -144,10 +142,6 @@ pub fn on_exit_launch_menu(mut commands: Commands) {
 pub fn on_enter_in_game(mut time: ResMut<Time<Physics>>) {
     time.unpause();
 }
-
-pub fn init_perf_ui(mut commands: Commands) {
-}
-
 
 #[derive(Component)]
 pub struct ErrorScreen;

@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 
 use bevy::{ecs::system::SystemParam, prelude::*};
-use bevy_egui::{EguiContext, EguiGlobalSettings, EguiPlugin, EguiPrimaryContextPass, PrimaryEguiContext, input::{EguiWantsInput, egui_wants_any_keyboard_input, egui_wants_any_pointer_input}};
+use bevy_egui::{EguiContext, EguiContexts, EguiGlobalSettings, EguiPlugin, EguiPrimaryContextPass, PrimaryEguiContext, input::{EguiWantsInput, egui_wants_any_keyboard_input, egui_wants_any_pointer_input}};
 use bevy_inspector_egui::DefaultInspectorConfigPlugin;
 
 use crate::*;
@@ -26,6 +26,7 @@ impl Plugin for DebugPlugin {
 
         app
             .init_resource::<DebugEguiCamera>()
+            .init_resource::<DebugUiState>()
 
             .add_systems(
                 PreUpdate,
@@ -43,9 +44,11 @@ impl Plugin for DebugPlugin {
                     .run_if(
                         |gui_state: Res<GuiState>, ovl_state: Res<State<OverlayState>>|
                             gui_state.show_inspector_always ||
-                            (gui_state.show_inspector && ovl_state.get().is_debug())
+                            (gui_state.show_inspector && ovl_state.is_debug())
                         )
                     ,
+                    update_egui_debug_ui
+                        .run_if(|ovl_state: Res<State<OverlayState>>| ovl_state.is_debug())
                 ),
             )
         ;
@@ -224,4 +227,62 @@ pub fn debug_gui_wants_direct_input(r: Option<Res<EguiWantsInput>>) -> bool {
     } else {
         false
     }
+}
+
+pub fn update_egui_debug_ui(
+    mut contexts: EguiContexts,
+    mut in_state: ResMut<GuiState>,
+) {
+    let Ok(ctx) = contexts.ctx_mut() else { return };
+    let mut state = in_state.clone();
+
+    egui::Window::new("Settings")
+        .default_open(true)
+        .default_rect(egui::Rect::from_min_size(
+            ctx.available_rect().right_bottom() - egui::Vec2::new(400., 700.),
+            egui::Vec2::new(400., 600.))
+        )
+        .resizable(true)
+        .show(ctx, |ui| {
+            egui::CollapsingHeader::new("UI")
+                .default_open(true)
+                .show(ui, |ui| {
+                ui.checkbox(&mut state.show_status, "Always Show Player Status")
+                    .on_hover_text("Show player status (position/movement) during gameplay");
+                ui.checkbox(&mut state.show_fps, "Show FPS Always")
+                    .on_hover_text("Show FPS overlay, even outside the control UI.");
+                // ui.checkbox(&mut state.show_skybox, "Show Skybox")
+                //     .on_hover_text("Show skybox.");
+                ui.checkbox(&mut state.show_inspector, "Show Inspector")
+                    .on_hover_text("Show Bevy inspector.");
+                ui.add_enabled_ui(state.show_inspector, |ui|
+                    ui.indent("inspector", |ui| {
+                        ui.checkbox(&mut state.show_inspector_always, "Always")
+                        .on_hover_text("Always show Bevy inspector.");
+                    })
+                );
+                ui.checkbox(&mut state.show_physics_gizmos, "Show Physics Gizmos")
+                    .on_hover_text("Show Avian physics gizmo overlays.");
+
+            });
+
+            // if let Ok((player, cheats)) = player_cheat_q.single_mut() {
+            //     let mut enabled = cheats.has(Cheats::Noclip);
+            //     if ui.checkbox(&mut enabled, "Enable Noclip")
+            //         .on_hover_text("Toggle collision bounds for player.")
+            //         .changed() {
+
+            //         commands.write_message(PlayerRequestMessage{
+            //             request: PlayerRequest::SetCheat(Cheats::Noclip, enabled),
+            //             player,
+            //         });
+            //     }
+            // }
+
+        }
+    );
+
+    in_state.set_if_neq(state);
+    // audio.audio_ctrl.set_if_neq(audio_ctrl);
+    // synth.set_if_neq(synth_ctrl);
 }

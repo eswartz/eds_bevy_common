@@ -1,4 +1,8 @@
 pub mod base_dir;
+#[cfg(feature = "input_lim")]
+pub mod actions_common_lim;
+#[cfg(feature = "input_bei")]
+pub mod actions_common_bei;
 pub mod actions_common;
 pub mod audio;
 pub mod debug;
@@ -23,7 +27,6 @@ pub mod conditions;
 pub mod crosshair;
 pub mod effects;
 pub mod assets;
-pub mod stock_input_maps;
 pub mod levels;
 pub mod player_spawning;
 pub mod collision_hooks;
@@ -33,6 +36,10 @@ pub mod fps;
 pub mod app;
 
 pub use base_dir::*;
+#[cfg(feature = "input_lim")]
+pub use actions_common_lim::*;
+#[cfg(feature = "input_bei")]
+pub use actions_common_bei::*;
 pub use actions_common::*;
 pub use audio::*;
 pub use debug::*;
@@ -57,7 +64,6 @@ pub use conditions::*;
 pub use crosshair::*;
 pub use effects::*;
 pub use assets::*;
-pub use stock_input_maps::*;
 pub use levels::*;
 pub use player_spawning::*;
 pub use collision_hooks::*;

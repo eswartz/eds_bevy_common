@@ -3,7 +3,16 @@ use avian3d::prelude::*;
 use avian3d::math::*;
 use bevy::window::PrimaryWindow;
 use bevy::window::WindowFocused;
+
+#[cfg(feature = "input_lim")]
 use leafwing_input_manager::prelude::ActionState;
+#[cfg(feature = "input_bei")]
+use bevy_enhanced_input::prelude::*;
+
+#[cfg(feature = "input_lim")]
+use crate::UserAction;
+#[cfg(feature = "input_bei")]
+use crate::actions_common_bei::actions::*;
 
 use crate::*;
 
@@ -87,6 +96,7 @@ impl PlayerControllerSettings {
 /// Handles movement from inputs.
 ///
 /// We gather relevant inputs and send events indicating our intent.
+#[cfg(feature = "input_lim")]
 fn collect_player_movement(
     action_state: Res<ActionState<UserAction>>,
     ctrl_settings: Res<PlayerControllerSettings>,
@@ -109,10 +119,10 @@ fn collect_player_movement(
     };
 
     let move_axis = action_state.axis_pair(&UserAction::MoveFlycam);
-    let up_down_axis = action_state.value(&UserAction::MoveDownUp);
+    let down_up_axis = action_state.value(&UserAction::MoveDownUp);
     let left_right_axis = action_state.value(&UserAction::MoveLeftRight);
     instant_thrust.x = (left_right_axis + move_axis.x) * ctrl_settings.move_scale.x;
-    instant_thrust.y = up_down_axis * ctrl_settings.move_scale.y;
+    instant_thrust.y = down_up_axis * ctrl_settings.move_scale.y;
     instant_thrust.z = move_axis.y * ctrl_settings.move_scale.z;
 
     let (player, vel) = &*player_vel_q;
@@ -138,9 +148,70 @@ fn collect_player_movement(
     ));
 }
 
+/// Handles movement from inputs.
+///
+/// We gather relevant inputs and send events indicating our intent.
+#[cfg(feature = "input_bei")]
+fn collect_player_movement(
+    accel_events: Single<&ActionEvents, With<Action<Accelerate>>>,
+    crouch_events: Single<&ActionEvents, With<Action<Crouch>>>,
+    move_flycam: Single<&Action<MoveFlycam>, With<PlayerContext>>,
+    move_down_up: Single<&Action<MoveDownUp>, With<PlayerContext>>,
+    move_left_right: Single<&Action<MoveLeftRight>, With<PlayerContext>>,
+
+    ctrl_settings: Res<PlayerControllerSettings>,
+    input_settings: Res<PlayerInputSettings>,
+    cam_settings: Res<PlayerCameraSettings>,
+    mut writer: MessageWriter<PlayerInput>,
+    player_vel_q: Single<(Entity, &LinearVelocity), With<OurPlayer>>,
+    mut cam_q: Single<&mut OurCamera, With<WorldCamera>>,
+    time: Res<Time>,
+    mode: Res<PlayerMode>,
+) {
+    let mut instant_thrust = Vec3::ZERO;
+
+    let speed = if accel_events.contains(ActionEvents::START | ActionEvents::ONGOING) {
+        Speed::Fast
+    } else if crouch_events.contains(ActionEvents::START | ActionEvents::ONGOING) {
+        Speed::Slow
+    } else {
+        Speed::Normal
+    };
+
+    let move_axis = ***move_flycam;
+    let down_up_axis = ***move_down_up;
+    let left_right_axis = ***move_left_right;
+    instant_thrust.x = (left_right_axis + move_axis.x) * ctrl_settings.move_scale.x;
+    instant_thrust.y = down_up_axis * ctrl_settings.move_scale.y;
+    instant_thrust.z = move_axis.y * ctrl_settings.move_scale.z;
+
+    let (player, vel) = &*player_vel_q;
+
+    // For bob, apply the actual speed, not the intended speed.
+    let actual_speed = vel.xz().length() / input_settings.base_xz_speed as Scalar;
+
+    cam_q.adjust_bob_roll_pitch(
+        &cam_settings,
+        *mode,
+        time.delta_secs(),
+        instant_thrust.z,
+        instant_thrust.x,
+        actual_speed as _,
+    );
+
+    if crouch_events.contains(ActionEvents::START) {
+        writer.write(PlayerInput::ToggleCrouch(*player));
+    }
+    writer.write(PlayerInput::Move(
+        *player,
+        PlayerMove::new(instant_thrust, speed),
+    ));
+}
+
 /// Handles looking around.
 ///
 /// We gather relevant inputs and send events indicating our intent.
+#[cfg(feature = "input_lim")]
 fn collect_player_look(
     mut primary_window: Query<&mut Window, With<PrimaryWindow>>,
     settings: Res<PlayerControllerSettings>,
@@ -202,6 +273,74 @@ fn collect_player_look(
     ));
 }
 
+/// Handles looking around.
+///
+/// We gather relevant inputs and send events indicating our intent.
+#[cfg(feature = "input_bei")]
+fn collect_player_look(
+    mut primary_window: Query<&mut Window, With<PrimaryWindow>>,
+    look: Single<&Action<Look>, With<PlayerContext>>,
+    turn_around_events: Single<&ActionEvents, (With<Action<TurnAround>>, With<PlayerContext>)>,
+    reset_events: Single<&ActionEvents, (With<Action<Reset>>, With<PlayerContext>)>,
+
+    settings: Res<PlayerControllerSettings>,
+    player_q: Single<Entity, With<OurPlayer>>,
+    overlay_state: Res<State<OverlayState>>,
+    mut writer: MessageWriter<PlayerInput>,
+) {
+    let Ok(mut window) = primary_window.single_mut() else {
+        return;
+    };
+    if !window.focused {
+        return;
+    }
+
+    let look_axis = dbg!(***look);
+
+    let mut instant_body_turn = Vec3::ZERO;
+    let mut instant_head_turn = Vec3::ZERO;
+
+    // Note: swap axes here.  From mouse, "Y" is up/down in userland, "X" is left/right.
+    instant_body_turn.y = (if settings.invert_turn_x { 1.0 } else { -1.0 })
+        * (settings.turn_scale.x * look_axis.x).to_radians();
+    instant_head_turn.y = instant_body_turn.y;
+
+    instant_head_turn.x = (if settings.invert_turn_y { 1.0 } else { -1.0 })
+        * (settings.turn_scale.y * look_axis.y).to_radians();
+
+    if settings.center_mouse && !(overlay_state.is_debug() || overlay_state.is_menu()) {
+        let center = Vec2::new(window.width() / 2.0, window.height() / 2.0);
+        window.set_cursor_position(Some(center));
+    }
+
+    // let mut tilt = action_state.value(&UserAction::Tilt);
+    // // Avoid having touchpad generate this as a side effect of a zoom.
+    // if mouse_scroll.delta != Vec2::ZERO && mouse_scroll.delta.y.abs() >= 8.0 {
+    //     tilt = 0.0;
+    // }
+    // let mut tilt = 0.0;
+    // instant_head_turn.z = tilt * settings.turn_scale.z;
+
+    // Don't repeat, else it's just a 360 on the slightest lingering touch.
+    if turn_around_events.contains(ActionEvents::START) {
+        writer.write(PlayerInput::TurnAround(*player_q));
+        return;
+    } else if reset_events.contains(ActionEvents::START) {
+        writer.write(PlayerInput::Straighten(*player_q));
+        return;
+    }
+
+    writer.write(PlayerInput::BodyTurn(
+        *player_q,
+        PlayerBodyTurn::new(instant_body_turn),
+    ));
+    writer.write(PlayerInput::HeadTurn(
+        *player_q,
+        PlayerHeadTurn::new(instant_head_turn),
+    ));
+}
+
+#[cfg(feature = "input_lim")]
 fn collect_player_input(
     mut commands: Commands,
     mut action_state: ResMut<ActionState<UserAction>>,
@@ -228,6 +367,50 @@ fn collect_player_input(
         commands.write_message(PlayerInput::StartFire(*player_q));
     }
     if action_state.just_released(&UserAction::Fire) || action_state.just_released(&UserAction::ShiftFire) {
+        debug!("release Fire");
+        commands.write_message(PlayerInput::StopFire(*player_q));
+    }
+}
+
+#[cfg(feature = "input_bei")]
+fn collect_player_input(
+    mut commands: Commands,
+
+    // player_active: Single<Entity, With<ContextActivity::<PlayerContext>>>,
+    // menu_active: Single<Entity, With<ContextActivity::<MenuContext>>>,
+    fire_events: Single<&ActionEvents, (With<Action<Firing>>, With<PlayerContext>)>,
+
+    player_q: Single<Entity, With<OurPlayer>>,
+
+    mut focused: MessageReader<WindowFocused>,
+    mut ignore_mouse: Local<bool>,
+) {
+    if !focused.is_empty() {
+        let focused = focused.read().any(|e| e.focused);
+        *ignore_mouse = true;
+        info!("focus change: {focused}");
+        // action_state.reset_all();
+        // if focused {
+        //     commands.entity(*player_active).insert(ContextActivity::<PlayerContext>::ACTIVE);
+        //     commands.entity(*menu_active).insert(ContextActivity::<MenuContext>::ACTIVE);
+        // } else {
+        //     commands.entity(*player_active).insert(ContextActivity::<PlayerContext>::INACTIVE);
+        //     commands.entity(*menu_active).insert(ContextActivity::<MenuContext>::INACTIVE);
+        // }
+        return;
+    }
+
+    if *ignore_mouse {
+        debug!("ignoring mouse next frame");
+        *ignore_mouse = false;
+        return;
+    }
+
+    if fire_events.contains(ActionEvents::START) {
+        debug!("press Fire");
+        commands.write_message(PlayerInput::StartFire(*player_q));
+    }
+    if fire_events.contains(ActionEvents::COMPLETE) {
         debug!("release Fire");
         commands.write_message(PlayerInput::StopFire(*player_q));
     }
