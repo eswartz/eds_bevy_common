@@ -316,8 +316,8 @@ pub fn assign_stock_menu_actions(
         // DeltaScale::default(),
         Scale::new(Vec3::new(UI_SENSITIVITY_X, UI_SENSITIVITY_Y, 1.0)),
         Bindings::spawn((
-            Bidirectional::new(KeyCode::ArrowLeft, KeyCode::ArrowRight),
-            Bidirectional::new(GamepadButton::DPadLeft, GamepadButton::DPadRight),
+            Bidirectional::new(KeyCode::ArrowRight, KeyCode::ArrowLeft),
+            Bidirectional::new(GamepadButton::DPadRight, GamepadButton::DPadLeft),
         )),
     ));
     // commands.spawn((
