@@ -65,6 +65,12 @@ impl Plugin for GuiPlugin {
         .add_systems(OnExit(OverlayState::Loading),
             on_loading_finished)
 
+        .add_systems(PreUpdate,
+            grab_cursor_for_game.run_if(resource_changed::<GuiState>),
+        )
+        .add_systems(PreUpdate,
+            ungrab_cursor_for_overlay.run_if(resource_changed::<GuiState>),
+        )
         .add_systems(
             Update,
             update_gui_state.run_if(resource_changed::<GuiState>),
@@ -244,34 +250,37 @@ fn update_gui_state(
 
 fn grab_cursor_for_game(
     mut commands: Commands,
+    gui_state: Res<GuiState>,
 ) {
-    commands.write_message(GrabCursor(true));
+    commands.write_message(GrabCursor(!gui_state.enabled));
 }
 
 fn ungrab_cursor_for_overlay(
     mut commands: Commands,
+    gui_state: Res<GuiState>,
 ) {
-    commands.write_message(GrabCursor(false));
+    commands.write_message(GrabCursor(gui_state.enabled));
 }
 
 fn check_grab_focus_state(
     mut grab: MessageReader<GrabCursor>,
     mut focused: MessageReader<WindowFocused>,
     overlay_state: Res<State<OverlayState>>,
+    gui_state: ResMut<GuiState>,
     mut grab_state: ResMut<GrabState>,
     mut cursor_options: Single<&mut CursorOptions, With<PrimaryWindow>>,
 ) {
     let mut desired_grab: Option<bool> = None;
 
-    for event in focused.read() {
+    if let Some(event) = focused.read().last() {
         if !event.focused {
             desired_grab = Some(false);
         } else {
-            desired_grab = Some(*overlay_state.get() == OverlayState::Hidden);
+            desired_grab = Some((**overlay_state).is_hidden() && !gui_state.enabled);
         }
     }
 
-    for event in grab.read() {
+    if let Some(event) = grab.read().last() {
         desired_grab = Some(event.0);
     }
 

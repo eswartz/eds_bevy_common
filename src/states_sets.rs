@@ -45,6 +45,10 @@ impl OverlayState {
             | Self::EscapeMenu
         )
     }
+
+    pub fn is_hidden(&self) -> bool {
+        *self == OverlayState::Hidden
+    }
 }
 
 
