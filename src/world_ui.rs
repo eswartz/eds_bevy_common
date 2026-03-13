@@ -106,7 +106,8 @@ pub fn apply_effect_settings(
             if let Ok(current_config) = shadow_q.get(camera_ent) {
                 new_config.num_cascades = current_config.bounds.len();
             }
-            new_config.first_cascade_far_bound = 5.0;
+            // new_config.first_cascade_far_bound = 10.0;
+            // new_config.maximum_distance = 150.0;
 
             match video_settings.shadow_quality {
                 ShadowQuality::Off => {
@@ -114,20 +115,20 @@ pub fn apply_effect_settings(
                 }
                 ShadowQuality::Low => {
                     new_config.num_cascades = 1;
-                    new_config.maximum_distance = 10.0;
+
                 }
                 ShadowQuality::Medium => {
                     // default
                     new_config.num_cascades = 3;
-                    new_config.maximum_distance = 25.0;
+                    // new_config.maximum_distance = 25.0;
                 }
                 ShadowQuality::High => {
                     new_config.num_cascades = 6;
-                    new_config.maximum_distance = 50.0;
+                    // new_config.maximum_distance = 35.0;
                 }
                 ShadowQuality::Ultra => {
                     new_config.num_cascades = 8;
-                    new_config.maximum_distance = 100.0;
+                    // new_config.maximum_distance = 50.0;
                 }
 
             }
@@ -167,6 +168,32 @@ pub fn apply_effect_settings(
     }
 
     // Update lights.
+    for (ent, mut light) in point_light_q.iter_mut() {
+        match video_settings.shadow_quality {
+            ShadowQuality::Off => {
+                light.soft_shadows_enabled = false;
+            }
+            ShadowQuality::Low => {
+                light.soft_shadows_enabled = false;
+                commands.entity(ent).insert(ShadowFilteringMethod::Hardware2x2);
+            }
+            ShadowQuality::Medium => {
+                // default
+                light.soft_shadows_enabled = true;
+                commands.entity(ent).insert(ShadowFilteringMethod::Hardware2x2);
+            }
+            ShadowQuality::High => {
+                light.soft_shadows_enabled = true;
+                commands.entity(ent).insert(ShadowFilteringMethod::Gaussian);
+            }
+            ShadowQuality::Ultra => {
+                light.soft_shadows_enabled = true;
+                commands.entity(ent).insert(ShadowFilteringMethod::Temporal);
+            }
+
+        };
+    }
+
     for (ent, mut light) in dir_light_q.iter_mut() {
         match video_settings.shadow_quality {
             ShadowQuality::Off => {
