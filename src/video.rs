@@ -15,6 +15,7 @@ pub struct VideoSettings {
     pub antialiasing: Antialiasing,
     pub mesh_quality: MeshQuality,
     pub texture_quality: TextureQuality,
+    pub shadow_quality: ShadowQuality,
     pub glass_quality: GlassQuality,
 }
 
@@ -25,6 +26,7 @@ impl Default for VideoSettings {
             antialiasing: Default::default(),
             mesh_quality: Default::default(),
             texture_quality: Default::default(),
+            shadow_quality: Default::default(),
             glass_quality: GlassQuality::Off,
         }
     }
@@ -151,6 +153,37 @@ pub enum TextureQuality {
 #[reflect(Default, Clone, Component)]
 #[type_path = "game"]
 pub enum GlassQuality {
+    Off,
+    Low,
+    #[default]
+    Medium,
+    High,
+    Ultra,
+}
+
+#[derive(
+    Component,
+    Reflect,
+    EnumIter,
+    EnumString,
+    VariantArray,
+    Display,
+    FromRepr,
+    Debug,
+    Default,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    Hash,
+    PartialOrd,
+    Ord,
+    Serialize,
+    Deserialize,
+)]
+#[reflect(Default, Clone, Component)]
+#[type_path = "game"]
+pub enum ShadowQuality {
     Off,
     Low,
     #[default]

@@ -140,8 +140,38 @@ default = ["bevy_skein", "input_bei"]
 trenchbroom = ["bevy_trenchbroom"]
 input_lim = ["dep:leafwing-input-manager"]
 input_bei = ["dep:bevy_enhanced_input"]
+webgpu = []
 # input_lim = []
 # input_bei = []
+dev = [
+    # Improve compile times for dev builds by linking Bevy as a dynamic library.
+    "bevy/dynamic_linking",
+    "bevy/bevy_dev_tools",
+    "bevy/bevy_ui_debug",
+    # Improve error messages coming from Bevy
+    "bevy/track_location",
+    # "dep:bevy-inspector-egui",
+    "avian3d/diagnostic_ui",
+    # "bevy_rerecast/debug_plugin",
+    # "bevy_rerecast/editor_integration",
+]
+dev_native = [
+    "bevy/bevy_remote",
+    "bevy/basis-universal",
+
+    # Enable asset hot reloading for native dev builds.
+    "bevy/file_watcher",
+    # Enable embedded asset hot reloading for native dev builds.
+    "bevy/embedded_watcher",
+    # "bevy_rerecast/editor_integration",
+
+    "bevy/webgpu",
+]
+web = [
+    # "bevy/webgpu",
+    "bevy_seedling/web_audio",
+]
+
 
 [[example]]
 name = "game_menu"

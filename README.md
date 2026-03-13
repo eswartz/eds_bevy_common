@@ -36,8 +36,7 @@ But it contains:
 
 * Play/pause support (`PauseState`, distinct gameplay and menu flags; pausing only affects `Time<Physics>`)
 * `bevy_inspector_egui` integration
-** `OverlayState::DebugGuiVisible` state used to avoid having debug UI clash with menus
-
+* see `DebugUiState` for various things visible when debugging enabled (toggle "`")
 * `bevy_asset_loader` integration with the states
 ** I.e. `New`/`Initializing` -> `AssetsLoaded` transitions
 ** I.e. so you know when you have fonts/icons/etc. available to use

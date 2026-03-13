@@ -1,4 +1,7 @@
 use bevy::camera::ScreenSpaceTransmissionQuality;
+use bevy::light::CascadeShadowConfig;
+use bevy::light::CascadeShadowConfigBuilder;
+use bevy::light::ShadowFilteringMethod;
 use bevy::prelude::*;
 
 use bevy::anti_alias::taa::TemporalAntiAliasing;
@@ -8,6 +11,7 @@ use bevy::pbr::ScreenSpaceAmbientOcclusionQualityLevel;
 use crate::WorldCamera;
 
 use super::video::Antialiasing;
+use super::video::ShadowQuality;
 use super::video::GlassQuality;
 use super::video::VideoCameraSettingsChanged;
 use super::video::VideoEffectSettingsChanged;
@@ -54,6 +58,10 @@ pub fn apply_effect_settings(
     trigger: Option<Res<VideoEffectSettingsChanged>>,
     mut commands: Commands,
     mut camera_q: Query<(Entity, &mut Camera3d)>, // all cameras
+    shadow_q: Query<&CascadeShadowConfig>,
+    mut point_light_q: Query<(Entity, &mut PointLight)>,
+    mut spot_light_q: Query<(Entity, &mut SpotLight)>,
+    mut dir_light_q: Query<(Entity, &mut DirectionalLight)>,
     video_settings: Res<VideoSettings>,
 ) {
     if trigger.is_none() {
@@ -63,6 +71,7 @@ pub fn apply_effect_settings(
     info!("Setting up effects");
     for (camera_ent, mut cam3d) in camera_q.iter_mut() {
         let mut ent_commands = commands.entity(camera_ent);
+
         ent_commands.remove::<Msaa>();
         ent_commands.remove::<ScreenSpaceAmbientOcclusion>();
         ent_commands.remove::<TemporalAntiAliasing>();
@@ -91,6 +100,43 @@ pub fn apply_effect_settings(
             // }
         }
 
+        // Configure the camera's shadow settings. See below for lighting.
+        {
+            let mut new_config = CascadeShadowConfigBuilder::default();
+            if let Ok(current_config) = shadow_q.get(camera_ent) {
+                new_config.num_cascades = current_config.bounds.len();
+            }
+
+            match video_settings.shadow_quality {
+                ShadowQuality::Off => {
+                    ent_commands.remove::<CascadeShadowConfig>();
+                }
+                ShadowQuality::Low => {
+                    new_config.num_cascades = 2;
+                }
+                ShadowQuality::Medium => {
+                    // default
+                    new_config.num_cascades = 4;
+                }
+                ShadowQuality::High => {
+                    new_config.num_cascades = 6;
+                }
+                ShadowQuality::Ultra => {
+                    new_config.num_cascades = 8;
+                }
+
+            }
+
+            if new_config.num_cascades > 0 {
+                // Copied from default()
+                if cfg!(target_arch = "wasm32") && !cfg!(feature = "webgpu") {
+                    new_config.num_cascades = 1;
+                }
+
+                ent_commands.insert(new_config.build());
+            }
+        }
+
         match video_settings.glass_quality {
             GlassQuality::Off => {
                 cam3d.screen_space_specular_transmission_steps = 0;
@@ -114,6 +160,40 @@ pub fn apply_effect_settings(
             }
         }
     }
+
+    // Update lights.
+    for (ent, mut light) in dir_light_q.iter_mut() {
+        match video_settings.shadow_quality {
+            ShadowQuality::Off => {
+                light.shadows_enabled = false;
+                light.soft_shadow_size = None;
+            }
+            ShadowQuality::Low => {
+                light.shadows_enabled = true;
+                light.soft_shadow_size = None;
+                commands.entity(ent).insert(ShadowFilteringMethod::Hardware2x2);
+            }
+            ShadowQuality::Medium => {
+                // default
+                light.shadows_enabled = true;
+                light.soft_shadow_size = Some(0.5);
+                commands.entity(ent).insert(ShadowFilteringMethod::Gaussian);
+            }
+            ShadowQuality::High => {
+                light.shadows_enabled = true;
+                light.soft_shadow_size = Some(0.5);
+                commands.entity(ent).insert(ShadowFilteringMethod::Temporal);
+            }
+            ShadowQuality::Ultra => {
+                light.shadows_enabled = true;
+                light.soft_shadow_size = Some(0.5);
+                commands.entity(ent).insert(ShadowFilteringMethod::Temporal);
+            }
+
+        };
+    }
+
+    // Done.
 
     commands.remove_resource::<VideoEffectSettingsChanged>();
 }
