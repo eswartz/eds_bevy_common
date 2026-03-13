@@ -214,8 +214,8 @@ macro_rules! add_actions {
     };
 }
 
-const UI_SENSITIVITY_X: f32 = 1.0 / 5.;     // relatively quick for sliders
-const UI_SENSITIVITY_Y: f32 = 1.0 / 15.;    // move through menus slower
+const UI_SENSITIVITY_X: f32 = 20.0;    // relatively quick for sliders
+const UI_SENSITIVITY_Y: f32 = 10.0;    // move through menus slower
 
 /// Assign actions to your own context/etc.
 /// include: should be at least e.g. `ActionOf::<YourContext>::new(context_entity)`
@@ -299,9 +299,8 @@ pub fn assign_stock_menu_actions(
 
         Action::<actions::MoveDownUp>::new(),
         DeadZone::default(),
-        // SmoothNudge::default(),
-        // DeltaScale::default(),
-        Scale::new(Vec3::new(UI_SENSITIVITY_X, UI_SENSITIVITY_Y, 1.0)),
+        DeltaScale::default(),
+        Scale::splat(UI_SENSITIVITY_Y),
         Bindings::spawn((
             Bidirectional::new(KeyCode::ArrowDown, KeyCode::ArrowUp),
             Bidirectional::new(GamepadButton::DPadDown, GamepadButton::DPadUp),
@@ -312,9 +311,8 @@ pub fn assign_stock_menu_actions(
 
         Action::<actions::MoveLeftRight>::new(),
         DeadZone::default(),
-        // SmoothNudge::default(),
-        // DeltaScale::default(),
-        Scale::new(Vec3::new(UI_SENSITIVITY_X, UI_SENSITIVITY_Y, 1.0)),
+        DeltaScale::default(),
+        Scale::splat(UI_SENSITIVITY_X),
         Bindings::spawn((
             Bidirectional::new(KeyCode::ArrowRight, KeyCode::ArrowLeft),
             Bidirectional::new(GamepadButton::DPadRight, GamepadButton::DPadLeft),

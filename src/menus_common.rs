@@ -152,7 +152,8 @@ impl<T> CountAccumulator<T> {
 
         let overflowed = self.count >= 1.;
         if overflowed {
-            self.count = self.count.fract();
+            // self.count = -self.count.fract();
+            self.count = 0.001;
         }
 
         if (was_zero && self.count != 0.) || overflowed {
