@@ -106,23 +106,28 @@ pub fn apply_effect_settings(
             if let Ok(current_config) = shadow_q.get(camera_ent) {
                 new_config.num_cascades = current_config.bounds.len();
             }
+            new_config.first_cascade_far_bound = 5.0;
 
             match video_settings.shadow_quality {
                 ShadowQuality::Off => {
                     ent_commands.remove::<CascadeShadowConfig>();
                 }
                 ShadowQuality::Low => {
-                    new_config.num_cascades = 2;
+                    new_config.num_cascades = 1;
+                    new_config.maximum_distance = 10.0;
                 }
                 ShadowQuality::Medium => {
                     // default
-                    new_config.num_cascades = 4;
+                    new_config.num_cascades = 3;
+                    new_config.maximum_distance = 25.0;
                 }
                 ShadowQuality::High => {
                     new_config.num_cascades = 6;
+                    new_config.maximum_distance = 50.0;
                 }
                 ShadowQuality::Ultra => {
                     new_config.num_cascades = 8;
+                    new_config.maximum_distance = 100.0;
                 }
 
             }
@@ -176,17 +181,17 @@ pub fn apply_effect_settings(
             ShadowQuality::Medium => {
                 // default
                 light.shadows_enabled = true;
-                light.soft_shadow_size = Some(0.5);
+                light.soft_shadow_size = Some(1.0);
                 commands.entity(ent).insert(ShadowFilteringMethod::Gaussian);
             }
             ShadowQuality::High => {
                 light.shadows_enabled = true;
-                light.soft_shadow_size = Some(0.5);
-                commands.entity(ent).insert(ShadowFilteringMethod::Temporal);
+                light.soft_shadow_size = Some(2.0);
+                commands.entity(ent).insert(ShadowFilteringMethod::Gaussian);
             }
             ShadowQuality::Ultra => {
                 light.shadows_enabled = true;
-                light.soft_shadow_size = Some(0.5);
+                light.soft_shadow_size = Some(3.0);
                 commands.entity(ent).insert(ShadowFilteringMethod::Temporal);
             }
 
