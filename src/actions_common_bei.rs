@@ -214,8 +214,8 @@ macro_rules! add_actions {
     };
 }
 
-const UI_SENSITIVITY_X: f32 = 20.0;    // relatively quick for sliders
-const UI_SENSITIVITY_Y: f32 = 10.0;    // move through menus slower
+const UI_SENSITIVITY_X: f32 = 8.0;    // relatively quick for sliders
+const UI_SENSITIVITY_Y: f32 = 7.0;    // move through menus slower
 
 /// Assign actions to your own context/etc.
 /// include: should be at least e.g. `ActionOf::<YourContext>::new(context_entity)`
