@@ -52,7 +52,7 @@ pub fn added_player_start(q: Query<&Transform, Added<PlayerStart>>) -> bool {
     q.iter().next().is_some()
 }
 
-/// Tell if the [PlayerStart] component was added.
+/// Tell if we saw a [WindowFocused] event.
 pub fn window_changed_focus(reader: MessageReader<WindowFocused>) -> bool {
     !reader.is_empty()
 }
