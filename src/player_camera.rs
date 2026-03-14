@@ -300,9 +300,10 @@ pub fn handle_player_camera_actions(
 
 #[cfg(feature = "input_bei")]
 pub fn handle_player_camera_actions(
-    change_camera: Single<&ActionEvents, With<Action<ChangeCamera>>>,
+    change_camera: Query<&ActionEvents, (With<Action<ChangeCamera>>, With<PlayerAction>)>,
     mut camera_q: Single<&mut PlayerCamera, (With<WorldCamera>, With<OurCamera>)>,
 ) {
+    let Some(change_camera) = change_camera.iter().next() else { return };
     if change_camera.contains(ActionEvents::START) {
         camera_q.0 = camera_q.0.next();
     }

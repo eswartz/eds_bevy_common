@@ -15,7 +15,7 @@ pub struct CrosshairPlugin;
 impl Plugin for CrosshairPlugin {
     fn build(&self, app: &mut App) {
         app
-        .init_resource::<CrosshairTarget>()
+        .init_resource::<CrosshairTargets>()
         .add_systems(
             OnEnter(ProgramState::InGame),
             init_crosshair
@@ -141,30 +141,46 @@ fn update_crosshair(
     };
     let strength = crosshair_q.1.current_strength;
     let mut image = image_q.get_mut(image_ent).unwrap();
-    image.color = image.color.with_alpha(strength.clamp(0.0, 1.0));
+    let new_color = image.color.with_alpha(strength.clamp(0.0, 1.0));
+    if image.color != new_color {
+        image.color = new_color;
+    }
 }
 
 
 /// This tracks the [CrosshairTargetable]s in view of a [WorldCamera]-oriented raycast.
 /// The module's systems perform a periodic scan in [FixedUpdate]
 /// which changes this value as the raycast hits change.
+///
+/// The index is owned by the game, though it retains the same Entity reference if possible.
 #[derive(Resource, Reflect, Debug, PartialEq, Default)]
 #[reflect(Resource, Default)]
 #[type_path = "game"]
-pub struct CrosshairTarget { pub targets: Vec<Entity> }
+pub struct CrosshairTargets {
+    pub targets: Vec<Entity>,
+    pub index: usize,
+}
+
+/// Previously highlighted thing (only defined if so).
+#[derive(Resource, Reflect)]
+#[reflect(Resource)]
+#[type_path = "game"]
+pub struct LastHighlightedItem(pub Entity);
+
+/// Currently highlighted thing (only defined if so).
+#[derive(Resource, Reflect)]
+#[reflect(Resource)]
+#[type_path = "game"]
+pub struct HighlightedItem(pub Entity);
 
 /// See if we're looking at something clickable.
 fn check_crosshair_target(
     crosshair_q: Single<&Crosshair>,
     camera_q: Single<&GlobalTransform, (With<Camera3d>, With<WorldCamera>)>,
-    // level: Res<LevelMetadata>,
     targetable_q: Query<&CrosshairTargetable>,
     parent_q: Query<&ChildOf>,
-    // scene_q: Query<&SceneRoot>,
-    // func_q: Query<(Option<&FuncButton>, Option<&FuncTile>)>,
-    // level_state: Res<State<LevelState>>,
     mut raycast: MeshRayCast,
-    mut cur_target_mut: ResMut<CrosshairTarget>,
+    mut crosshair_targets: ResMut<CrosshairTargets>,
 ) {
     let crosshair = *crosshair_q;
     if !crosshair.is_active() {
@@ -188,28 +204,21 @@ fn check_crosshair_target(
         false
     };
 
-    // let ctr = std::cell::RefCell::new(2u32);
-    // let gather_and_limit_seen = move |_: Entity| { *ctr.borrow_mut() -= 1; *ctr.borrow() == 0 };
     let settings = MeshRayCastSettings::default()
         .with_visibility(RayCastVisibility::Any)    // allow for hidden controller ents
-        .always_early_exit()
+        .never_early_exit()
         .with_filter(&filter)
         ;
     let hits = raycast.cast_ray(ray, &settings);
-    // // Ignore if same targets.
-    // if cur_target.is_none_or(|cur_target| cur_target.targets != targets) {
-    //     return;
-    // }
-
-    // // Clean up previous target before we overwrite the resource.
-    // if let Some(cur) = cur_target.take() {
-    //     commands.insert_resource(CrosshairDetarget(cur.0));
-    // }
 
     let targets = hits.iter().map(|(target, _)| *target).collect::<Vec<_>>();
-    let crosshair_target = CrosshairTarget{ targets };
+    let target_opt = crosshair_targets.targets.get(crosshair_targets.index);
+    let index = if let Some(old_target) = target_opt.cloned() {
+        targets.iter().position(|t| *t == old_target)
+    } else {
+        None
+    };
+    let new_crosshair_targets = CrosshairTargets{ targets, index: index.unwrap_or(0) };
 
-    // dbg!(&crosshair_target);
-    // cur_target_mut.set_if_neq(crosshair_target);
-    *cur_target_mut = crosshair_target;
+    crosshair_targets.set_if_neq(new_crosshair_targets);
 }

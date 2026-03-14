@@ -10,4 +10,6 @@ pub struct CommonAssets {
     pub emoji_icon_font: Handle<Font>,
     #[asset(path = "textures/crosshair.png")]
     pub crosshair: Handle<Image>,
+    #[asset(path = "textures/crosshair_select.png")]
+    pub crosshair_select: Handle<Image>,
 }

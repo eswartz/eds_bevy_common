@@ -136,6 +136,21 @@ pub mod actions {
     #[derive(InputAction)]
     #[action_output(bool)]
     pub struct ForceLose;
+
+    /// When active, select items in the scene.
+    #[derive(InputAction)]
+    #[action_output(bool)]
+    pub struct ToggleSelect;
+
+    /// When active, grab selected item(s).
+    #[derive(InputAction)]
+    #[action_output(bool)]
+    pub struct ToggleGrab;
+
+    /// Move further/closer away, either hovered item or distance of grabbed,
+    #[derive(InputAction)]
+    #[action_output(f32)]
+    pub struct CycleExtendGrab;
 }
 
 fn toggle_context(

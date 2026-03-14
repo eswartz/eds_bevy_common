@@ -122,7 +122,7 @@ impl Plugin for MenuCommonPlugin {
 }
 
 #[derive(Resource)]
-struct CountAccumulator<T> {
+pub struct CountAccumulator<T> {
     dir: f32,
     count: f32,
     _marker: PhantomData<T>,

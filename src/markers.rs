@@ -16,7 +16,7 @@ pub struct Saveable;
 #[type_path = "game"]
 pub struct DespawnAfter(pub Duration);
 
-/// Mark the entity as being out of play.
+/// Mark the entity as being out of play (e.g. when something is pending deletion).
 #[derive(Component, Reflect, Debug)]
 #[reflect(Component)]
 #[type_path = "game"]
@@ -47,6 +47,20 @@ pub struct PlayerStart;
 #[reflect(Component, Clone)]
 #[type_path = "game"]
 pub struct BackgroundAudio;
+
+///
+
+/// Mark the entity as being "hovered".
+#[derive(Component, Reflect, Debug)]
+#[reflect(Component)]
+#[type_path = "game"]
+pub struct Hovered;
+
+/// Mark the entity as being "selected".
+#[derive(Component, Reflect, Debug)]
+#[reflect(Component)]
+#[type_path = "game"]
+pub struct Selected;
 
 ///
 
