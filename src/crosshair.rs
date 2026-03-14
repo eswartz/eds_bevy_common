@@ -161,18 +161,6 @@ pub struct CrosshairTargets {
     pub index: usize,
 }
 
-/// Previously highlighted thing (only defined if so).
-#[derive(Resource, Reflect)]
-#[reflect(Resource)]
-#[type_path = "game"]
-pub struct LastHighlightedItem(pub Entity);
-
-/// Currently highlighted thing (only defined if so).
-#[derive(Resource, Reflect)]
-#[reflect(Resource)]
-#[type_path = "game"]
-pub struct HighlightedItem(pub Entity);
-
 /// See if we're looking at something clickable.
 fn check_crosshair_target(
     crosshair_q: Single<&Crosshair>,
