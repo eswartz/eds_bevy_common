@@ -194,6 +194,32 @@ pub fn apply_effect_settings(
         };
     }
 
+    for (ent, mut light) in spot_light_q.iter_mut() {
+        match video_settings.shadow_quality {
+            ShadowQuality::Off => {
+                light.soft_shadows_enabled = false;
+            }
+            ShadowQuality::Low => {
+                light.soft_shadows_enabled = false;
+                commands.entity(ent).insert(ShadowFilteringMethod::Hardware2x2);
+            }
+            ShadowQuality::Medium => {
+                // default
+                light.soft_shadows_enabled = true;
+                commands.entity(ent).insert(ShadowFilteringMethod::Hardware2x2);
+            }
+            ShadowQuality::High => {
+                light.soft_shadows_enabled = true;
+                commands.entity(ent).insert(ShadowFilteringMethod::Gaussian);
+            }
+            ShadowQuality::Ultra => {
+                light.soft_shadows_enabled = true;
+                commands.entity(ent).insert(ShadowFilteringMethod::Temporal);
+            }
+
+        };
+    }
+
     for (ent, mut light) in dir_light_q.iter_mut() {
         match video_settings.shadow_quality {
             ShadowQuality::Off => {

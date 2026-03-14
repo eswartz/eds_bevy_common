@@ -4,7 +4,6 @@ use std::time::Duration;
 use avian3d::math::*;
 use avian3d::prelude::*;
 use bevy::prelude::*;
-use bevy::window::WindowFocused;
 
 use crate::*;
 
