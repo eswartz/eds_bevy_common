@@ -64,8 +64,8 @@ impl Plugin for MenuCommonPlugin {
             .insert_resource(DraggingMenuItem(None))
             .insert_resource(MenuItemSelectionHistory::default())
             .insert_resource(PreviousMenuStack::default())
-            .insert_resource(CountAccumulator::<actions::MoveDownUp>::default())
-            .insert_resource(CountAccumulator::<actions::MoveLeftRight>::default())
+            .insert_resource(CountAccumulator::<MoveDownUp>::default())
+            .insert_resource(CountAccumulator::<MoveLeftRight>::default())
             .add_message::<MenuActionMessage>()
             .add_systems(
                 PreUpdate,
@@ -98,17 +98,8 @@ impl Plugin for MenuCommonPlugin {
         ;
 
         #[cfg(feature = "input_lim")]
-        app.add_systems(
-            Update,
-            (
-                handle_focused_item_actions,
-                handle_menu_navigation,
-            )
-            .run_if(is_in_menu)
-        );
-        #[cfg(feature = "input_bei")]
-        {
-            app.add_systems(
+        app
+            .add_systems(
                 Update,
                 (
                     handle_focused_item_actions,
@@ -116,10 +107,24 @@ impl Plugin for MenuCommonPlugin {
                 )
                 .run_if(is_in_menu)
             );
+        #[cfg(feature = "input_bei")]
+        {
+            app
+                .add_systems(
+                    Update,
+                    (
+                        handle_focused_item_actions,
+                        handle_menu_navigation,
+                    )
+                    .run_if(is_in_menu)
+                );
         }
 
     }
 }
+
+struct MoveDownUp;
+struct MoveLeftRight;
 
 #[derive(Resource)]
 pub struct CountAccumulator<T> {
@@ -771,7 +776,7 @@ fn handle_focused_item_actions(
     slider_q: Query<&MenuSlider>,
     enum_q: Query<&MenuEnum>,
     menu_item_q: Query<&MenuItem>,
-    mut left_right_ctr: Local<CountAccumulator>,
+    mut left_right_ctr: Local<CountAccumulator<MoveLeftRight>>,
     mut writer: MessageWriter<MenuActionMessage>,
 ) {
     let Some(entity) = focus.0 else { return };
@@ -823,7 +828,7 @@ fn handle_focused_item_actions(
     slider_q: Query<&MenuSlider>,
     enum_q: Query<&MenuEnum>,
     menu_item_q: Query<&MenuItem>,
-    mut left_right_ctr: ResMut<CountAccumulator<actions::MoveLeftRight>>,
+    mut left_right_ctr: ResMut<CountAccumulator<MoveLeftRight>>,
     mut writer: MessageWriter<MenuActionMessage>,
 ) {
     let Some(entity) = focus.0 else { return };
@@ -881,7 +886,7 @@ fn handle_menu_navigation(
     action_state: Res<ActionState<UserAction>>,
     mut focus: ResMut<InputFocus>,
     mut visible: ResMut<InputFocusVisible>,
-    mut ctr: Local<CountAccumulator>,
+    mut ctr: Local<CountAccumulator<MoveDownUp>>,
 ) {
     if action_state.just_pressed(&UserAction::ToggleMenu) || action_state.just_pressed(&UserAction::Back) {
         commands.insert_resource(GoBackInMenuRequest);
@@ -931,7 +936,7 @@ fn handle_menu_navigation(
     mut focus: ResMut<InputFocus>,
     mut visible: ResMut<InputFocusVisible>,
 
-    mut down_up_ctr: ResMut<CountAccumulator<actions::MoveDownUp>>,
+    mut down_up_ctr: ResMut<CountAccumulator<MoveDownUp>>,
 ) {
     let menu_or_back = menu_or_back_q.iter().any(|e| e.contains(ActionEvents::START));
     if menu_or_back {

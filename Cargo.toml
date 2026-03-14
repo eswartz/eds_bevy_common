@@ -136,7 +136,7 @@ lto = "thin"
 # opt-level = 1
 
 [features]
-default = ["bevy_skein", "input_bei"]
+default = []
 trenchbroom = ["bevy_trenchbroom"]
 input_lim = ["dep:leafwing-input-manager"]
 input_bei = ["dep:bevy_enhanced_input"]

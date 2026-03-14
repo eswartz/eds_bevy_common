@@ -144,12 +144,11 @@ pub enum UserAction {
 /// in similar systems. Multiple clients independently
 /// see the UserActions and can respond appropriately.
 pub(crate) fn process_global_actions(
-    mut commands: Commands,
     action_state: Res<ActionState<UserAction>>,
-    overlay_state: Res<State<OverlayState>>,
     mut primary_window: Query<&mut Window, With<PrimaryWindow>>,
     mut pause_state: ResMut<PauseState>,
     mut vol_q: Single<&mut UserVolume, With<MainBus>>,
+    mut gui_state: ResMut<GuiState>,
 ) {
     if action_state.just_pressed(&UserAction::TogglePause) {
         // Toggle from whatever means we are paused, as an
@@ -158,14 +157,8 @@ pub(crate) fn process_global_actions(
         pause_state.set_user_paused(paused);
     }
     if action_state.just_pressed(&UserAction::ToggleDebugUi) {
-        if show_dev_tools() {
-            if !overlay_state.is_menu() {
-                commands.set_state(match overlay_state.get() {
-                    OverlayState::Hidden => OverlayState::DebugGuiVisible,
-                    OverlayState::DebugGuiVisible => OverlayState::Hidden,
-                    current => *current,
-                });
-            }
+        if dev_tools_enabled() {
+            gui_state.enabled = dev_tools_enabled() && !gui_state.enabled;
         }
     }
     if action_state.just_pressed(&UserAction::ToggleFullScreen)
@@ -191,7 +184,6 @@ pub(crate) fn process_global_actions(
 }
 
 pub(crate) fn toggle_pointer_actions(
-    overlay: Res<State<OverlayState>>,
     gui_state: Res<GuiState>,
     mut state: ResMut<ActionState<UserAction>>,
 ) {
