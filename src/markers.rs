@@ -50,13 +50,13 @@ pub struct BackgroundAudio;
 
 ///
 
-/// Mark the entity as being "hovered".
+/// Mark the entity as being highlighted (the meaning and operation are client-side).
 #[derive(Component, Reflect, Debug)]
 #[reflect(Component)]
 #[type_path = "game"]
-pub struct Hovered;
+pub struct Highlighted;
 
-/// Mark the entity as being "selected".
+/// Mark the entity as being "selected" (the meaning and operation are client-side).
 #[derive(Component, Reflect, Debug)]
 #[reflect(Component)]
 #[type_path = "game"]
