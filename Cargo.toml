@@ -40,14 +40,11 @@ bevy = { version = "0.18.0", default-features = false, features = [
     # "trace_tracy",
 ] }
 
-# Set max log levels. This helps avoid unwanted low-severity log spam, which can affect performance.
 log = { version = "0.4", features = [
     "max_level_debug",
-    "release_max_level_info",
 ] }
 tracing = { version = "0.1", features = [
     "max_level_debug",
-    "release_max_level_info",
 ] }
 avian3d = { version = "0.6.0-dev", default-features = false, features = [
 	"3d", "f32",
@@ -67,6 +64,7 @@ bevy-inspector-egui = "0.36"
 egui = { version = "0.33", features = ["bytemuck"] }
 
 firewheel = { version = "0.10.0" }
+firewheel-graph = { version = "=0.10.0" }
 
 bevy_seedling = { version = "0.7.0", default-features = false, features = [
     "wav", "ogg", "rand", "reflect",

@@ -3161,6 +3161,7 @@ dependencies = [
  "bytemuck",
  "egui",
  "firewheel",
+ "firewheel-graph",
  "getrandom 0.4.2",
  "image",
  "leafwing-input-manager",
