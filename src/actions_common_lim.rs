@@ -332,14 +332,11 @@ pub fn default_fps_input_map() -> InputMap<UserAction> {
     input_map.insert(Accelerate, GamepadButton::West);
 
     input_map.insert(ToggleCrouch, ModifierKey::Control);
-    // input_map.insert(ToggleCrouch, GamepadButton::DPadDown);
-    // input_map.insert(ToggleCrouch, GamepadButton::LeftThumb);
 
     input_map.insert(Crouch, KeyCode::KeyC);
     input_map.insert(Crouch, GamepadButton::LeftThumb);
 
     input_map.insert(TurnAround, KeyCode::Backspace);
-    input_map.insert(TurnAround, GamepadButton::LeftTrigger);
 
     // Home, i.e. to reset the camera to home position.
     input_map.insert(Home, KeyCode::Backslash);

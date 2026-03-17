@@ -280,15 +280,6 @@ pub fn assign_stock_common_actions(
             GamepadButton::South,
         ],
     ));
-    commands.spawn((
-        include.clone(),
-        Action::<actions::Reset>::new(),
-        bindings![
-            KeyCode::Backspace,
-            GamepadButton::LeftTrigger,
-        ],
-    ));
-
 }
 
 /// include: should be at least e.g. `(ActionOf::<YourContext>::new(context_entity), {Menu,Player}Action)`
@@ -318,7 +309,7 @@ pub fn assign_stock_menu_actions(
         Scale::splat(UI_SENSITIVITY_Y),
         Bindings::spawn((
             Bidirectional::new(KeyCode::ArrowDown, KeyCode::ArrowUp),
-            // Bidirectional::new(GamepadButton::DPadDown, GamepadButton::DPadUp),
+            Bidirectional::new(GamepadButton::DPadDown, GamepadButton::DPadUp),
         )),
     ));
     commands.spawn((
@@ -332,6 +323,15 @@ pub fn assign_stock_menu_actions(
             Bidirectional::new(KeyCode::ArrowRight, KeyCode::ArrowLeft),
             Bidirectional::new(GamepadButton::DPadRight, GamepadButton::DPadLeft),
         )),
+    ));
+
+    commands.spawn((
+        include.clone(),
+        Action::<actions::Reset>::new(),
+        bindings![
+            KeyCode::Backspace,
+            GamepadButton::LeftTrigger,
+        ],
     ));
     // commands.spawn((
     //     // Note: this usage as an action is only processed in gameplay
@@ -386,7 +386,6 @@ pub fn assign_stock_player_actions(
         Negate::y(),
         Bindings::spawn((
             Cardinal::wasd_keys(),
-            Cardinal::dpad(),
             Axial::left_stick(),
         )),
     ));
@@ -404,9 +403,6 @@ pub fn assign_stock_player_actions(
     commands.spawn((
         include.clone(),
         Action::<actions::MoveLeftRight>::new(),
-        // DeadZone::default(),
-        // SmoothNudge::default(),
-        // DeltaScale::default(),
         Bindings::spawn((
             Bidirectional::new(GamepadButton::DPadRight, GamepadButton::DPadLeft),
         )),
@@ -414,14 +410,9 @@ pub fn assign_stock_player_actions(
     commands.spawn((
         include.clone(),
         Action::<actions::Look>::new(),
-        Negate::y(),
-        DeadZone::default(),
-        // SmoothNudge::default(),
-        // DeltaScale::default(),
-        Scale::new(Vec3::splat(50.0)),
         Bindings::spawn((
-            Spawn((Binding::mouse_motion(), Negate::y())),
-            Axial::right_stick(),
+            Spawn((Binding::mouse_motion(), Scale::new(Vec3::splat(1.0)))),
+            Axial::right_stick().with((DeadZone::default(), Scale::new(Vec3::splat(100.0)), Negate::y())),
         )),
     ));
     commands.spawn((
@@ -435,8 +426,7 @@ pub fn assign_stock_player_actions(
         bindings![
             KeyCode::KeyC,
             KeyCode::ControlRight,
-            // GamepadButton::LeftThumb,
-            GamepadButton::LeftTrigger,
+            GamepadButton::LeftThumb,
         ],
     ));
     commands.spawn((
@@ -444,7 +434,7 @@ pub fn assign_stock_player_actions(
         Action::<actions::TurnAround>::new(),
         bindings![
             KeyCode::Backspace,
-            // GamepadButton::LeftTrigger,
+            GamepadButton::RightThumb,
         ],
     ));
     commands.spawn((
@@ -453,8 +443,14 @@ pub fn assign_stock_player_actions(
         bindings![
             MouseButton::Left,
             KeyCode::Enter,
-            // GamepadButton::RightThumb,
             GamepadButton::RightTrigger,
+        ],
+    ));
+    commands.spawn((
+        include.clone(),
+        Action::<actions::Reset>::new(),
+        bindings![
+            KeyCode::Backslash,
         ],
     ));
 
