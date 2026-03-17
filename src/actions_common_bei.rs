@@ -397,7 +397,7 @@ pub fn assign_stock_player_actions(
         // DeltaScale::default(),
         Bindings::spawn((
             Bidirectional::new(KeyCode::Space, KeyCode::KeyC),
-            // Bidirectional::new(GamepadButton::DPadDown, GamepadButton::DPadUp),
+            Bidirectional::new(GamepadButton::DPadUp, GamepadButton::DPadDown),
         )),
     ));
     commands.spawn((
@@ -412,7 +412,13 @@ pub fn assign_stock_player_actions(
         Action::<actions::Look>::new(),
         Bindings::spawn((
             Spawn((Binding::mouse_motion(), Scale::new(Vec3::splat(1.0)))),
-            Axial::right_stick().with((DeadZone::default(), Scale::new(Vec3::splat(100.0)), Negate::y())),
+            Axial::right_stick()
+                .with((
+                    DeadZone::default(),
+                    Scale::new(Vec3::splat(100.0)),
+                    Negate::y(),
+                    SmoothNudge::default(),
+                )),
         )),
     ));
     commands.spawn((
