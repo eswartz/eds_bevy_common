@@ -318,7 +318,7 @@ pub fn assign_stock_menu_actions(
         Scale::splat(UI_SENSITIVITY_Y),
         Bindings::spawn((
             Bidirectional::new(KeyCode::ArrowDown, KeyCode::ArrowUp),
-            Bidirectional::new(GamepadButton::DPadDown, GamepadButton::DPadUp),
+            // Bidirectional::new(GamepadButton::DPadDown, GamepadButton::DPadUp),
         )),
     ));
     commands.spawn((
@@ -398,7 +398,7 @@ pub fn assign_stock_player_actions(
         // DeltaScale::default(),
         Bindings::spawn((
             Bidirectional::new(KeyCode::Space, KeyCode::KeyC),
-            Bidirectional::new(GamepadButton::DPadUp, GamepadButton::DPadDown),
+            // Bidirectional::new(GamepadButton::DPadDown, GamepadButton::DPadUp),
         )),
     ));
     commands.spawn((
@@ -408,17 +408,17 @@ pub fn assign_stock_player_actions(
         // SmoothNudge::default(),
         // DeltaScale::default(),
         Bindings::spawn((
-            Bidirectional::new(GamepadButton::DPadLeft, GamepadButton::DPadRight),
+            Bidirectional::new(GamepadButton::DPadRight, GamepadButton::DPadLeft),
         )),
     ));
     commands.spawn((
         include.clone(),
         Action::<actions::Look>::new(),
         Negate::y(),
-        // DeadZone::default(),
+        DeadZone::default(),
         // SmoothNudge::default(),
         // DeltaScale::default(),
-        // Scale::new(Vec3::splat(1.0)),
+        Scale::new(Vec3::splat(50.0)),
         Bindings::spawn((
             Spawn((Binding::mouse_motion(), Negate::y())),
             Axial::right_stick(),
@@ -435,7 +435,8 @@ pub fn assign_stock_player_actions(
         bindings![
             KeyCode::KeyC,
             KeyCode::ControlRight,
-            GamepadButton::LeftThumb,
+            // GamepadButton::LeftThumb,
+            GamepadButton::LeftTrigger,
         ],
     ));
     commands.spawn((
@@ -443,7 +444,7 @@ pub fn assign_stock_player_actions(
         Action::<actions::TurnAround>::new(),
         bindings![
             KeyCode::Backspace,
-            GamepadButton::LeftTrigger,
+            // GamepadButton::LeftTrigger,
         ],
     ));
     commands.spawn((
@@ -452,6 +453,7 @@ pub fn assign_stock_player_actions(
         bindings![
             MouseButton::Left,
             KeyCode::Enter,
+            // GamepadButton::RightThumb,
             GamepadButton::RightTrigger,
         ],
     ));

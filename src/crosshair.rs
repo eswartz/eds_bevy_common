@@ -30,9 +30,10 @@ impl Plugin for CrosshairPlugin {
             .run_if(resource_changed::<State<OverlayState>>)
         )
         .add_systems(
-            Update,
+            FixedUpdate,
             (
-                check_crosshair_activity,
+                check_crosshair_activity_mouse,
+                check_crosshair_activity_gamepad,
                 update_crosshair,
                 check_crosshair_target,
             )
@@ -53,6 +54,9 @@ pub struct Crosshair {
 }
 
 impl Crosshair {
+    pub fn add_activity(&mut self, activity_delta: f32) {
+        self.current_strength = (self.current_strength + activity_delta).clamp(0.0, 1.0);
+    }
     pub fn is_active(&self) -> bool {
         self.current_strength >= 0.5
     }
@@ -116,18 +120,40 @@ fn check_crosshair_visibility(
     }
 }
 
-fn check_crosshair_activity(
+fn check_crosshair_activity_mouse(
     mut crosshair_q: Single<&mut Crosshair>,
     movement: Res<AccumulatedMouseMotion>,
     time: Res<Time>,
 ) {
-    let dt = time.delta_secs() * 4.0;
+    let dt = time.delta_secs();
     let activity_delta = if movement.delta.length() < 1.0 {
         -dt
     } else {
-        dt
+        dt * 4.0
     };
-    crosshair_q.current_strength = (crosshair_q.current_strength + activity_delta).clamp(0.0, 1.0);
+    crosshair_q.add_activity(activity_delta);
+}
+
+fn check_crosshair_activity_gamepad(
+    mut crosshair_q: Single<&mut Crosshair>,
+    gamepad_q: Query<&Gamepad>,
+    time: Res<Time>,
+) {
+    let mut delta = 0.;
+    let mut count = 0;
+    for gamepad in gamepad_q.iter() {
+        for (_, value) in gamepad.analog().all_axes_and_values() {
+            delta += value;
+            count += 1;
+        }
+    }
+    let dt = time.delta_secs();
+    let activity_delta = if delta * (count as f32) < 1.0 {
+        -dt
+    } else {
+        dt * 4.0
+    };
+    crosshair_q.add_activity(activity_delta);
 }
 
 fn update_crosshair(

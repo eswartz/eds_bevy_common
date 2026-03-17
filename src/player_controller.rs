@@ -281,7 +281,7 @@ fn collect_player_look(
 fn collect_player_look(
     mut primary_window: Query<&mut Window, With<PrimaryWindow>>,
 
-    look: Query<&Action<Look>, With<PlayerAction>>,
+    look: Query<&Action<Look>, (With<Action<Look>>, With<PlayerAction>)>,
     turn_around_events: Query<&ActionEvents, (With<Action<TurnAround>>, With<PlayerAction>)>,
     reset_events: Query<&ActionEvents, (With<Action<Reset>>, With<PlayerAction>)>,
 
@@ -298,7 +298,7 @@ fn collect_player_look(
         return;
     }
 
-    let look_axis = **look.iter().next().unwrap();
+    let look_axis = **look.single().unwrap();
 
     let mut instant_body_turn = Vec3::ZERO;
     let mut instant_head_turn = Vec3::ZERO;
