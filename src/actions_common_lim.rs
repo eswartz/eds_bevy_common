@@ -346,7 +346,7 @@ pub fn default_fps_input_map() -> InputMap<UserAction> {
         ShiftFire,
         ButtonlikeChord::modified(ModifierKey::Shift, MouseButton::Left),
     );
-    input_map.insert(Fire, GamepadButton::RightTrigger);
+    input_map.insert(Fire, GamepadButton::RightTrigger2);
 
     input_map.insert(AlternateFire, MouseButton::Right);
     input_map.insert(

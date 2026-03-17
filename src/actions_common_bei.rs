@@ -98,9 +98,15 @@ pub mod actions {
     #[action_output(bool)]
     pub struct Accelerate;
 
+    /// Button version of crouching.
     #[derive(InputAction)]
     #[action_output(bool)]
     pub struct Crouch;
+
+    /// Button version of jump.
+    #[derive(InputAction)]
+    #[action_output(bool)]
+    pub struct Jump;
 
     /// Switch perspective.
     #[derive(InputAction)]
@@ -433,6 +439,15 @@ pub fn assign_stock_player_actions(
             KeyCode::KeyC,
             KeyCode::ControlRight,
             GamepadButton::LeftThumb,
+            GamepadButton::West,
+        ],
+    ));
+    commands.spawn((
+        include.clone(),
+        Action::<actions::Jump>::new(),
+        bindings![
+            KeyCode::Space,
+            GamepadButton::East,
         ],
     ));
     commands.spawn((
@@ -449,7 +464,7 @@ pub fn assign_stock_player_actions(
         bindings![
             MouseButton::Left,
             KeyCode::Enter,
-            GamepadButton::RightTrigger,
+            GamepadButton::RightTrigger2,
         ],
     ));
     commands.spawn((

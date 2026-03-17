@@ -155,6 +155,7 @@ fn collect_player_movement(
 fn collect_player_movement(
     accel_events: Query<&ActionEvents, (With<Action<Accelerate>>, With<PlayerAction>)>,
     crouch_events: Query<&ActionEvents, (With<Action<Crouch>>, With<PlayerAction>)>,
+    jump_events: Query<&ActionEvents, (With<Action<Jump>>, With<PlayerAction>)>,
     move_flycam: Query<&Action<MoveFlycam>, With<PlayerAction>>,
     move_down_up: Query<&Action<MoveDownUp>, With<PlayerAction>>,
     move_left_right: Query<&Action<MoveLeftRight>, With<PlayerAction>>,
@@ -170,9 +171,9 @@ fn collect_player_movement(
 ) {
     let mut instant_thrust = Vec3::ZERO;
 
-    let speed = if accel_events.iter().next().unwrap().contains(ActionEvents::START | ActionEvents::ONGOING) {
+    let speed = if accel_events.iter().next().unwrap().contains(ActionEvents::START | ActionEvents::FIRE) {
         Speed::Fast
-    } else if crouch_events.iter().next().unwrap().contains(ActionEvents::START | ActionEvents::ONGOING) {
+    } else if crouch_events.iter().next().unwrap().contains(ActionEvents::START | ActionEvents::FIRE) {
         Speed::Slow
     } else {
         Speed::Normal
@@ -184,6 +185,10 @@ fn collect_player_movement(
     instant_thrust.x = (left_right_axis + move_axis.x) * ctrl_settings.move_scale.x;
     instant_thrust.y = down_up_axis * ctrl_settings.move_scale.y;
     instant_thrust.z = move_axis.y * ctrl_settings.move_scale.z;
+
+    if jump_events.iter().next().unwrap().contains(ActionEvents::START | ActionEvents::FIRE) {
+        instant_thrust.y += ctrl_settings.move_scale.y;
+    }
 
     let (player, vel) = &*player_vel_q;
 

@@ -800,6 +800,7 @@ pub fn process_player_input_movement_for_fps(
 
         let mut instant_thrust = Vec3::ZERO;
         let mut overall_speed = input_settings.base_xz_speed as f32;
+
         match input {
             PlayerInput::Move(..) if movement.state == MovementState::Scripted => {
                 // Ignore.
