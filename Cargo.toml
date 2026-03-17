@@ -173,3 +173,4 @@ web = [
 
 [[example]]
 name = "game_menu"
+required-features = ["input_bei", "bevy_skein"]

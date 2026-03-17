@@ -10,11 +10,13 @@ use bevy::ecs::world::CommandQueue;
 use bevy::scene::SceneInstanceReady;
 use bevy::sprite::Text2dShadow;
 use bevy_seedling::spatial::SpatialListener3D;
+#[cfg(feature = "bevy_skein")]
 use bevy_skein::SkeinPlugin;
 use bevy_tweening::lens::TextColorLens;
 use bevy_tweening::{AnimTarget, EaseMethod, Tween, TweenAnim};
 use bevy::winit::WinitSettings;
 
+#[cfg(feature = "input_lim")]
 use leafwing_input_manager::prelude::{ActionState, InputMap};
 use strum::VariantArray;
 use std::time::Duration;
@@ -44,12 +46,10 @@ fn main() -> AppExit {
                 ..default()
             },
         )
-        .add_plugins(SkeinPlugin::default())
 
         .add_plugins(AppPlugin)
 
         .add_plugins(ActionPlugin)
-        .insert_resource(create_input_map())
 
         .add_plugins(LifecyclePlugin)
         .add_plugins(GuiPlugin)
@@ -89,21 +89,29 @@ fn main() -> AppExit {
             ensure_3d_camera,
         )
 
-        .add_systems(
-            FixedUpdate,
-            (
-                check_actions,
-            )
-                .run_if(not(is_in_menu))
-                .run_if(is_level_active)
-                .run_if(not(is_paused))
-                .run_if(not(debug_gui_wants_direct_input))
-                .run_if(in_state(ProgramState::InGame))
-            ,
-        )
+        // .add_systems(
+        //     FixedUpdate,
+        //     (
+        //         check_actions,
+        //     )
+        //         .run_if(not(is_in_menu))
+        //         .run_if(is_level_active)
+        //         .run_if(not(is_paused))
+        //         .run_if(not(debug_gui_wants_direct_input))
+        //         .run_if(in_state(ProgramState::InGame))
+        //     ,
+        // )
     ;
 
-    if show_dev_tools() {
+    #[cfg(feature = "input_lim")]
+    app.insert_resource(create_input_map());
+    #[cfg(feature = "input_bei")]
+    app.add_systems(Startup, create_input_map);
+
+    #[cfg(feature = "bevy_skein")]
+    app.add_plugins(SkeinPlugin::default());
+
+    if dev_tools_enabled() {
         app
             .add_plugins(DebugPlugin)
 
@@ -123,6 +131,7 @@ fn main() -> AppExit {
     app.run()
 }
 
+#[cfg(feature = "input_lim")]
 fn create_input_map() -> InputMap::<UserAction> {
     let mut map = InputMap::default();
     map.merge(&stock_input_maps::default_gui_input_map());
@@ -130,18 +139,36 @@ fn create_input_map() -> InputMap::<UserAction> {
     map
 }
 
+#[cfg(feature = "input_bei")]
+fn create_input_map(mut commands: Commands) {
+    use bevy_enhanced_input::prelude::ActionOf;
 
-fn check_actions(
-    actions: Res<ActionState<UserAction>>,
-    mut commands: Commands,
-) {
-    if actions.just_released(&UserAction::ForceLose) {
-        commands.set_state(LevelState::Lost);
-    }
-    if actions.just_released(&UserAction::ForceWin) {
-        commands.set_state(LevelState::Won);
-    }
+    let menu_entity = commands.spawn((
+        MenuContext,
+        Name::new("MenuContext"),
+    )).id();
+    let include = (
+        ActionOf::<MenuContext>::new(menu_entity),
+        MenuAction,
+    );
+    assign_stock_common_actions(commands.reborrow(), include.clone());
+    assign_stock_menu_actions(commands.reborrow(), include.clone());
+
+    ///////
+
+    let player_entity = commands.spawn((
+        PlayerContext,
+        Name::new("PlayerContext"),
+    )).id();
+
+    let include = (
+        ActionOf::<PlayerContext>::new(player_entity),
+        PlayerAction,
+    );
+    assign_stock_common_actions(commands.reborrow(), include.clone());
+    assign_stock_player_actions(commands.reborrow(), include.clone());
 }
+
 
 fn register_dummy_level(
     assets: Res<AssetServer>,
