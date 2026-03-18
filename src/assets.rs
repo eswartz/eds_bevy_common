@@ -1,7 +1,7 @@
+//! Common assets.
+//!
+//!
 use std::path::Path;
-
-/// Common assets.
-///
 use bevy::prelude::*;
 use bevy::asset::io::AssetSourceBuilder;
 use bevy_asset_loader::prelude::*;
@@ -19,7 +19,7 @@ impl Plugin for CommonAssetsPlugin {
             while let Some(test) = comps.next() {
                 let common_assets = Path::new(&test).join(COMMON_DIR);
                 if common_assets.is_dir() {
-                    log::info!("Using {common_assets:?} for 'common' assets");
+                    eprintln!("info: using {common_assets:?} for 'common' assets");
                     app.register_asset_source(
                         "common",
                         AssetSourceBuilder::platform_default(
@@ -31,6 +31,50 @@ impl Plugin for CommonAssetsPlugin {
                 }
             }
 
+            // OK, did not find it. Do the uglier work of sniffing
+            // around in the git repo checkout.
+            if let Ok(cargo_dir) = std::env::var("CARGO_HOME") {
+                let git_checkouts = Path::new(&cargo_dir).join("git").join("checkouts");
+                if let Ok(dir) = git_checkouts.read_dir() {
+                    let mut newest = None;
+                    let mut newest_dir = None;
+                    for ent in dir {
+                        let Ok(ent) = ent else { continue };
+                        let name = ent.file_name().display().to_string();
+                        if name.starts_with("eds_bevy_common-") {
+                            let exp_dir = ent.path();
+                            eprintln!("info: searching within {exp_dir:?}");
+
+                            // This holds subdirs named after checkout SHA1 prefixes.
+                            if let Ok(revs) = exp_dir.read_dir() {
+                                for rev in revs {
+                                    let Ok(rev) = rev else { continue };
+                                    let Ok(revm) = rev.metadata() else { continue };
+                                    let Ok(revmt) = revm.modified() else { continue };
+                                    if revm.is_dir() && newest.is_none_or(|n| revmt > n) {
+                                        newest_dir = Some(rev.path());
+                                        newest = Some(revmt);
+                                    }
+                                }
+                            }
+
+                        }
+                    }
+                    if let Some(newest_dir) = newest_dir {
+                        eprintln!("info: using eds_bevy_common git repo checkout at {newest_dir:?}");
+                        app.register_asset_source(
+                            "common",
+                            AssetSourceBuilder::platform_default(
+                                &newest_dir.join("assets").display().to_string(),
+                                None,
+                            ),
+                        );
+                        return;
+                    }
+                }
+            }
+
+            eprintln!("error: did not find eds_bevy_common git repo checkout");
         }
 
         // Assets better be installed.
@@ -46,7 +90,7 @@ impl Plugin for CommonAssetsPlugin {
             return;
         }
 
-        log::warn!("did not find eds_bevy_common/assets");
+        eprintln!("error: did not find eds_bevy_common/assets");
     }
 }
 
