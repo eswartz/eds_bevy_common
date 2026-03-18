@@ -3143,7 +3143,7 @@ dependencies = [
 
 [[package]]
 name = "eds_bevy_common"
-version = "0.0.7"
+version = "0.0.8"
 dependencies = [
  "anyhow",
  "avian3d 0.6.0",

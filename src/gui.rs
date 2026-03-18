@@ -13,7 +13,7 @@ use bevy_asset_loader::prelude::*;
 use bevy_seedling::prelude::MainBus;
 
 use crate::FpsOverlayVisible;
-use crate::assets::CommonAssets;
+use crate::assets::CommonGuiAssets;
 use crate::RENDER_LAYER_UI;
 
 use super::audio::UserVolume;
@@ -30,14 +30,6 @@ impl Plugin for GuiPlugin {
         .insert_resource(StatusVisible(false))
         .init_resource::<GrabState>()
         .add_message::<GrabCursor>()
-        .configure_loading_state(
-            LoadingStateConfig::new(ProgramState::Initializing)
-                .load_collection::<CommonAssets>()
-        )
-        .configure_loading_state(
-            LoadingStateConfig::new(ProgramState::LoadingSave)
-                .load_collection::<CommonAssets>()
-        )
         .add_systems(Startup,
             load_ui_font,
         )
@@ -120,7 +112,7 @@ fn load_ui_font(
 fn ensure_font_assets(
     world: &mut World,
 ) {
-    world.init_collection::<CommonAssets>();
+    world.init_collection::<CommonGuiAssets>();
     // if world.get_resource::<UiFont>().is_none() {
     //     let default_ui_font = world.get_resource::<CommonAssets>().unwrap().recursive_bold_font.clone();
     //     world.insert_resource(UiFont(default_ui_font));
@@ -329,7 +321,7 @@ struct MuteArea;
 
 fn setup_gui_nodes(
     mut commands: Commands,
-    assets: Res<CommonAssets>,
+    assets: Res<CommonGuiAssets>,
     ui_font: Option<Res<UiFont>>,
 ) {
     let font = ui_font.map_or(default(), |f| f.0.clone());

@@ -34,6 +34,9 @@ fn main() -> AppExit {
             )),
         })
 
+        // Needs to precede DefaultPlugins.AssetPlugin
+        .add_plugins(CommonAssetsPlugin)
+
         .add_plugins((
             DefaultPlugins,
             PhysicsPlugins::default(),

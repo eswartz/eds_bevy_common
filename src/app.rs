@@ -4,8 +4,7 @@ use bevy::camera::visibility::RenderLayers;
 use bevy::color::palettes::tailwind;
 use bevy::ecs::message::MessageUpdateSystems;
 use bevy::prelude::*;
-use bevy_asset_loader::loading_state::LoadingState;
-use bevy_asset_loader::loading_state::LoadingStateAppExt as _;
+use bevy_asset_loader::prelude::*;
 
 use crate::*;
 
@@ -34,6 +33,17 @@ impl Plugin for AppPlugin {
                 .continue_to_state(ProgramState::New)
                 .on_failure_continue_to_state(ProgramState::Error)
             ,
+        )
+
+        .configure_loading_state(
+            LoadingStateConfig::new(ProgramState::Initializing)
+                .load_collection::<CommonGuiAssets>()
+                .load_collection::<CommonFxAssets>()
+        )
+        .configure_loading_state(
+            LoadingStateConfig::new(ProgramState::LoadingSave)
+                .load_collection::<CommonGuiAssets>()
+                .load_collection::<CommonFxAssets>()
         )
 
         // Custom exit handling.

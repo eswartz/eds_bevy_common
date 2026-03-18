@@ -2,7 +2,7 @@ use bevy::camera::visibility::RenderLayers;
 use bevy::input::mouse::AccumulatedMouseMotion;
 use bevy::prelude::*;
 
-use crate::assets::CommonAssets;
+use crate::assets::CommonGuiAssets;
 use crate::RENDER_LAYER_DEFAULT;
 use crate::RENDER_LAYER_VIEW;
 use crate::WorldCamera;
@@ -70,7 +70,7 @@ pub struct CrosshairTargetable;
 
 fn init_crosshair(
     mut commands: Commands,
-    gui_assets: Res<CommonAssets>,
+    gui_assets: Res<CommonGuiAssets>,
     mut crosshair_q: Query<&mut Visibility, With<Crosshair>>,
 ) {
     if let Ok(mut vis) = crosshair_q.single_mut() {

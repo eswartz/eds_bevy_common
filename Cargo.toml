@@ -1,6 +1,6 @@
 [package]
 name = "eds_bevy_common"
-version = "0.0.7"
+version = "0.0.8"
 edition = "2024"
 authors = ["Ed Swartz (github.com/eswartz)"]
 license = "MIT OR Apache 2"
