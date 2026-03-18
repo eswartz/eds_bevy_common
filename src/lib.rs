@@ -33,7 +33,11 @@ pub mod collision_hooks;
 pub mod areas;
 pub mod deathbox;
 pub mod fps;
+pub mod synth;
+pub mod client_synth;
 pub mod app;
+
+pub mod midi_synth;
 
 pub use base_dir::*;
 #[cfg(feature = "input_lim")]
@@ -70,4 +74,6 @@ pub use collision_hooks::*;
 pub use areas::*;
 pub use deathbox::*;
 pub use fps::*;
+pub use synth::*;
+pub use client_synth::*;
 pub use app::*;

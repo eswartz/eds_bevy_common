@@ -63,7 +63,7 @@ bevy_egui = { version = "0.39", features = ["render", "serde"] }
 bevy-inspector-egui = "0.36"
 egui = { version = "0.33", features = ["bytemuck"] }
 
-firewheel = { version = "0.10" }
+firewheel = { version = "0.10", optional = true }
 
 bevy_seedling = { version = "0.7.0", default-features = false, features = [
     "wav", "ogg", "rand", "reflect",
@@ -71,7 +71,7 @@ bevy_seedling = { version = "0.7.0", default-features = false, features = [
     "dev",
     "stream", "loudness", "hrtf",
     # "web_audio",
-] }
+], optional = true }
 rustc-hash = "2.1.1"
 
 strum = { version = "0.27.2", features = ["derive", "strum_macros"] }
@@ -101,6 +101,12 @@ bevy_trenchbroom_avian = { optional = true, version = "0.12", default-features =
 bevy_skein = { optional = true, version = "0.5.0" }
 
 sysinfo = { version = "0.37" }
+
+rustysynth = "1.3.6"
+# rustysynth = { path = "../rustysynth/rustysynth" }
+xsynth-core = "0.3.3"
+thiserror = "2.0.12"
+crossbeam-channel = "0.5.15"
 
 # Idiomatic Bevy code often triggers these lints, and the CI workflow treats them as errors.
 # In some cases they may still signal poor code quality however, so consider commenting out these lines.
@@ -133,13 +139,18 @@ lto = "thin"
 # opt-level = 1
 
 [features]
-default = []
+default = ["firewheel"]
 trenchbroom = ["bevy_trenchbroom"]
 input_lim = ["dep:leafwing-input-manager"]
 input_bei = ["dep:bevy_enhanced_input"]
 webgpu = []
 # input_lim = []
 # input_bei = []
+
+# kira = ["dep:kira", "dep:bevy_kira_audio"]
+kira = []
+firewheel = ["dep:firewheel", "dep:bevy_seedling"]
+
 dev = [
     # Improve compile times for dev builds by linking Bevy as a dynamic library.
     "bevy/dynamic_linking",
