@@ -7,6 +7,7 @@ use bevy::asset::io::AssetSourceBuilder;
 use bevy_asset_loader::prelude::*;
 use bevy_seedling::sample::AudioSample;
 use crate::find_runtime_base_directory_by_folder;
+use crate::midi_synth::asset::SoundFont;
 
 pub struct CommonAssetsPlugin;
 
@@ -107,6 +108,13 @@ pub struct CommonGuiAssets {
     pub crosshair: Handle<Image>,
     #[asset(path = "common://textures/crosshair_select.png")]
     pub crosshair_select: Handle<Image>,
+}
+
+#[derive(Resource, AssetCollection)]
+#[allow(unused)]
+pub struct CommonSoundFontAssets {
+    #[asset(path = "common://soundfonts/TimGM6mb.sf2")]
+    pub timgm6mb: Handle<SoundFont>,
 }
 
 #[derive(Resource, AssetCollection)]

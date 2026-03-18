@@ -39,11 +39,13 @@ impl Plugin for AppPlugin {
             LoadingStateConfig::new(ProgramState::Initializing)
                 .load_collection::<CommonGuiAssets>()
                 .load_collection::<CommonFxAssets>()
+                .load_collection::<CommonSoundFontAssets>()
         )
         .configure_loading_state(
             LoadingStateConfig::new(ProgramState::LoadingSave)
                 .load_collection::<CommonGuiAssets>()
                 .load_collection::<CommonFxAssets>()
+                .load_collection::<CommonSoundFontAssets>()
         )
 
         // Custom exit handling.
