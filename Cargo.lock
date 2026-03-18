@@ -417,9 +417,9 @@ dependencies = [
 
 [[package]]
 name = "avian3d"
-version = "0.6.0-rc.1"
+version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "59554a1f936b55ade114a5f6b68bf718060133296a170c5107ffe73abfa65ea9"
+checksum = "ccf73a986c8a79fa00483d75ccb6fb306bf37eef2681c1fdd86f0ae8afd07d46"
 dependencies = [
  "approx",
  "avian_derive",
@@ -430,7 +430,6 @@ dependencies = [
  "bitflags 2.11.0",
  "derive_more",
  "disqualified",
- "glam 0.31.1",
  "glam_matrix_extras",
  "itertools 0.14.0",
  "obvhs",
@@ -3147,7 +3146,7 @@ name = "eds_bevy_common"
 version = "0.0.7"
 dependencies = [
  "anyhow",
- "avian3d 0.6.0-rc.1",
+ "avian3d 0.6.0",
  "bevy",
  "bevy-inspector-egui",
  "bevy_asset_loader",
@@ -3161,7 +3160,6 @@ dependencies = [
  "bytemuck",
  "egui",
  "firewheel",
- "firewheel-graph",
  "getrandom 0.4.2",
  "image",
  "leafwing-input-manager",

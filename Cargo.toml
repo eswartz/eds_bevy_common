@@ -46,7 +46,7 @@ log = { version = "0.4", features = [
 tracing = { version = "0.1", features = [
     "max_level_debug",
 ] }
-avian3d = { version = "0.6.0-dev", default-features = false, features = [
+avian3d = { version = "0.6", default-features = false, features = [
 	"3d", "f32",
 	"collider-from-mesh",
      # "f64",
@@ -56,15 +56,14 @@ avian3d = { version = "0.6.0-dev", default-features = false, features = [
     "bevy_picking",
     "diagnostic_ui",
     "debug-plugin",
-    # "validate",
-    "xpbd_joints",
+    # "validate",  # has crash
+    "xpbd_joints", # optional
 ] }
 bevy_egui = { version = "0.39", features = ["render", "serde"] }
 bevy-inspector-egui = "0.36"
 egui = { version = "0.33", features = ["bytemuck"] }
 
-firewheel = { version = "0.10.0" }
-firewheel-graph = { version = "=0.10.0" }
+firewheel = { version = "0.10" }
 
 bevy_seedling = { version = "0.7.0", default-features = false, features = [
     "wav", "ogg", "rand", "reflect",
