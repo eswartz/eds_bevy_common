@@ -1,8 +1,3 @@
-#![doc = r#"
-Asset types
-
-TODO
-"#]
 
 use std::{io::Read, sync::Arc};
 use thiserror::Error;
@@ -20,7 +15,6 @@ pub struct SoundFont {
 }
 
 impl SoundFont {
-    /// Create a new
     fn new<R: Read>(file: &mut R) -> Self {
         let sf = Sf::new(file).unwrap();
 

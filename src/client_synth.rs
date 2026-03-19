@@ -4,12 +4,13 @@ use std::collections::VecDeque;
 use std::sync::atomic::Ordering;
 use std::time::Duration;
 
-use crate::GameplayState;
-use crate::is_paused;
-
 use bevy::ecs::entity::EntityHashMap;
 use bevy::ecs::entity::EntityHashSet;
 use bevy::prelude::*;
+use bevy_asset_loader::prelude::*;
+
+use crate::*;
+
 use crate::midi_synth::synth::*;
 
 use crate::synth::MidiSynthProxy;
@@ -30,6 +31,15 @@ impl Plugin for ClientSynthPlugin {
             .init_resource::<PendingSynthEvents>()
             .init_resource::<SynthController>()
             .init_resource::<SynthProxyMap>()
+
+            .configure_loading_state(
+                LoadingStateConfig::new(ProgramState::Initializing)
+                    .load_collection::<CommonSoundFontAssets>()
+            )
+            .configure_loading_state(
+                LoadingStateConfig::new(ProgramState::LoadingSave)
+                    .load_collection::<CommonSoundFontAssets>()
+            )
 
             // Reset when we know no gameplay should be active.
             // Other clients should use DespawnOnExit for MidiSynth.

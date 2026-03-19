@@ -1,6 +1,10 @@
 use bevy::prelude::*;
 use bevy_seedling::prelude::*;
+use bevy_asset_loader::prelude::*;
 use bevy_tweening::Lens;
+
+use crate::CommonFxAssets;
+use crate::ProgramState;
 
 /// Remember to schedule [initialize_audio] or a local copy
 /// (can be as early as [Startup])
@@ -16,6 +20,15 @@ impl Plugin for AudioCommonPlugin {
                 },
                 ..default()
             })
+
+            .configure_loading_state(
+                LoadingStateConfig::new(ProgramState::Initializing)
+                    .load_collection::<CommonFxAssets>()
+            )
+            .configure_loading_state(
+                LoadingStateConfig::new(ProgramState::LoadingSave)
+                    .load_collection::<CommonFxAssets>()
+            )
 
             .add_systems(PostUpdate,
                 (

@@ -108,24 +108,27 @@ pub mod actions {
     #[action_output(bool)]
     pub struct Jump;
 
-    /// Switch perspective.
+    /// Switch camera perspective.
     #[derive(InputAction)]
     #[action_output(bool)]
     pub struct ChangeCamera;
 
+    /// Move in the XZ plane (forward/back/strafe).
     #[derive(InputAction)]
     #[action_output(Vec2)]
     pub struct MoveFlycam;
 
+    /// Move in the Y axis (fly/dive).
     #[derive(InputAction)]
     #[action_output(f32)]
     pub struct MoveDownUp;
 
+    /// Move in the X axis (i.e. strafe).
     #[derive(InputAction)]
     #[action_output(f32)]
     pub struct MoveLeftRight;
 
-    /// Get closer/further from active object.
+    /// Change camera to be closer/further from some object.
     #[derive(InputAction)]
     #[action_output(Vec2)]
     pub struct Zoom;
@@ -134,14 +137,6 @@ pub mod actions {
     #[derive(InputAction)]
     #[action_output(Vec2)]
     pub struct Look;
-
-    #[derive(InputAction)]
-    #[action_output(bool)]
-    pub struct ForceWin;
-
-    #[derive(InputAction)]
-    #[action_output(bool)]
-    pub struct ForceLose;
 
     /// When active, select items in the scene.
     #[derive(InputAction)]

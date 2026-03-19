@@ -33,10 +33,13 @@ pub mod collision_hooks;
 pub mod areas;
 pub mod deathbox;
 pub mod fps;
-pub mod synth;
-pub mod client_synth;
 pub mod app;
 
+#[cfg(feature = "midi_synth")]
+pub mod synth;
+#[cfg(feature = "midi_synth")]
+pub mod client_synth;
+#[cfg(feature = "midi_synth")]
 pub mod midi_synth;
 
 pub use base_dir::*;
@@ -74,6 +77,8 @@ pub use collision_hooks::*;
 pub use areas::*;
 pub use deathbox::*;
 pub use fps::*;
+#[cfg(feature = "midi_synth")]
 pub use synth::*;
+#[cfg(feature = "midi_synth")]
 pub use client_synth::*;
 pub use app::*;

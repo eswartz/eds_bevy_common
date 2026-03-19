@@ -7,6 +7,8 @@ use bevy::asset::io::AssetSourceBuilder;
 use bevy_asset_loader::prelude::*;
 use bevy_seedling::sample::AudioSample;
 use crate::find_runtime_base_directory_by_folder;
+
+#[cfg(feature = "midi_synth")]
 use crate::midi_synth::asset::SoundFont;
 
 pub struct CommonAssetsPlugin;
@@ -112,13 +114,6 @@ pub struct CommonGuiAssets {
 
 #[derive(Resource, AssetCollection)]
 #[allow(unused)]
-pub struct CommonSoundFontAssets {
-    #[asset(path = "common://soundfonts/TimGM6mb.sf2")]
-    pub timgm6mb: Handle<SoundFont>,
-}
-
-#[derive(Resource, AssetCollection)]
-#[allow(unused)]
 pub struct CommonFxAssets {
     #[asset(path = "common://sounds/164472__deleted_user_2104797__crack-of-branch-3.ogg")]
     pub action: Handle<AudioSample>,
@@ -197,4 +192,12 @@ pub struct CommonFxAssets {
 
     #[asset(path = "common://sounds/03-197884__millavsb__elasticwhip.ogg")]
     pub select: Handle<AudioSample>,
+}
+
+#[cfg(feature = "midi_synth")]
+#[derive(Resource, AssetCollection)]
+#[allow(unused)]
+pub struct CommonSoundFontAssets {
+    #[asset(path = "common://soundfonts/TimGM6mb.sf2")]
+    pub timgm6mb: Handle<SoundFont>,
 }

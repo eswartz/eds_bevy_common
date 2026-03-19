@@ -17,4 +17,4 @@ codegen-backend = "llvm"
 # avian3d = { git = "https://github.com/Jondolf/avian.git", branch = "main" }
 # avian3d = { path = "../avian/crates/avian3d" }
 # bevy = { path = "../bevy-fork" }
-# gltf = { git = "https://github.com/gltf-rs/gltf.git", branch = "main" }
+gltf = { git = "https://github.com/gltf-rs/gltf.git", branch = "main" }
