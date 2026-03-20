@@ -33,6 +33,10 @@ pub mod collision_hooks;
 pub mod areas;
 pub mod deathbox;
 pub mod fps;
+#[cfg(feature = "highlighting")]
+pub mod highlighting;
+#[cfg(feature = "grabbing")]
+pub mod grabbing;
 pub mod app;
 
 #[cfg(feature = "midi_synth")]
@@ -81,4 +85,8 @@ pub use fps::*;
 pub use synth::*;
 #[cfg(feature = "midi_synth")]
 pub use client_synth::*;
+#[cfg(feature = "highlighting")]
+pub use highlighting::*;
+#[cfg(feature = "grabbing")]
+pub use grabbing::*;
 pub use app::*;

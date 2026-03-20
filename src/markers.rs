@@ -43,6 +43,7 @@ pub struct PlayerStart;
 
 /// This marks an entity playing background music / sound.
 #[derive(Component, Clone, Reflect, Debug)]
+#[component(storage = "SparseSet")]
 // #[require(Saveable)]
 #[reflect(Component, Clone)]
 #[type_path = "game"]
@@ -50,17 +51,21 @@ pub struct BackgroundAudio;
 
 ///
 
-/// Mark the entity as being highlighted (the meaning and operation are client-side).
+/// Mark the entity as being "highlighted".
+/// (See the `highlighting` feature.)
 #[derive(Component, Reflect, Debug)]
+#[component(storage = "SparseSet")]
 #[reflect(Component)]
 #[type_path = "game"]
 pub struct Highlighted;
 
-/// Mark the entity as being "selected" (the meaning and operation are client-side).
+/// Mark the entity as being "grabbed".
+/// (See the `grabbing` feature.)
 #[derive(Component, Reflect, Debug)]
+#[component(storage = "SparseSet")]
 #[reflect(Component)]
 #[type_path = "game"]
-pub struct Selected;
+pub struct Grabbed;
 
 ///
 

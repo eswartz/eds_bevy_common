@@ -12,6 +12,8 @@ trenchbroom = ["bevy_trenchbroom"]
 input_lim = ["dep:leafwing-input-manager"]
 input_bei = ["dep:bevy_enhanced_input"]
 midi_synth = ["dep:rustysynth", "dep:xsynth-core", "dep:crossbeam-channel", "dep:thiserror"]
+highlighting = ["dep:bevy_mod_outline"]
+grabbing = ["dep:bevy_mod_outline"]
 # input_lim = []
 # input_bei = []
 
@@ -143,6 +145,8 @@ bevy_trenchbroom = { optional = true, version = "0.12", default-features = false
 bevy_trenchbroom_avian = { optional = true, version = "0.12", default-features = false }
 
 bevy_skein = { optional = true, version = "0.5.0" }
+
+bevy_mod_outline = { version = "0.12", optional = true }
 
 sysinfo = { version = "0.37" }
 

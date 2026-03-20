@@ -6,7 +6,10 @@ use crate::assets::CommonGuiAssets;
 use crate::RENDER_LAYER_DEFAULT;
 use crate::RENDER_LAYER_VIEW;
 use crate::WorldCamera;
+use crate::debug_gui_wants_direct_input;
 use crate::is_in_menu;
+use crate::is_level_active;
+use crate::is_paused;
 
 use super::states_sets::OverlayState;
 use super::states_sets::ProgramState;
@@ -37,6 +40,10 @@ impl Plugin for CrosshairPlugin {
                 update_crosshair,
                 check_crosshair_target,
             )
+            .run_if(not(is_paused))
+            .run_if(not(is_in_menu))
+            .run_if(is_level_active)
+            .run_if(not(debug_gui_wants_direct_input))
             .run_if(in_state(ProgramState::InGame))
         )
         ;
@@ -235,4 +242,39 @@ fn check_crosshair_target(
     let new_crosshair_targets = CrosshairTargets{ targets, index: index.unwrap_or(0) };
 
     crosshair_targets.set_if_neq(new_crosshair_targets);
+}
+
+/// Format a string reporting which items are currently visible
+/// in the crosshair, indicating the selected index.
+pub fn report_crosshair_targets(
+    // mut info_q: Single<(&mut Text, &mut TextColor, &mut Visibility), With<InfoArea>>,
+    crosshair_target: &CrosshairTargets,
+    targets_q: &Query<Option<&Name>>,
+) -> Option<String> {
+    if crosshair_target.targets.is_empty() {
+        return None
+    }
+
+    let mut message = "[".to_string();
+    let mut started = false;
+    let current = crosshair_target.targets.get(crosshair_target.index).cloned();
+    for ent in &crosshair_target.targets {
+        let Ok(name_opt) = targets_q.get(*ent) else { continue };
+        if !started {
+            started = true
+        } else {
+            message += ", "
+        }
+        if current == Some(*ent) {
+            message += "*";
+        }
+        let segment = if let Some(name) = name_opt {
+            format!("{ent}: \"{name}\"")
+        } else {
+            ent.to_string()
+        };
+        message += &segment;
+    }
+    message += "]";
+    Some(message)
 }

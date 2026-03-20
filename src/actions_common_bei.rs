@@ -5,7 +5,7 @@ use bevy::window::WindowMode;
 use bevy_enhanced_input::prelude::*;
 use bevy_seedling::prelude::MainBus;
 
-pub const CTRL_COMMAND: ModKeys = if cfg!(target_os = "macos") {
+pub const MOD_CTRL_COMMAND: ModKeys = if cfg!(target_os = "macos") {
     ModKeys::SUPER
 } else {
     ModKeys::CONTROL
@@ -138,20 +138,27 @@ pub mod actions {
     #[action_output(Vec2)]
     pub struct Look;
 
-    /// When active, select items in the scene.
+    /// Select items in the scene.
     #[derive(InputAction)]
     #[action_output(bool)]
-    pub struct ToggleSelect;
+    pub struct ToggleSelect(pub Entity);
 
-    /// When active, grab selected item(s).
+    /// (Try to) grab selected item(s).
     #[derive(InputAction)]
     #[action_output(bool)]
-    pub struct ToggleGrab;
+    pub struct StartGrab;
 
-    /// Move further/closer away, either hovered item or distance of grabbed,
+    /// (Try to) stop grabbing items.
+    /// This has a lead-up time so that quick taps release/drop the item,
+    /// but longer presses fire the item.
+    #[derive(InputAction)]
+    #[action_output(bool)]
+    pub struct ReleaseGrab;
+
+    /// Move further/closer away, either hovered item or distance of grabbed item.
     #[derive(InputAction)]
     #[action_output(f32)]
-    pub struct CycleExtendGrab;
+    pub struct CycleHighlightedItem;
 }
 
 fn toggle_context(
@@ -253,7 +260,7 @@ pub fn assign_stock_common_actions(
         Action::<actions::Mute>::new(),
         bindings![
             KeyCode::F12,
-            KeyCode::KeyM.with_mod_keys(CTRL_COMMAND),
+            KeyCode::KeyM.with_mod_keys(MOD_CTRL_COMMAND),
         ],
     ));
     commands.spawn((
@@ -334,27 +341,6 @@ pub fn assign_stock_menu_actions(
             GamepadButton::LeftTrigger,
         ],
     ));
-    // commands.spawn((
-    //     // Note: this usage as an action is only processed in gameplay
-    //     // (which, being pauseable, means there'd be no way to escape),
-    //     // but KeyCode::Escape is elsewhere handled manually in an unpauseable way.
-    //     include.clone(),
-
-    //     Action::<actions::Menu>::new(),
-    //     bindings![
-    //         KeyCode::Escape,
-    //         GAMEPAD_BUTTON_MENU,
-    //     ],
-    // ));
-    // commands.spawn((
-    //     include.clone(),
-
-    //     Action::<actions::Back>::new(),
-    //     bindings![
-    //         KeyCode::Escape,
-    //         GamepadButton::East,
-    //     ],
-    // ));
 }
 
 /// include: should be at least e.g. `(ActionOf::<YourContext>::new(context_entity), {Menu,Player}Action)`

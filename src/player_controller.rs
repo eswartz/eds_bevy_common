@@ -27,8 +27,10 @@ impl Plugin for PlayerControllerPlugin {
         app.register_type::<PlayerControllerSettings>()
             .insert_resource(
                 PlayerControllerSettings::default().with_center_mouse(DEFAULT_CENTER_MOUSE),
-            )
-            .add_systems(
+            );
+
+        #[cfg(any(feature = "input_lim", feature = "input_bei"))]
+        app.add_systems(
                 FixedPreUpdate,
                 (
                     collect_player_movement,

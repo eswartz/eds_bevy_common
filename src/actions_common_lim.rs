@@ -7,13 +7,13 @@ use leafwing_input_manager::action_diff::ActionDiffMessage;
 use leafwing_input_manager::prelude::*;
 use strum_macros::EnumIter;
 
-pub const CTRL_COMMAND: KeyCode = if cfg!(target_os = "macos") {
+pub const KEY_CTRL_COMMAND: KeyCode = if cfg!(target_os = "macos") {
     KeyCode::SuperLeft
 } else {
     KeyCode::ControlLeft
 };
 
-pub const MOD_CTRL_COMMAND: ModifierKey = if cfg!(target_os = "macos") {
+pub const MOD_KEY_CTRL_COMMAND: ModifierKey = if cfg!(target_os = "macos") {
     ModifierKey::Super
 } else {
     ModifierKey::Control
@@ -132,10 +132,8 @@ pub enum UserAction {
     /// Switch perspective.
     ChangeCamera,
 
-    /// Force winning the level.
-    ForceWin,
-    /// Force losing the level.
-    ForceLose,
+    /// Switch highlighted item (forward or back).
+    CycleHighlightedItem,
 }
 
 /// Process actions, sampling actions globally.
@@ -251,14 +249,14 @@ pub fn default_gui_input_map() -> InputMap<UserAction> {
     input_map.insert(TogglePause, KeyCode::Pause);
     input_map.insert(
         TogglePause,
-        ButtonlikeChord::new([CTRL_COMMAND, KeyCode::KeyP]),
+        ButtonlikeChord::new([KEY_CTRL_COMMAND, KeyCode::KeyP]),
     ); // "P"ause
     input_map.insert(TogglePause, GamepadButton::Mode);
 
     input_map.insert(ToggleMute, KeyCode::F12);
     input_map.insert(
         ToggleMute,
-        ButtonlikeChord::new([CTRL_COMMAND, KeyCode::KeyM]),
+        ButtonlikeChord::new([KEY_CTRL_COMMAND, KeyCode::KeyM]),
     ); // "M"ute
 
     input_map.insert(ToggleFullScreen, KeyCode::F11);

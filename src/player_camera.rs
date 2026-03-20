@@ -19,7 +19,6 @@ use crate::actions_common_bei::actions::*;
 use crate::player_client::OurPlayer;
 use crate::*;
 
-
 pub struct PlayerCameraPlugin;
 
 impl Plugin for PlayerCameraPlugin {
@@ -288,24 +287,25 @@ pub fn sync_view_camera_to_player(
     view_camera_q.rotation = target_rot;
 }
 
-#[cfg(feature = "input_lim")]
 pub fn handle_player_camera_actions(
+    #[cfg(feature = "input_lim")]
     action_state: Res<ActionState<UserAction>>,
-    mut camera_q: Single<&mut PlayerCamera, (With<WorldCamera>, With<OurCamera>)>,
-) {
-    if action_state.just_pressed(&UserAction::ChangeCamera) {
-        camera_q.0 = camera_q.0.next();
-    }
-}
-
-#[cfg(feature = "input_bei")]
-pub fn handle_player_camera_actions(
+    #[cfg(feature = "input_bei")]
     change_camera: Query<&ActionEvents, (With<Action<ChangeCamera>>, With<PlayerAction>)>,
     mut camera_q: Single<&mut PlayerCamera, (With<WorldCamera>, With<OurCamera>)>,
 ) {
-    let Some(change_camera) = change_camera.iter().next() else { return };
-    if change_camera.contains(ActionEvents::START) {
-        camera_q.0 = camera_q.0.next();
+    #[cfg(feature = "input_lim")]
+    {
+        if action_state.just_pressed(&UserAction::ChangeCamera) {
+            camera_q.0 = camera_q.0.next();
+        }
+    }
+    #[cfg(feature = "input_bei")]
+    {
+        let Some(change_camera) = change_camera.iter().next() else { return };
+        if change_camera.contains(ActionEvents::START) {
+            camera_q.0 = camera_q.0.next();
+        }
     }
 }
 

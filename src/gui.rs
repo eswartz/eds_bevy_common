@@ -230,14 +230,14 @@ fn update_gui_state(
     state: Res<GuiState>,
     fps_visible: Option<ResMut<FpsOverlayVisible>>,
     mut status_visible: ResMut<StatusVisible>,
-    mut gizmos: ResMut<GizmoConfigStore>,
+    mut gizmo_config: ResMut<GizmoConfigStore>,
 ) {
     if let Some(mut fps_visible) = fps_visible {
         fps_visible.0 = state.show_fps || state.enabled;
     }
     status_visible.0 = state.show_status;
 
-    gizmos.config_mut::<PhysicsGizmos>().0.enabled = state.show_physics_gizmos;
+    gizmo_config.config_mut::<PhysicsGizmos>().0.enabled = state.show_physics_gizmos;
 }
 
 fn grab_cursor_for_game(
