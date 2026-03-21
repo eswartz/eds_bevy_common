@@ -159,6 +159,11 @@ pub mod actions {
     #[derive(InputAction)]
     #[action_output(f32)]
     pub struct CycleHighlightedItem;
+
+    /// Watch for the Tab key to avoid Alt-Tab misfires.
+    #[derive(InputAction)]
+    #[action_output(bool)]
+    pub struct JustTab;
 }
 
 fn toggle_context(
@@ -459,8 +464,6 @@ pub fn assign_stock_player_actions(
     commands.spawn((
         include.clone(),
         Action::<actions::StartGrab>::new(),
-        // Hold::new(0.25),
-        // Cooldown::new(0.125),
         bindings![
             MouseButton::Right,
             KeyCode::AltLeft,
@@ -468,6 +471,7 @@ pub fn assign_stock_player_actions(
             GamepadButton::LeftTrigger2,
         ],
     ));
+
     commands.spawn((
         include.clone(),
         Action::<actions::ReleaseGrab>::new(),

@@ -233,11 +233,12 @@ impl Default for GrabbingForce {
 /// See if the user is grabbing/dragging/ungrabbing something.
 fn on_start_grab(
     _event: On<Start<actions::StartGrab>>,
+    inputs: Res<ButtonInput<KeyCode>>,
     mut commands: Commands,
     grabbable_q: Query<Entity, With<Grabbable>>,
     grabbed_opt: Option<Res<GrabbedItem>>,
 ) {
-    if grabbed_opt.is_some() {
+    if grabbed_opt.is_some() || (inputs.pressed(KeyCode::AltLeft) || inputs.pressed(KeyCode::AltRight)) {
         // Still holding, release.
         commands.write_message(GrabbingCommand::ReleaseItems);
     } else {
