@@ -103,6 +103,7 @@ impl SkyboxCache {
 /// If the reflection probe option is set, apply it with the given brightness.
 #[derive(Component, Reflect)]
 #[reflect(Component)]
+#[type_path = "game"]
 pub struct SkyboxModel{
     pub skybox: Skybox,
     pub xfrm: SkyboxTransform,

@@ -44,6 +44,7 @@ fn check_despawners(
 /// This resource reflects and drives the state of Pause across the process.
 #[derive(Resource, Debug, Clone, Reflect, Default)]
 #[reflect(Resource)]
+#[type_path = "game"]
 pub struct PauseState {
     /// User state (e.g. from pressing Pause key)
     user: bool,

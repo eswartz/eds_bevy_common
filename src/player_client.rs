@@ -22,11 +22,13 @@ pub struct Player(pub Uuid);
 
 /// This represents our account.
 #[derive(Resource, Reflect, Default)]
+#[reflect(Resource)]
 #[type_path = "game"]
 pub struct OurUser(pub Uuid);
 
 /// This represents our player, attached to a Player(Uuid) matching ours.
 #[derive(Component, Reflect, Default)]
+#[reflect(Component)]
 #[require(Saveable)]
 #[type_path = "game"]
 pub struct OurPlayer;

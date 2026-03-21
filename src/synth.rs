@@ -22,6 +22,7 @@ impl Plugin for SynthPlugin {
 /// This clock aligns multiple synths to the same beat.
 #[derive(Resource, Reflect)]
 #[reflect(Resource)]
+#[type_path = "game"]
 pub struct SynthClock {
     beat_time: Duration,
     beat_tick: Duration,
@@ -157,6 +158,7 @@ impl SynthMessage {
 /// the user's CPU capacity.
 #[derive(Component, Reflect)]
 #[reflect(Component)]
+#[type_path = "game"]
 pub struct MidiSynthProxy{
     pub params: MidiSynthParams,
     pub bank: String,

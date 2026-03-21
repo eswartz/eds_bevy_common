@@ -89,6 +89,7 @@ fn __entity_count(world: &World) -> usize {
 
 #[derive(Resource, Reflect)]
 #[reflect(Resource, Default)]
+#[type_path = "game"]
 pub struct FpsOverlayStyle {
     pub outer_margin: f32,
     pub inner_margin: f32,

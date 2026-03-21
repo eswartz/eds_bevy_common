@@ -18,6 +18,7 @@ pub struct DeathboxPlugin {
 
 #[derive(Resource, Debug, Reflect, Clone)]
 #[reflect(Resource)]
+#[type_path = "game"]
 pub struct DeathboxFlags {
     move_players: bool,
     remove_spawns: bool,

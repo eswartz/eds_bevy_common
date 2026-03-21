@@ -60,6 +60,7 @@ impl Plugin for DebugPlugin {
 /// Which 3D camera hosts egui UI?
 #[derive(Resource, Reflect, Default, PartialEq, Debug)]
 #[reflect(Resource)]
+#[type_path = "game"]
 pub enum DebugEguiCamera {
     WorldCamera,
     #[default]

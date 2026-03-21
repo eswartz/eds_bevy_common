@@ -91,6 +91,7 @@ impl SynthProxyMap {
 /// Lists of events pending.
 #[derive(Resource, Default, Reflect)]
 #[reflect(Resource)]
+#[type_path = "game"]
 struct PendingSynthEvents(VecDeque<(Duration, SynthMessage)>);
 
 fn reset_synth_config(

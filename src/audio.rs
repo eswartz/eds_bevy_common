@@ -44,8 +44,10 @@ impl Plugin for AudioCommonPlugin {
 ///
 /// Our [apply_volumes] system ensures that a corresponding VolumeNode matches
 /// the volume and muted state.
-#[derive(Component)]
+#[derive(Component, Reflect)]
 #[require(VolumeNode{ volume: Volume::SILENT, ..default() })]
+#[reflect(Component)]
+#[type_path = "game"]
 pub struct UserVolume {
     pub volume: Volume,
     pub muted: bool,
@@ -54,22 +56,32 @@ pub struct UserVolume {
 /// Pool for in-game diegetic sound effects with spatial listening.
 #[derive(PoolLabel, Reflect, PartialEq, Eq, Debug, Hash, Clone)]
 #[reflect(Component)]
+#[type_path = "game"]
 pub struct Sfx;
 
 /// Pool for UI sound effects (menus, etc), not spatial.
 #[derive(PoolLabel, Reflect, PartialEq, Eq, Debug, Hash, Clone)]
 #[reflect(Component)]
+#[type_path = "game"]
 pub struct UiSfx;
 
 /// Pool for the music, not spatial.
 #[derive(PoolLabel, Reflect, PartialEq, Eq, Debug, Hash, Clone)]
 #[reflect(Component)]
+#[type_path = "game"]
 pub struct Music;
 
 /// Node label for the music.
 #[derive(NodeLabel, Reflect, PartialEq, Eq, Debug, Hash, Clone)]
 #[reflect(Component)]
+#[type_path = "game"]
 pub struct MusicBus;
+
+/// Marker for the background audio, if any.
+#[derive(Component, Reflect)]
+#[reflect(Component)]
+#[type_path = "game"]
+struct BackgroundAudio;
 
 /// Default means for initializing the Seedling [PoolLabel]s provided here.
 ///

@@ -29,21 +29,28 @@ impl Plugin for ActionPlugin {
 /// Context for gameplay.
 /// Note, this is a parent. Use PlayerAction to detect.
 #[derive(Component, Reflect)]
+#[reflect(Component)]
+#[type_path = "game"]
 pub struct PlayerContext;
 
 /// Context for menu.
 /// Note, this is a parent. Use MenuAction to detect.
 #[derive(Component, Reflect)]
+#[reflect(Component)]
+#[type_path = "game"]
 pub struct MenuContext;
 
 /// Marker for Actions on a Player.
 #[derive(Component, Reflect, Clone)]
 #[reflect(Component)]
+#[type_path = "game"]
+
 pub struct PlayerAction;
 
 /// Marker for Actions on a menu.
 #[derive(Component, Reflect, Clone)]
 #[reflect(Component)]
+#[type_path = "game"]
 pub struct MenuAction;
 
 pub mod actions {

@@ -92,7 +92,7 @@ log = { version = "0.4", features = [
 tracing = { version = "0.1", features = [
     "max_level_debug",
 ] }
-avian3d = { version = "0.6", default-features = false, features = [
+avian3d = { version = "0.7.0-dev", default-features = false, features = [
 	"3d", "f32",
 	"collider-from-mesh",
      # "f64",

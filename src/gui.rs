@@ -237,11 +237,13 @@ fn apply_ui_alpha(
 /// Use this OR UiFont.
 #[derive(Resource, Reflect)]
 #[reflect(Resource)]
+#[type_path = "game"]
 pub struct UiFontPath(pub PathBuf);
 
 /// Define to define the font for UI. Overrides [UiFontPath]. Defined after Startup.
 #[derive(Resource, Reflect)]
 #[reflect(Resource)]
+#[type_path = "game"]
 pub struct UiFont(pub Handle<Font>);
 
 fn load_ui_font(

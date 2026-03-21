@@ -48,4 +48,5 @@ pub struct CurrentLevel(pub LevelInfo);
 /// The level index into [LevelList].
 #[derive(Resource, Default, Reflect)]
 #[reflect(Resource, Default)]
+#[type_path = "game"]
 pub struct LevelIndex(pub usize);
