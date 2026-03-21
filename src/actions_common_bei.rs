@@ -456,4 +456,37 @@ pub fn assign_stock_player_actions(
         ],
     ));
 
+    commands.spawn((
+        include.clone(),
+        Action::<actions::StartGrab>::new(),
+        // Hold::new(0.25),
+        // Cooldown::new(0.125),
+        bindings![
+            MouseButton::Right,
+            KeyCode::AltLeft,
+            KeyCode::AltRight,
+            GamepadButton::LeftTrigger2,
+        ],
+    ));
+    commands.spawn((
+        include.clone(),
+        Action::<actions::ReleaseGrab>::new(),
+        Hold::new(0.5),
+        // Cooldown::new(0.125),
+        bindings![
+            MouseButton::Left,
+            GamepadButton::RightTrigger2,
+        ],
+    ));
+    commands.spawn((
+        include.clone(),
+        Action::<actions::CycleHighlightedItem>::new(),
+        Scale::splat(0.25),
+        Bindings::spawn((
+            Spawn((Binding::mouse_wheel(), SwizzleAxis::YYY)),
+            Bidirectional::new(KeyCode::ArrowUp, KeyCode::ArrowDown),
+            Bidirectional::new(GamepadButton::RightTrigger, GamepadButton::LeftTrigger),
+        )),
+    ));
+
 }
