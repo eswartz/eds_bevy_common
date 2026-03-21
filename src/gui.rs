@@ -1,10 +1,14 @@
+use std::any::Any;
+use std::any::TypeId;
 use std::path::PathBuf;
 
 use avian3d::prelude::PhysicsGizmos;
 use bevy::asset::AssetPath;
 use bevy::camera::visibility::RenderLayers;
 use bevy::color::palettes::tailwind;
+use bevy::platform::collections::HashMap;
 use bevy::prelude::*;
+use bevy::reflect::Typed;
 use bevy::window::CursorGrabMode;
 use bevy::window::CursorOptions;
 use bevy::window::PrimaryWindow;
@@ -32,6 +36,13 @@ impl Plugin for GuiPlugin {
         .add_message::<GrabCursor>()
         .add_systems(Startup,
             load_ui_font,
+        )
+        .add_systems(
+            Update,
+            (
+                update_ui_alpha,
+                apply_ui_alpha,
+            )
         )
         .add_systems(OnEnter(ProgramState::InGame),
             (
@@ -84,6 +95,141 @@ impl Plugin for GuiPlugin {
         //     .run_if(in_state(ProgramState::InGame))
         // )
         ;
+    }
+}
+
+/// Control the UI alpha of the immediate node.
+/// The value is multiplied by any others down the tree.
+#[derive(Component, Reflect)]
+pub struct UiNodeAlpha(pub f32);
+
+impl Default for UiNodeAlpha {
+    fn default() -> Self {
+        Self(1.0)
+    }
+}
+
+/// Computed alpha from parents and self.
+#[derive(Component, Reflect)]
+pub struct UiNodeComputedAlpha {
+    pub(crate) alpha: f32,
+    pub(crate) orig_values: HashMap<TypeId, f32>,
+}
+
+impl Default for UiNodeComputedAlpha {
+    fn default() -> Self {
+        Self {
+            alpha: 1.0,
+            orig_values: default(),
+        }
+    }
+}
+
+fn update_ui_alpha(
+    mut commands: Commands,
+    alpha_q: Query<(Entity, &UiNodeAlpha)>,
+    parent_q: Query<&ChildOf>,
+    child_q: Query<&Children>,
+    mut comp_alpha_q: Query<&mut UiNodeComputedAlpha>,
+    color_q: Query<(
+        Option<&ImageNode>,
+        Option<&TextColor>,
+        Option<&TextShadow>,
+        Option<&Sprite>,
+    )>,
+) {
+    for (ent, alpha) in alpha_q.iter() {
+        // Figure the alpha for this (child) node.
+        let mut full_alpha = alpha.0;
+        parent_q.iter_ancestors(ent).for_each(|parent| {
+            if let Ok((_, parent_alpha)) = alpha_q.get(parent) {
+                full_alpha *= parent_alpha.0;
+            }
+        });
+
+        // Be sure we have UiNodeAlpha on child nodes.
+        child_q.iter_descendants(ent).for_each(|kid| {
+            if !alpha_q.contains(kid)
+            && let Ok((a, b, c, d)) = color_q.get(kid)
+            && (a.is_some() || b.is_some() || c.is_some() || d.is_some()) {
+                commands.entity(kid).insert(UiNodeAlpha(1.0));
+            }
+        });
+
+        if let Ok(mut comp) = comp_alpha_q.get_mut(ent) {
+            // Only change the alpha.
+            if comp.alpha != full_alpha {
+                comp.alpha = full_alpha;
+
+                commands.entity(ent).insert((
+                    if full_alpha <= 0.0 {
+                        Visibility::Hidden
+                    } else {
+                        Visibility::Inherited
+                    },
+                ));
+            }
+        } else {
+            // Remember the baseline values for alphas.
+            let mut orig_values = HashMap::default();
+            if let Ok((im, text, shadow, sprite)) = color_q.get(ent) {
+                if let Some(im) = im {
+                    orig_values.insert(im.type_id(), im.color.alpha());
+                }
+                if let Some(text) = text {
+                    orig_values.insert(text.type_id(), text.alpha());
+                }
+                if let Some(shadow) = shadow {
+                    orig_values.insert(shadow.type_id(), shadow.color.alpha());
+                }
+                if let Some(sprite) = sprite {
+                    orig_values.insert(sprite.type_id(), sprite.color.alpha());
+                }
+            }
+            commands.entity(ent).insert((
+                UiNodeComputedAlpha {
+                    alpha: full_alpha,
+                    orig_values,
+                },
+                if full_alpha <= 0.0 {
+                    Visibility::Hidden
+                } else {
+                    Visibility::Inherited
+                },
+            ));
+        }
+    }
+}
+
+fn apply_ui_alpha(
+    mut comp_alpha_q: Query<(
+        &UiNodeComputedAlpha,
+        Option<&mut ImageNode>,
+        Option<&mut TextColor>,
+        Option<&mut TextShadow>,
+        Option<&mut Sprite>,
+    ), Or<(
+        Changed<UiNodeComputedAlpha>,
+        Changed<UiNodeAlpha>,
+    )>>
+) {
+    for (alpha, im, text, shadow, sprite) in comp_alpha_q.iter_mut() {
+        if let Some(mut im) = im {
+            let orig_alpha = alpha.orig_values.get(&ImageNode::type_info().type_id()).unwrap_or(&1.0);
+            im.color.set_alpha(alpha.alpha * orig_alpha);
+        }
+        if let Some(mut text) = text {
+            let orig_alpha = alpha.orig_values.get(&TextColor::type_info().type_id()).unwrap_or(&1.0);
+            text.set_alpha(alpha.alpha * orig_alpha);
+        }
+        if let Some(mut shadow) = shadow {
+            let orig_alpha = alpha.orig_values.get(&TextShadow::type_info().type_id()).unwrap_or(&1.0);
+            shadow.color.set_alpha(alpha.alpha * orig_alpha);
+        }
+        if let Some(mut sprite) = sprite {
+            let orig_alpha = alpha.orig_values.get(&Sprite::type_info().type_id()).unwrap_or(&1.0);
+            sprite.color.set_alpha(alpha.alpha * orig_alpha);
+        }
     }
 }
 
@@ -193,7 +339,7 @@ const GRABBED_MODE: CursorGrabMode = CursorGrabMode::Locked;
 #[derive(Message)]
 pub struct GrabCursor(pub bool);
 
-/// Tells whether we're in a mode where the status area is displayed.
+/// Tells whether we're in a mode where the [GameStatusArea] is displayed.
 #[derive(Resource, Clone, PartialEq)]
 pub(crate) struct StatusVisible(pub bool);
 
@@ -302,6 +448,10 @@ pub struct InfoArea;
 /// The information area of the GUI (smaller font, bottom)
 #[derive(Component)]
 pub struct InstructionsArea;
+
+/// Where the status of the held item is.
+#[derive(Component)]
+pub struct HandStatusArea;
 
 /// The game status area of the GUI (large)
 #[derive(Component)]
@@ -423,6 +573,25 @@ fn setup_gui_nodes(
             TextLayout::new(Justify::Center, LineBreak::WordBoundary),
         ));
     })
+    ;
+
+    // In-hand status
+    commands.spawn((
+        DespawnOnExit(ProgramState::InGame),
+        HandStatusArea,
+        UiNodeAlpha(0.0),
+        Name::new("InHandStatus"),
+        Node {
+            position_type: PositionType::Absolute,
+            bottom: Val::Percent(5.0),
+            right: Val::Percent(50.0),
+            flex_direction: FlexDirection::Column,
+            align_items: AlignItems::Center,
+            justify_content: JustifyContent::End,
+            ..default()
+        },
+        Visibility::Hidden,
+    ))
     ;
 
     // Pause icon in upper right

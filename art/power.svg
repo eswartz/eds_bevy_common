@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="512"
+   height="128"
+   viewBox="0 0 135.46666 33.866665"
+   version="1.1"
+   id="svg1"
+   inkscape:version="1.4.2 (ebf0e940d0, 2025-05-08)"
+   sodipodi:docname="power.svg"
+   inkscape:export-filename="../assets/textures/power_mask.png"
+   inkscape:export-xdpi="96"
+   inkscape:export-ydpi="96"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:xlink="http://www.w3.org/1999/xlink"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#505050"
+     bordercolor="#ffffff"
+     borderopacity="1"
+     inkscape:showpageshadow="0"
+     inkscape:pageopacity="0"
+     inkscape:pagecheckerboard="1"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="px"
+     inkscape:zoom="2.4726562"
+     inkscape:cx="298.06003"
+     inkscape:cy="113.03633"
+     inkscape:current-layer="layer2"
+     inkscape:export-bgcolor="#00000000" />
+  <defs
+     id="defs1">
+    <linearGradient
+       id="linearGradient6"
+       inkscape:collect="always">
+      <stop
+         style="stop-color:#000000;stop-opacity:0;"
+         offset="0"
+         id="stop7" />
+      <stop
+         style="stop-color:#000000;stop-opacity:1;"
+         offset="1"
+         id="stop8" />
+    </linearGradient>
+    <linearGradient
+       id="linearGradient2"
+       inkscape:collect="always">
+      <stop
+         style="stop-color:#fffc76;stop-opacity:1;"
+         offset="0"
+         id="stop3" />
+      <stop
+         style="stop-color:#428e4b;stop-opacity:1;"
+         offset="0.26228121"
+         id="stop5" />
+      <stop
+         style="stop-color:#428e4b;stop-opacity:1;"
+         offset="0.68193293"
+         id="stop6" />
+      <stop
+         style="stop-color:#ff0000;stop-opacity:1;"
+         offset="1"
+         id="stop2" />
+    </linearGradient>
+    <linearGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient2"
+       id="linearGradient3"
+       x1="33.157341"
+       y1="134.6255"
+       x2="106.09273"
+       y2="134.6255"
+       gradientUnits="userSpaceOnUse"
+       gradientTransform="matrix(1.429304,0,0,0.74582535,-47.846552,-76.388506)"
+       spreadMethod="pad" />
+    <linearGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient6"
+       id="linearGradient8"
+       x1="-2.6579983e-08"
+       y1="16.933394"
+       x2="135.46665"
+       y2="16.933394"
+       gradientUnits="userSpaceOnUse" />
+  </defs>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     style="display:inline">
+    <path
+       id="path1"
+       style="display:inline;fill:url(#linearGradient3);fill-rule:evenodd;stroke:#000000;stroke-width:2.11667;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:0.75;paint-order:normal"
+       d="M 134.40832,1.0582542 C 124.89023,7.1772279 114.0601,11.759558 102.27938,15.228593 72.673454,23.946583 37.065318,25.63505 1.2001477,27.022377 L 1.0583321,32.80846 H 102.27938 134.40832 Z"
+       inkscape:export-filename="power.png"
+       inkscape:export-xdpi="115.68"
+       inkscape:export-ydpi="115.68" />
+  </g>
+  <g
+     inkscape:groupmode="layer"
+     id="layer2"
+     inkscape:label="Layer 2"
+     style="display:none">
+    <path
+       id="path1-1"
+       style="display:inline;fill:url(#linearGradient8);fill-rule:evenodd;stroke:#000000;stroke-width:2.11667;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:0.75;paint-order:normal"
+       d="M 134.40832,1.058247 C 124.89023,7.177221 114.0601,11.759551 102.27938,15.228586 72.673454,23.946576 37.065318,25.635043 1.2001483,27.02237 l -0.141816,5.786083 H 102.27938 134.40832 Z"
+       inkscape:export-filename="power.png"
+       inkscape:export-xdpi="115.68"
+       inkscape:export-ydpi="115.68" />
+  </g>
+</svg>

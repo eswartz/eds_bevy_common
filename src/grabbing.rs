@@ -24,15 +24,11 @@ use crate::Highlighted;
 #[cfg(feature = "highlighting")]
 use crate::HighlightingMode;
 #[cfg(feature = "input_bei")]
-use crate::PlayerAction;
-#[cfg(feature = "input_bei")]
 use crate::ProgramState;
 #[cfg(feature = "input_bei")]
 use crate::WorldCamera;
 #[cfg(feature = "input_bei")]
 use crate::actions;
-#[cfg(feature = "input_bei")]
-use crate::actions::StartGrab;
 #[cfg(feature = "input_bei")]
 use crate::debug_gui_wants_direct_input;
 #[cfg(feature = "input_bei")]
@@ -260,7 +256,7 @@ fn on_end_grab_drop(
     grabbed_opt: Option<Res<GrabbedItem>>,
 ) {
     // Let go.
-    if dbg!(grabbed_opt.is_some()) {
+    if grabbed_opt.is_some() {
         commands.write_message(GrabbingCommand::ReleaseItems);
     } else {
         commands.write_message(GrabbingCommand::CancelGrabItems);
@@ -275,7 +271,7 @@ fn on_end_grab_fire(
     grabbed_opt: Option<Res<GrabbedItem>>,
 ) {
     // Let go.
-    if dbg!(grabbed_opt.is_some()) {
+    if grabbed_opt.is_some() {
         commands.write_message(GrabbingCommand::ReleaseItems);
     } else {
         commands.write_message(GrabbingCommand::CancelGrabItems);
@@ -288,82 +284,16 @@ fn on_end_grab_fire(
 // Only see these after the hold delay.
 fn on_change_grab_distance(
     event: On<Fire<actions::CycleHighlightedItem>>,
-    // mut commands: Commands,
-    // grabbable_q: Query<Entity, With<Grabbable>>,
     mut grabbed_opt: Option<ResMut<GrabbedItem>>,
-    // extend_action_q: Query<(&ActionEvents, &Action<actions::CycleHighlightedItem>), With<PlayerAction>>,
 ) {
-    // let Some((extend_events, extend_action)) = extend_action_q.iter().next() else { log::warn!("no CycleHighlightedItem exists"); return };
-
     // Still grabbing?
     if let Some(grabbed) = &mut grabbed_opt
-    // And extending? Also presently active after its hold delay.
-    // && extend_events.contains(ActionEvents::FIRE)
     {
         let new_dist = (grabbed.distance + event.value).clamp(0.1, 100.0);
         grabbed.distance = new_dist;
     }
 
 }
-
-// /// See if the user is grabbing/dragging/ungrabbing something.
-// #[cfg(feature = "input_bei")]
-// fn check_grab_actions(
-//     mut commands: Commands,
-
-//     // grab_action_q: Query<&ActionEvents, (With<Action<actions::StartGrab>>, With<PlayerAction>)>,
-//     release_action_q: Query<&ActionEvents, (With<Action<actions::ReleaseGrab>>, With<PlayerAction>)>,
-//     // extend_action_q: Query<(&ActionEvents, &Action<actions::CycleHighlightedItem>), With<PlayerAction>>,
-
-//     grabbable_q: Query<Entity, With<Grabbable>>,
-//     mut grabbed_opt: Option<ResMut<GrabbedItem>>,
-// ) {
-//     let Some(grab_events) = grab_action_q.iter().next() else { log::warn!("no StartGrab exists"); return };
-//     let Some(release_events) = release_action_q.iter().next() else { log::warn!("no ReleaseGrab exists"); return };
-//     let Some((extend_events, extend_action)) = extend_action_q.iter().next() else { log::warn!("no CycleHighlightedItem exists"); return };
-
-//     // dbg!(grab_events);
-//     // if grab_events.contains(ActionEvents::START) {
-//     //     // Try to grab.
-//     //     if grabbed_opt.is_none()
-//     //     && let Some(grabbed) = grabbable_q.iter().next() {
-//     //         commands.write_message(GrabbingCommand::GrabItem(grabbed));
-//     //         commands.entity(grabbed).try_remove::<Grabbable>();
-//     //     }
-//     // }
-
-//     // // Extend (e.g. mouse wheel) moves the ideal distance in or out
-//     // // from its original position.
-//     // //
-//     // // Only see these after the hold delay.
-//     // if grab_events.contains(ActionEvents::FIRE)
-//     // // Still grabbing?
-//     // && let Some(grabbed) = &mut grabbed_opt
-//     // // And extending? Also presently active after its hold delay.
-//     // && extend_events.contains(ActionEvents::FIRE) {
-//     //     let new_dist = (grabbed.distance + **extend_action).clamp(0.1, 100.0);
-//     //     grabbed.distance = new_dist;
-//     // }
-
-//     // if grab_events.contains(ActionEvents::CANCEL) {
-//     //     // Clean up from trying to grab.
-//     //     commands.write_message(GrabbingCommand::CancelGrabItems);
-//     // }
-//     // if grab_events.contains(ActionEvents::COMPLETE) {
-//     //     // Let go.
-//     //     commands.write_message(GrabbingCommand::ReleaseItems);
-//     // }
-
-//     // if release_events.contains(ActionEvents::FIRE)
-//     // // Still grabbing?
-//     // && let Some(grabbed) = &mut grabbed_opt
-//     // // And extending? Also presently active after its hold delay.
-//     // && extend_events.contains(ActionEvents::FIRE) {
-//     //     let new_dist = (grabbed.distance + **extend_action).clamp(0.1, 100.0);
-//     //     grabbed.distance = new_dist;
-//     // }
-
-// }
 
 fn move_grabbed_item(
     mut commands: Commands,
@@ -426,7 +356,7 @@ fn process_grab_changes(
     mut reader: MessageReader<GrabbingCommand>,
 
     mut commands: Commands,
-    mut grabbed_opt: Option<ResMut<GrabbedItem>>,
+    grabbed_opt: Option<Res<GrabbedItem>>,
     styler: Res<GrabbedItemStyle>,
     // grabbing_force: Res<GrabbingForce>,
 
@@ -440,7 +370,7 @@ fn process_grab_changes(
     phys_info_q: Query<(Forces, &GlobalTransform, &Transform, Option<&LockedAxes>)>,
 ) {
     for command in reader.read() {
-        match dbg!(command) {
+        match command {
             GrabbingCommand::GrabItem(entity) => {
                 let entity = *entity;
 
@@ -498,52 +428,6 @@ fn process_grab_changes(
                 // Insert the outline bundle, whatever it is.
                 styler.apply_to(commands.entity(entity));
             }
-            // GrabbingCommand::MoveItems => {
-            //     if let Some(grabbed) = &mut grabbed_opt
-            //     && let Ok((mut forces, item_global_xfrm, xfrm, _)) = phys_info_q.get_mut(grabbed.entity) {
-            //         // Currently grabbing (and moving?)
-
-            //         let Ok(cam_global_xfrm) = camera_q.single() else {
-            //             log::warn!("no camera for grabbing {}", grabbed.entity);
-            //             continue
-            //         };
-
-            //         // Compute the desired new location, i.e. the current
-            //         // position plus the camera's position + original distance,
-            //         // then apply an impulse to move to that location.
-            //         let cur_pos = item_global_xfrm.translation() + grabbed.orig_offset;
-
-            //         let cam_pos = cam_global_xfrm.translation();
-            //         let new_pos = cam_pos + cam_global_xfrm.rotation() * Vec3::NEG_Z * grabbed.distance;
-
-            //         let offset = new_pos - cur_pos;
-
-            //         let movement = offset.length();
-            //         if movement > 0.01 {
-            //             grabbed.speed = grabbed.speed.max(0.05) * 1.01;
-            //             *forces.linear_velocity_mut() = offset * grabbed.speed * grabbing_force.0;
-            //             *forces.angular_velocity_mut() = default();
-            //             grabbed.movement += movement;
-            //         } else {
-            //             grabbed.speed *= 0.99;
-            //         }
-
-            //         // Draw axes from all edges.
-            //         gizmos.axes(*xfrm, grabbing_force.0);
-
-            //         let mut inv_xfrm = xfrm.clone();
-            //         inv_xfrm.rotate_local_x(std::f32::consts::PI);
-            //         gizmos.axes(inv_xfrm, grabbing_force.0);
-
-            //         let mut inv_xfrm = xfrm.clone();
-            //         inv_xfrm.rotate_local_y(std::f32::consts::PI);
-            //         gizmos.axes(inv_xfrm, grabbing_force.0);
-
-            //         let mut inv_xfrm = xfrm.clone();
-            //         inv_xfrm.rotate_local_z(std::f32::consts::PI);
-            //         gizmos.axes(inv_xfrm, grabbing_force.0);
-            //     }
-            // }
             GrabbingCommand::ReleaseItems => {
                 commands.remove_resource::<GrabbedItem>();
                 if let Some(grabbed) = &grabbed_opt {
