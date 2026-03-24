@@ -188,14 +188,14 @@ fn diagnostic_system(
     time_buffer.push(time.delta_secs());
     *sys_timer += time.delta_secs();
     if *sys_timer > 0.2 {
-        *sys_timer -= 0.2;
+        *sys_timer = 0.;
         sys_info.refresh_memory();
         sys_info.refresh_cpu_usage();
     }
 
     *refresh_timer += time.delta_secs();
     if *refresh_timer > 0.05 {
-        *refresh_timer -= 0.05;
+        *refresh_timer = 0.;
 
         if let Ok(mut text) = text.get_mut(fps) {
             text.0.clear();
