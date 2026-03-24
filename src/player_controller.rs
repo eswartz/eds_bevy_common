@@ -34,16 +34,11 @@ impl Plugin for PlayerControllerPlugin {
                 FixedPreUpdate,
                 (
                     collect_player_movement,
-                    collect_player_look,
+                    collect_player_look.run_if(not(is_debug_ui_inspector_active)),
                     collect_player_input,
                 )
                     .run_if(not(is_paused))
-                    .run_if(
-                        in_state(OverlayState::Hidden)
-                        .or(in_state(OverlayState::ControlsMenu)) // allow testing control settings inside menu
-                        .or(not(debug_gui_wants_direct_input))
-                    ,
-                    ),
+                    .run_if(not(debug_gui_wants_direct_input))
             );
     }
 }

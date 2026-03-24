@@ -14,6 +14,7 @@ use bevy::window::CursorOptions;
 use bevy::window::PrimaryWindow;
 use bevy::window::WindowFocused;
 use bevy_asset_loader::prelude::*;
+use bevy_egui::input::EguiWantsInput;
 use bevy_seedling::prelude::MainBus;
 
 use crate::FpsOverlayVisible;
@@ -369,6 +370,24 @@ impl Default for GuiState {
             show_physics_gizmos: false,
         }
     }
+}
+
+pub fn is_debug_ui_enabled(gui_state: Option<Res<GuiState>>) -> bool {
+    gui_state.is_some_and(|g| g.enabled)
+}
+
+pub fn is_debug_ui_inspector_active(
+    gui_state: Option<Res<GuiState>>,
+    ovl_state: Option<Res<State<OverlayState>>>,
+) -> bool {
+    gui_state.is_some_and(|gui_state| {
+        gui_state.enabled && (
+            gui_state.show_inspector_always ||
+            (gui_state.show_inspector && ovl_state.is_none_or(|ovl_state|
+                !ovl_state.is_menu() || *ovl_state == OverlayState::ControlsMenu // allow testing
+            ))
+        )
+    })
 }
 
 #[derive(Resource)]

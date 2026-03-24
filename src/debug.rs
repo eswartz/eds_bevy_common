@@ -6,7 +6,7 @@ use bevy_inspector_egui::DefaultInspectorConfigPlugin;
 
 use crate::*;
 
-use super::{gui::GuiState, states_sets::OverlayState};
+use super::gui::GuiState;
 
 /// You need to manually add EguiPlugin and DefaultInspectorConfigPlugin.
 pub struct DebugPlugin;
@@ -39,19 +39,12 @@ impl Plugin for DebugPlugin {
             .add_systems(
                 EguiPrimaryContextPass,
                 update_egui_inspector_ui
-                .run_if(|gui_state: Res<GuiState>, ovl_state: Res<State<OverlayState>>|
-                    gui_state.enabled && (
-                        gui_state.show_inspector_always ||
-                        (gui_state.show_inspector && !ovl_state.is_menu())
-                    )
-                ),
+                .run_if(is_debug_ui_inspector_active),
             )
             .add_systems(
                 EguiPrimaryContextPass,
                 update_egui_debug_ui
-                .run_if(|gui_state: Res<GuiState>|
-                    gui_state.enabled
-                ),
+                .run_if(is_debug_ui_enabled),
             )
         ;
     }
@@ -227,6 +220,13 @@ pub fn debug_gui_wants_keyboard_input(r: Option<Res<EguiWantsInput>>) -> bool {
 pub fn debug_gui_wants_direct_input(r: Option<Res<EguiWantsInput>>) -> bool {
     if let Some(r) = r {
         r.is_pointer_over_area() || r.is_popup_open()
+    } else {
+        false
+    }
+}
+pub fn debug_gui_wants_input(r: Option<Res<EguiWantsInput>>) -> bool {
+    if let Some(r) = r {
+        r.is_popup_open() || r.wants_any_keyboard_input() || r.wants_any_pointer_input()
     } else {
         false
     }
