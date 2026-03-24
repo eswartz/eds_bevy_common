@@ -676,7 +676,7 @@ fn check_player_environment_space(
 
         if movement.velocity < 0.01 {
             // Lose speed gradually.
-            vel.0 = vel.0 * settings.air_scale;
+            vel.0 *= settings.air_scale as Scalar;
         }
     }
 }

@@ -2,6 +2,7 @@
 //!
 //! Items with the [crate::Selected] component can be grabbed.
 
+use avian3d::math::AdjustPrecision;
 #[cfg(feature = "input_bei")]
 use bevy::color::palettes::tailwind;
 use bevy_mod_outline::InheritOutline;
@@ -330,7 +331,7 @@ fn move_grabbed_item(
     let movement = offset.length();
     if movement > 0.01 {
         grabbed.speed = grabbed.speed.max(0.05) * 1.01;
-        *forces.linear_velocity_mut() = offset * grabbed.speed * grabbing_force.0;
+        *forces.linear_velocity_mut() = (offset * grabbed.speed * grabbing_force.0).adjust_precision();
         *forces.angular_velocity_mut() = default();
         grabbed.movement += movement;
     } else {

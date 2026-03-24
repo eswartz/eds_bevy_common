@@ -93,11 +93,10 @@ tracing = { version = "0.1", features = [
     "max_level_debug",
 ] }
 avian3d = { version = "0.6", default-features = false, features = [
-	"3d", "f32",
+	"3d",
 	"collider-from-mesh",
-     # "f64",
-    "parry-f32",
-    # "parry-f64",
+    "f32", "parry-f32",
+    #  "f64", "parry-f64",
     "bevy_scene",
     "bevy_picking",
     "diagnostic_ui",

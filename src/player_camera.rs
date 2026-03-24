@@ -283,7 +283,7 @@ pub fn sync_view_camera_to_player(
     // Slowly align but don't tilt.
     let target_rot = view_camera_q.rotation.lerp(camera_xfrm.rotation, align_rate.0);
     let (ex, ey, _ez) = target_rot.to_euler(default());
-    let target_rot = Quaternion::from_euler(default(), ex, ey, 0.0);
+    let target_rot = Quat::from_euler(default(), ex, ey, 0.0);
     view_camera_q.rotation = target_rot;
 }
 
