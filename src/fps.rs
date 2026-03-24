@@ -1,3 +1,4 @@
+use avian3d::dynamics::solver::SolverDiagnostics;
 /// Based on `bevy_mini_fps` (single-file implementation in `lib.rs`).
 
 /// I had some build problems and also wanted the
@@ -117,12 +118,13 @@ fn diagnostic_system(
     mut refresh_timer: Local<f32>,
     mut sys_timer: Local<f32>,
     mut time_buffer: Local<RingBuffer<128>>,
-    cached: Local<::std::cell::OnceCell<[Entity; 5]>>,
+    cached: Local<::std::cell::OnceCell<[Entity; 6]>>,
+    solver_diags: Res<SolverDiagnostics>,
     time: Res<Time>,
     mut text: Query<&mut Text>,
 ) {
-    let [fps, max_ft, entities, cpu, ram] = *cached.get_or_init(|| {
-        let mut result = [Entity::PLACEHOLDER; 5];
+    let [fps, max_ft, entities, contacts, cpu, ram] = *cached.get_or_init(|| {
+        let mut result = [Entity::PLACEHOLDER; 6];
         let font = TextFont {
             font_size: style.font_size,
             font: style.font.clone(),
@@ -157,6 +159,7 @@ fn diagnostic_system(
                     c.spawn((Node::default(), font.clone(), Text::new("FPS:"))).id(),
                     c.spawn((Node::default(), font.clone(), Text::new("Max Frametime:"))).id(),
                     c.spawn((Node::default(), font.clone(), Text::new("Entities:"))).id(),
+                    c.spawn((Node::default(), font.clone(), Text::new("Contacts:"))).id(),
                     c.spawn((Node::default(), font.clone(), Text::new("CPU Usage:"))).id(),
                     c.spawn((Node::default(), font.clone(), Text::new("Memory Usage:"))).id(),
                 ];
@@ -174,6 +177,7 @@ fn diagnostic_system(
                 ..Default::default()
             }).with_children(|c| {
                 result = [
+                    c.spawn((Node::default(), font.clone(), Text::default())).id(),
                     c.spawn((Node::default(), font.clone(), Text::default())).id(),
                     c.spawn((Node::default(), font.clone(), Text::default())).id(),
                     c.spawn((Node::default(), font.clone(), Text::default())).id(),
@@ -212,6 +216,10 @@ fn diagnostic_system(
         if let Ok(mut text) = text.get_mut(entities) {
             text.0.clear();
             let _ = write!(&mut text.0, "{}", *entity_count);
+        };
+        if let Ok(mut text) = text.get_mut(contacts) {
+            text.0.clear();
+            let _ = write!(&mut text.0, "{}", solver_diags.contact_constraint_count);
         };
         if let Ok(mut text) = text.get_mut(cpu) {
             let pct = sys_info.global_cpu_usage() as i32;
