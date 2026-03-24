@@ -120,6 +120,12 @@ pub struct CommonGuiAssets {
 pub struct CommonFxAssets {
     #[asset(path = "common://sounds/164472__deleted_user_2104797__crack-of-branch-3.ogg")]
     pub action: Handle<AudioSample>,
+
+    #[asset(path = "common://sounds/03-197884__millavsb__elasticwhip.ogg")]
+    pub select: Handle<AudioSample>,
+    #[asset(path = "common://sounds/164472__deleted_user_2104797__crack-of-branch-3-rev.ogg")]
+    pub deselect: Handle<AudioSample>,
+
     #[asset(path = "common://sounds/257803__xtrgamr__swish-2_swish-178056__eneasz__folder-snapped-shut.ogg")]
     pub swoosh: Handle<AudioSample>,
     #[asset(path = "common://sounds/414763__michorvath__click.ogg")]
@@ -192,9 +198,6 @@ pub struct CommonFxAssets {
     pub bump2: Handle<AudioSample>,
     #[asset(path = "common://sounds/412378__smokenweewalt__closet_hit_01.ogg")]
     pub bump3: Handle<AudioSample>,
-
-    #[asset(path = "common://sounds/03-197884__millavsb__elasticwhip.ogg")]
-    pub select: Handle<AudioSample>,
 }
 
 #[cfg(feature = "midi_synth")]
