@@ -44,7 +44,8 @@ impl Plugin for HighlightingPlugin {
                 (
                     check_actions,
                     cycle_targetables,
-                    update_highlight_ui.run_if(resource_changed::<CrosshairTargets>),
+                    update_highlightable,
+                    update_highlighting_mode,
                 ).chain()
                     .run_if(is_highlighting_enabled)
                     .run_if(not(is_paused))
@@ -119,17 +120,34 @@ pub enum HighlightingMode {
     Busy,
 }
 impl HighlightingMode {
-    pub(crate) fn original_or_enabled(&self) -> HighlightingMode {
+    #[must_use]
+    pub fn original_or_enabled(&self) -> HighlightingMode {
         if *self == HighlightingMode::Busy {
             HighlightingMode::Enabled
-         } else {
+        } else {
             *self
-         }
+        }
+    }
+
+    #[must_use]
+    pub fn toggle_enabled(&self) -> HighlightingMode {
+        match self {
+            HighlightingMode::Disabled => HighlightingMode::Enabled,
+            HighlightingMode::Enabled => HighlightingMode::Disabled,
+            HighlightingMode::Busy => HighlightingMode::Busy,
+        }
+    }
+
+    pub fn is_enabled(&self) -> bool {
+        *self == HighlightingMode::Enabled
+    }
+    pub fn is_disabled(&self) -> bool {
+        *self == HighlightingMode::Disabled
     }
 }
 
 pub fn is_highlighting_enabled(res: Res<HighlightingMode>) -> bool {
-    *res == HighlightingMode::Enabled
+    res.is_enabled()
 }
 
 /// Marker for CountAccumulator.
@@ -248,14 +266,73 @@ fn cycle_targetables(
     }
 }
 
-/// When [CrosshairTargets] changes (see registration), remove/add [Highlighted].
-fn update_highlight_ui(
+/// When [HighlightingMode] changes, remove [Highlighted].
+fn update_highlighting_mode(
     mut commands: Commands,
     fx: Res<CommonFxAssets>,
+    mode: Res<HighlightingMode>,
+    mut crosshair_q: Single<&mut Crosshair>,
+    hilit_q: Query<Entity, (With<Spawned>, With<Highlighted>)>,
+    style: Res<HighlightedItemStyle>,
+    mut targets: ResMut<CrosshairTargets>,
+) {
+    if !mode.is_changed() {
+        return
+    }
+
+    if mode.is_enabled() {
+        // Turn on, and re-scan.
+        crosshair_q.current_strength = 1.0;
+    } else if mode.is_disabled() {
+        // Turn off.
+        crosshair_q.current_strength = 0.0;
+
+        let mut any = !targets.targets.is_empty();
+        if any {
+            targets.targets.clear();
+            targets.index = 0;
+        }
+
+        for ent in hilit_q.iter() {
+            let mut ent_commands = commands.entity(ent);
+            ent_commands.try_remove::<Highlighted>();
+            style.remove_from(ent_commands);
+            any = true;
+        }
+
+        if any && cfg!(feature = "firewheel") {
+            let mut rng = rand::rng();
+            commands.spawn((
+                UiSfx,
+                SamplePlayer::new(
+                    (*[&fx.deselect]
+                        .choose(&mut rng)
+                        .unwrap())
+                    .clone(),
+                ),
+                PlaybackSettings {
+                    speed: rng.random_range(0.9..1.1),
+                    ..default()
+                },
+                VolumeNode::from_linear(rng.random_range(0.85..1.0)),
+            ));
+        }
+    }
+}
+
+/// When [CrosshairTargets] changes, remove/add [Highlighted].
+fn update_highlightable(
+    mut commands: Commands,
+    fx: Res<CommonFxAssets>,
+    targets: Res<CrosshairTargets>,
     style: Res<HighlightedItemStyle>,
     now_hovered_q: Query<Entity, (With<Spawned>, Added<Highlighted>)>,
     was_hovered_q: Query<Entity, (With<OutlineVolume>, With<Spawned>, Without<Highlighted>)>,
 ) {
+    if !targets.is_changed() {
+        return
+    }
+
     for ent in was_hovered_q.iter() {
         style.remove_from(commands.entity(ent));
     }
