@@ -6,6 +6,24 @@ authors = ["Ed Swartz (github.com/eswartz)"]
 license = "MIT OR Apache 2"
 categories = ["game"]
 
+
+#########
+# If you are using `webp` in glTF files via `bevy/webp`,
+# then please copy this section into your project's `.cargo/config.toml`'s
+# section so all clients will see the same patches.
+# (Without such edits, your project will have a separate copy of bevy
+# and you'll get a lot of errors.)
+#########
+[patch.crates-io]
+# bevy = { path = "../bevy-fork" }
+# avian3d = { git = "https://github.com/Jondolf/avian.git", branch = "main" }
+# avian3d = { path = "../avian/crates/avian3d" }
+
+# Support webp.
+# See above to fix error: feature `reqs` includes `gltf/EXT_texture_webp`, but `gltf` is not a dependency
+gltf = { git = "https://github.com/gltf-rs/gltf.git", branch = "main" }
+#########
+
 [features]
 default = ["firewheel"]
 trenchbroom = ["bevy_trenchbroom"]
