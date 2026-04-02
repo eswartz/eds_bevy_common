@@ -3,7 +3,11 @@ use bevy_seedling::prelude::*;
 use bevy_asset_loader::prelude::*;
 use bevy_tweening::Lens;
 
+use bevy_seedling::prelude::PlaybackSettings;
+use bevy_seedling::sample::SamplePlayer;
+
 use crate::CommonFxAssets;
+use crate::PauseState;
 use crate::ProgramState;
 
 /// Remember to schedule [initialize_audio] or a local copy
@@ -30,6 +34,11 @@ impl Plugin for AudioCommonPlugin {
                     .load_collection::<CommonFxAssets>()
             )
 
+            .add_systems(PreUpdate,
+                (
+                    check_pause_request,
+                )
+            )
             .add_systems(PostUpdate,
                 (
                     apply_spatial_fixes,
@@ -188,5 +197,37 @@ impl Lens<VolumeNode> for VolumeNodeLens {
     fn lerp(&mut self, mut target: Mut<VolumeNode>, ratio: f32) {
         let new_linear = self.start.volume.linear().lerp(self.end.volume.linear(), ratio);
         target.set_linear(new_linear);
+    }
+}
+
+#[derive(Component, Reflect)]
+#[reflect(Component)]
+#[type_path = "game"]
+struct PlaybackPaused;
+
+/// This owns the management of play/pause toggling.
+fn check_pause_request(
+    mut commands: Commands,
+    paused: ResMut<PauseState>,
+    mut settings_q: Query<(Entity, &mut PlaybackSettings, Option<&PlaybackPaused>), With<SamplePlayer>>,
+) {
+    if !paused.is_changed() {
+        return
+    }
+    let pause = paused.is_paused();
+    if pause {
+        for (ent, mut settings, _) in settings_q.iter_mut() {
+            if *settings.play {
+                settings.pause();
+                commands.entity(ent).insert(PlaybackPaused);
+            }
+        }
+    } else /* !pause ==> resume */ {
+        for (ent, mut settings, paused) in settings_q.iter_mut() {
+            if paused.is_some() {
+                settings.play();
+                commands.entity(ent).remove::<PlaybackPaused>();
+            }
+        }
     }
 }
