@@ -14,7 +14,6 @@ use bevy::window::CursorOptions;
 use bevy::window::PrimaryWindow;
 use bevy::window::WindowFocused;
 use bevy_asset_loader::prelude::*;
-use bevy_egui::input::EguiWantsInput;
 use bevy_seedling::prelude::MainBus;
 
 use crate::FpsOverlayVisible;

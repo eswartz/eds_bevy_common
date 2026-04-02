@@ -2,7 +2,6 @@
 
 use std::any::TypeId;
 
-use avian3d::math::Quaternion;
 use avian3d::prelude::*;
 use bevy::prelude::*;
 
