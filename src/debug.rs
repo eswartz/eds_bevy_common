@@ -3,6 +3,7 @@ use std::collections::BTreeMap;
 use bevy::{ecs::system::SystemParam, prelude::*};
 use bevy_egui::{EguiContext, EguiContexts, EguiGlobalSettings, EguiPlugin, EguiPrimaryContextPass, PrimaryEguiContext, input::{EguiWantsInput, egui_wants_any_keyboard_input, egui_wants_any_pointer_input}};
 use bevy_inspector_egui::DefaultInspectorConfigPlugin;
+use fuzzy_matcher::skim::SkimMatcherV2;
 
 use crate::*;
 
@@ -103,7 +104,6 @@ pub fn ensure_egui_context(
 ) {
     for camera_ent in camera_q.iter() {
         if debug.is_debug_camera(camera_ent) {
-            dbg!(camera_ent);
             commands.entity(camera_ent).insert(
                 PrimaryEguiContext,
             );
@@ -115,7 +115,6 @@ pub fn setup_egui_style(
     mut q: Query<(&mut EguiContext, Option<&PrimaryEguiContext>)>,
 ) {
     let Ok((mut ctx, Some(_))) = q.single_mut() else { return };
-    dbg!("got");
     let ctx = ctx.get_mut();
     {
         use egui::FontFamily::Proportional;
@@ -160,27 +159,30 @@ pub fn update_egui_inspector_ui(
         .show(egui_context.clone().get_mut(), |ui| {
             egui::ScrollArea::both().show(ui, |ui| {
                 ui.checkbox(&mut show_flat, "Show Flat");
-                const FILTER_ID: &str = "my_world_entities_filter";
+                const FILTER_ID: &str = "my_inspector_entity_filter";
                 if *show_flat == false {
-                    let filter: Filter<Without<Observer>> =
-                        Filter::from_ui_fuzzy(ui, egui::Id::new(FILTER_ID));
                     egui::CollapsingHeader::new("Entities")
                         .default_open(false)
                         .show(ui, |ui| {
+                            let filter: Filter<Without<Observer>> =
+                                Filter::from_ui_fuzzy(ui, egui::Id::new(FILTER_ID));
                             ui_for_entities_filtered(world, ui, false, &filter);
                         });
                 } else {
-                    let filter: Filter<(Without<Observer>, Without<ChildOf>)> =
-                        Filter::from_ui_fuzzy(ui, egui::Id::new(FILTER_ID));
                     egui::CollapsingHeader::new("Entities")
                         .default_open(false)
                         .show(ui, |ui| {
+                            let filter: Filter<(Without<Observer>, Without<ChildOf>)> =
+                                Filter::from_ui_fuzzy(ui, egui::Id::new(FILTER_ID));
                             ui_for_entities_filtered(world, ui, true, &filter);
                         });
                 }
 
                 egui::CollapsingHeader::new("Resources").show(ui, |ui| {
-                    ui_for_resources(world, ui);
+                    const FILTER_ID: &str = "my_inspector_resource_filter";
+                    let filter: Filter<()> =
+                        Filter::from_ui_fuzzy(ui, egui::Id::new(FILTER_ID));
+                    ui_for_filtered_resources(world, ui, filter);
                 });
 
                 egui::CollapsingHeader::new("Assets").show(ui, |ui| {
@@ -199,6 +201,60 @@ pub fn update_egui_inspector_ui(
 
             });
         });
+}
+
+// Our versions.
+
+fn name_satisfies_filter(
+    name: &str,
+    filter: &str,
+    is_fuzzy: bool,
+) -> bool {
+    use fuzzy_matcher::FuzzyMatcher;
+    if filter.is_empty() {
+        true
+    } else {
+        if is_fuzzy {
+            let matcher = SkimMatcherV2::default();
+            matcher.fuzzy_match(&name, filter).is_some()
+        } else {
+            name.to_lowercase().contains(filter)
+        }
+    }
+}
+
+pub fn ui_for_filtered_resources(
+    world: &mut World,
+    ui: &mut egui::Ui,
+    filter: bevy_inspector_egui::bevy_inspector::Filter<()>,
+) {
+    use bevy_inspector_egui::bevy_inspector::*;
+
+    let type_registry = world.resource::<AppTypeRegistry>().0.clone();
+    let type_registry = type_registry.read();
+
+    let mut resources: Vec<_> = type_registry
+        .iter()
+        .filter(|registration| {
+            registration.data::<ReflectResource>().is_some() &&
+            name_satisfies_filter(
+                registration.type_info().type_path(),
+                &filter.word,
+                filter.is_fuzzy)
+        })
+        .map(|registration| {
+            (
+                registration.type_info().type_path_table().short_path(),
+                registration.type_id(),
+            )
+        })
+        .collect();
+    resources.sort_by(|(name_a, ..), (name_b, ..)| name_a.cmp(name_b));
+    for (name, type_id) in resources {
+        ui.collapsing(name, |ui| {
+            by_type_id::ui_for_resource(world, type_id, ui, name, &type_registry);
+        });
+    }
 }
 
 // Re-exports.
