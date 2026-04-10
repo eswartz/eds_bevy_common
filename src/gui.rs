@@ -68,12 +68,6 @@ impl Plugin for GuiPlugin {
         .add_systems(OnExit(OverlayState::Loading),
             on_loading_finished)
 
-        .add_systems(PreUpdate,
-            grab_cursor_for_game.run_if(resource_changed::<GuiState>),
-        )
-        .add_systems(PreUpdate,
-            ungrab_cursor_for_overlay.run_if(resource_changed::<GuiState>),
-        )
         .add_systems(
             Update,
             update_gui_state.run_if(resource_changed::<GuiState>),
@@ -338,15 +332,15 @@ impl Default for GrabState {
 const GRABBED_MODE: CursorGrabMode = CursorGrabMode::Locked;
 
 /// Indicate the desire to change the cursor grab state (false = not grabbed).
-#[derive(Message)]
+#[derive(Message, Debug)]
 pub struct GrabCursor(pub bool);
 
 /// Tells whether we're in a mode where the [GameStatusArea] is displayed.
-#[derive(Resource, Clone, PartialEq)]
+#[derive(Resource, Debug, Clone, PartialEq)]
 pub(crate) struct StatusVisible(pub bool);
 
 /// Flags
-#[derive(Resource, Clone, PartialEq, Reflect)]
+#[derive(Resource, Debug, Clone, PartialEq, Reflect)]
 #[reflect(Resource)]
 #[type_path = "game"]
 pub struct GuiState {

@@ -22,7 +22,9 @@ impl Plugin for ActionPlugin {
             .add_observer(handle_pause)
             .add_observer(handle_debug_ui)
             .add_observer(handle_full_screen)
-            .add_observer(handle_mute);
+            .add_observer(handle_mute)
+
+            ;
     }
 }
 
@@ -193,9 +195,11 @@ pub(crate) fn handle_pause(_event: On<Start<actions::Pause>>, mut pause_state: R
 
 pub(crate) fn handle_debug_ui(
     _event: On<Start<actions::DebugUi>>,
+    mut commands: Commands,
     mut gui_state: ResMut<GuiState>,
 ) {
     gui_state.enabled = dev_tools_enabled() && !gui_state.enabled;
+    commands.write_message(GrabCursor(!gui_state.enabled));
 }
 
 pub(crate) fn handle_full_screen(

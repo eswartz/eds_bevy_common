@@ -142,6 +142,7 @@ pub enum UserAction {
 /// in similar systems. Multiple clients independently
 /// see the UserActions and can respond appropriately.
 pub(crate) fn process_global_actions(
+    mut commands: Commands,
     action_state: Res<ActionState<UserAction>>,
     mut primary_window: Query<&mut Window, With<PrimaryWindow>>,
     mut pause_state: ResMut<PauseState>,
@@ -157,6 +158,7 @@ pub(crate) fn process_global_actions(
     if action_state.just_pressed(&UserAction::ToggleDebugUi) {
         if dev_tools_enabled() {
             gui_state.enabled = dev_tools_enabled() && !gui_state.enabled;
+            commands.write_message(GrabCursor(!gui_state.enabled));
         }
     }
     if action_state.just_pressed(&UserAction::ToggleFullScreen)
