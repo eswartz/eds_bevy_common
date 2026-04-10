@@ -470,6 +470,8 @@ pub fn assign_stock_player_actions(
             MouseButton::Right,
             GamepadButton::LeftTrigger2,
 
+            KeyCode::KeyF,
+            
             // These are dangerous since they must be used in isolation
             // and not with keyboard combinations.
             KeyCode::AltLeft,
