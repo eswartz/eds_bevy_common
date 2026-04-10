@@ -47,7 +47,7 @@ impl Plugin for GrabbingPlugin {
             app.add_plugins(OutlinePlugin);
         }
         app
-            .init_resource::<GrabbingForce>()
+            .init_resource::<GrabbingBehavior>()
             .init_resource::<HighlightedIsGrabbable>()
             .init_resource::<GrabbedItemStyle>()
             .add_message::<GrabbingCommand>()
@@ -218,15 +218,33 @@ pub fn is_grabbing_item(res: Option<Res<GrabbedItem>>) -> bool {
     res.is_some()
 }
 
-/// Force that a grabbed object will be moved.
+/// Control how a grabbed object will be moved.
 #[derive(Resource, Reflect, Debug)]
 #[reflect(Resource)]
 #[type_path = "game"]
-pub struct GrabbingForce(pub f32);
+pub struct GrabbingBehavior {
+    /// N/s to apply to move a grabbed object.
+    pub force: f32,
+    /// If true, multiply force by mass to achieve consistent movement.
+    pub ignore_mass: bool,
+    /// Amount (N) by which to accelerate an item per second.
+    /// Should be > 1.0 usually.
+    pub move_accel: f32,
+    /// Minimum speed, if movement detected.
+    pub min_speed: f32,
+    /// Maximum speed, to avoid explosive movements.
+    pub max_speed: f32,
+}
 
-impl Default for GrabbingForce {
+impl Default for GrabbingBehavior {
     fn default() -> Self {
-        Self(25.0)
+        Self {
+            force: 50.0,
+            ignore_mass: false,
+            move_accel: 1.1,
+            min_speed: 0.05,
+            max_speed: 10.0,
+        }
     }
 }
 
@@ -300,7 +318,7 @@ fn on_change_grab_distance(
 fn move_grabbed_item(
     mut commands: Commands,
     mut grabbed: ResMut<GrabbedItem>,
-    grabbing_force: Res<GrabbingForce>,
+    grabbing_force: Res<GrabbingBehavior>,
 
     camera_q: Query<&GlobalTransform, (With<Camera3d>, With<WorldCamera>)>,
 
@@ -330,28 +348,34 @@ fn move_grabbed_item(
 
     let movement = offset.length();
     if movement > 0.01 {
-        grabbed.speed = grabbed.speed.max(0.05) * 1.01;
-        *forces.linear_velocity_mut() = (offset * grabbed.speed * grabbing_force.0).adjust_precision();
+        grabbed.speed = (grabbed.speed.max(0.05) * grabbing_force.move_accel).min(grabbing_force.max_speed);
+        let vel = offset * grabbed.speed * grabbing_force.force;
+        if grabbing_force.ignore_mass {
+            *forces.linear_velocity_mut() = vel.adjust_precision();
+        } else {
+            forces.apply_linear_acceleration(vel.adjust_precision());
+        }
         *forces.angular_velocity_mut() = default();
         grabbed.movement += movement;
     } else {
-        grabbed.speed *= 0.99;
+        grabbed.speed *= 0.95;
     }
 
     // Draw axes from all edges.
-    gizmos.axes(*xfrm, grabbing_force.0);
+    let size = grabbing_force.force;
+    gizmos.axes(*xfrm, size);
 
     let mut inv_xfrm = xfrm.clone();
     inv_xfrm.rotate_local_x(std::f32::consts::PI);
-    gizmos.axes(inv_xfrm, grabbing_force.0);
+    gizmos.axes(inv_xfrm, size);
 
     let mut inv_xfrm = xfrm.clone();
     inv_xfrm.rotate_local_y(std::f32::consts::PI);
-    gizmos.axes(inv_xfrm, grabbing_force.0);
+    gizmos.axes(inv_xfrm, size);
 
     let mut inv_xfrm = xfrm.clone();
     inv_xfrm.rotate_local_z(std::f32::consts::PI);
-    gizmos.axes(inv_xfrm, grabbing_force.0);
+    gizmos.axes(inv_xfrm, size);
 }
 
 fn process_grab_changes(
