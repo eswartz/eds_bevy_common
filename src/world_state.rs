@@ -16,9 +16,10 @@ impl Plugin for WorldStatePlugin {
                     transition_from_loading,
                     setup_world_marker,
                 )
-                // .in_set(SimulationSystems)
                 .run_if(in_state(ProgramState::InGame))
             )
+
+            // Despawn on exiting out of a game.
             .add_systems(OnTransition{ exited: ProgramState::InGame, entered: ProgramState::LaunchMenu },
                 (
                     despawn_world,
@@ -76,11 +77,13 @@ pub fn setup_world_marker(
 }
 
 pub fn despawn_world(
-    world: Single<Entity, With<WorldMarker>>,
+    world_q: Query<Entity, With<WorldMarker>>,
     child_q: Query<&Children>,
     mut commands: Commands,
 ) {
-    for kid in child_q.iter_descendants(*world) {
-        commands.entity(kid).try_despawn();
+    for world in world_q.iter() {
+        for kid in child_q.iter_descendants(world) {
+            commands.entity(kid).try_despawn();
+        }
     }
 }
