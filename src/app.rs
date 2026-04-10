@@ -99,6 +99,7 @@ impl Plugin for AppPlugin {
 #[derive(Debug, Resource)]
 pub struct ExitRequest;
 
+/// This acknowledges an `ExitRequest` and pings the App to exit.
 pub fn check_app_exit(
     mut commands: Commands,
     exit: Option<Res<ExitRequest>>,
@@ -198,7 +199,7 @@ pub fn setup_error_screen(
     .with_children(|builder| {
         builder.spawn((
             Text::new(
-                "There is an installation error (assets are missing).\nPlease gather stdout and stderr and report.",
+                "There is an installation error\n(assets are missing or corrupt).\nPlease gather stdout and stderr and report.",
             ),
             TextFont {
                 font: ui_font.map_or(default(), |f| f.0.clone()),
