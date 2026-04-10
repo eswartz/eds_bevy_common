@@ -1,5 +1,4 @@
-use avian3d::dynamics::solver::SolverDiagnostics;
-/// Based on `bevy_mini_fps` (single-file implementation in `lib.rs`).
+/// eswartz: Based on `bevy_mini_fps` (single-file implementation in `lib.rs`).
 
 /// I had some build problems and also wanted the
 /// Plugin model, so the interface is totally different.
@@ -7,6 +6,8 @@ use bevy::prelude::*;
 
 use sysinfo;
 use ::core::fmt::Write;
+
+use avian3d::dynamics::solver::SolverDiagnostics;
 
 pub struct FpsOverlayPlugin;
 
@@ -22,7 +23,7 @@ impl Plugin for FpsOverlayPlugin {
             )
             .add_systems(
                 Update,
-                __entity_count.pipe(diagnostic_system),
+                entity_count_in.pipe(diagnostic_system),
             )
         ;
     }
@@ -48,32 +49,33 @@ fn update_fps_visibility(
 
 /// N is only allowed to be a power of 2.
 #[doc(hidden)]
-pub struct RingBuffer<const N: usize> {
+struct F32RingBuffer<const N: usize> {
     buffer: [f32; N],
     ptr: usize,
     len: usize,
 }
 
-impl<const N: usize> RingBuffer<N> {
-    pub fn is_empty(&self) -> bool {
+impl<const N: usize> F32RingBuffer<N> {
+    fn is_empty(&self) -> bool {
         self.len == 0
     }
 
-    pub fn len(&self) -> usize {
+    fn len(&self) -> usize {
         self.len
     }
 
-    pub fn push(&mut self, item: f32) {
+    fn push(&mut self, item: f32) {
         self.buffer[self.ptr] = item;
         self.ptr = (self.ptr + 1) & (N - 1);
         self.len = N.min(self.len + 1)
     }
 
-    pub fn iter(&self) -> impl Iterator<Item = &f32> {
+    fn iter(&self) -> impl Iterator<Item = &f32> {
         self.buffer[0..self.len].iter()
     }
 }
-impl<const N: usize> Default for RingBuffer<N> {
+
+impl<const N: usize> Default for F32RingBuffer<N> {
     fn default() -> Self {
         Self {
             buffer: [0.0; N],
@@ -83,8 +85,8 @@ impl<const N: usize> Default for RingBuffer<N> {
     }
 }
 
-
-fn __entity_count(world: &World) -> usize {
+fn entity_count_in(world: &World) -> usize {
+    //. yes, this is expensive, but more "active"
     world.entities().count_spawned() as _
 }
 
@@ -108,6 +110,7 @@ impl Default for FpsOverlayStyle {
     }
 }
 
+const TIME_BUFFER_LEN: usize = 16;
 
 #[allow(clippy::too_many_arguments)]
 fn diagnostic_system(
@@ -117,13 +120,17 @@ fn diagnostic_system(
     mut sys_info: Local<sysinfo::System>,
     mut refresh_timer: Local<f32>,
     mut sys_timer: Local<f32>,
-    mut time_buffer: Local<RingBuffer<128>>,
+    mut time_buffer: Local<F32RingBuffer<TIME_BUFFER_LEN>>,
     cached: Local<::std::cell::OnceCell<[Entity; 6]>>,
+
     solver_diags: Res<SolverDiagnostics>,
     time: Res<Time>,
+
     mut text: Query<&mut Text>,
 ) {
+    // Fetch the [Entity]s for the [Text] nodes to edit.
     let [fps, max_ft, entities, contacts, cpu, ram] = *cached.get_or_init(|| {
+        // Generate the UI once.
         let mut result = [Entity::PLACEHOLDER; 6];
         let font = TextFont {
             font_size: style.font_size,

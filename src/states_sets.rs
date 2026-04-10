@@ -74,7 +74,8 @@ pub enum ProgramState {
     /// This state means some aspect of the game is active,
     /// possibly paused, scripted, or behind a transient menu.
     InGame,
-    /// Completed the game.
+    /// Completed the program. This is not used internally,
+    /// but may be useful for tracking when the program is exiting.
     Completed,
 }
 

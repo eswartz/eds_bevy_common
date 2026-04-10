@@ -423,9 +423,9 @@ dependencies = [
 
 [[package]]
 name = "avian3d"
-version = "0.6.0"
+version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ccf73a986c8a79fa00483d75ccb6fb306bf37eef2681c1fdd86f0ae8afd07d46"
+checksum = "d0751cde05c2be789fad86cd19219daf8a8907e0c6c2175f2c8144706493f010"
 dependencies = [
  "approx",
  "avian_derive",
@@ -3182,7 +3182,7 @@ name = "eds_bevy_common"
 version = "0.0.8"
 dependencies = [
  "anyhow",
- "avian3d 0.6.0",
+ "avian3d 0.6.1",
  "bevy",
  "bevy-inspector-egui",
  "bevy_asset_loader",
@@ -3198,6 +3198,7 @@ dependencies = [
  "crossbeam-channel",
  "egui",
  "firewheel",
+ "fuzzy-matcher",
  "getrandom 0.4.2",
  "image",
  "leafwing-input-manager",
@@ -9106,3 +9107,27 @@ checksum = "410e9ecef634c709e3831c2cfdb8d9c32164fae1c67496d5b68fff728eec37fe"
 dependencies = [
  "zune-core 0.5.1",
 ]
+
+[[patch.unused]]
+name = "fedry"
+version = "0.1.0"
+
+[[patch.unused]]
+name = "fedry_bevy_plugin"
+version = "0.1.0"
+
+[[patch.unused]]
+name = "fedry_runtime"
+version = "0.1.0"
+
+[[patch.unused]]
+name = "fedry"
+version = "0.1.0"
+
+[[patch.unused]]
+name = "fedry_bevy_plugin"
+version = "0.1.0"
+
+[[patch.unused]]
+name = "fedry_runtime"
+version = "0.1.0"

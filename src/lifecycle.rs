@@ -67,7 +67,7 @@ impl PauseState {
     }
 }
 
-/// This owns the management of play/pause toggling.
+/// This handles play/pause toggling for our resources.
 pub fn check_pause_request(
     paused: ResMut<PauseState>,
     mut time: ResMut<Time<Physics>>,
