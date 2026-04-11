@@ -16,7 +16,7 @@ categories = ["game"]
 #########
 [patch.crates-io]
 # bevy = { path = "../bevy-fork" }
-# avian3d = { git = "https://github.com/Jondolf/avian.git", branch = "main" }
+avian3d = { git = "https://github.com/Jondolf/avian.git", branch = "main" }
 # avian3d = { path = "../avian/crates/avian3d" }
 
 # Support webp.
@@ -110,7 +110,7 @@ log = { version = "0.4", features = [
 tracing = { version = "0.1", features = [
     "max_level_debug",
 ] }
-avian3d = { version = "0.6", default-features = false, features = [
+avian3d = { version = "0.7.0-dev", default-features = false, features = [
 	"3d",
 	"collider-from-mesh",
     "f32", "parry-f32",
