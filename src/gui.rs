@@ -16,7 +16,7 @@ use bevy::window::WindowFocused;
 use bevy_asset_loader::prelude::*;
 use bevy_seedling::prelude::MainBus;
 
-use crate::FpsOverlayVisible;
+use crate::StatsOverlayVisible;
 use crate::assets::CommonGuiAssets;
 use crate::RENDER_LAYER_UI;
 
@@ -388,7 +388,7 @@ pub struct GrabState{ was_grabbed: bool, options: CursorOptions }
 
 fn update_gui_state(
     state: Res<GuiState>,
-    fps_visible: Option<ResMut<FpsOverlayVisible>>,
+    fps_visible: Option<ResMut<StatsOverlayVisible>>,
     mut status_visible: ResMut<StatusVisible>,
     mut gizmo_config: ResMut<GizmoConfigStore>,
 ) {

@@ -127,7 +127,7 @@ fn main() -> AppExit {
                     bevy::dev_tools::states::log_transitions::<LevelState>,
                 ),
             )
-            .add_plugins(FpsOverlayPlugin)
+            .add_plugins(StatsOverlayPlugin)
         ;
     }
 

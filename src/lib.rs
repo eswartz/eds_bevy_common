@@ -32,7 +32,7 @@ pub mod player_spawning;
 pub mod collision_hooks;
 pub mod areas;
 pub mod deathbox;
-pub mod fps;
+pub mod stats;
 #[cfg(feature = "highlighting")]
 pub mod highlighting;
 #[cfg(feature = "grabbing")]
@@ -80,7 +80,7 @@ pub use player_spawning::*;
 pub use collision_hooks::*;
 pub use areas::*;
 pub use deathbox::*;
-pub use fps::*;
+pub use stats::*;
 #[cfg(feature = "midi_synth")]
 pub use synth::*;
 #[cfg(feature = "midi_synth")]
