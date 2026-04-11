@@ -323,9 +323,9 @@ fn move_grabbed_item(
     camera_q: Query<&GlobalTransform, (With<Camera3d>, With<WorldCamera>)>,
 
     mut gizmos: Gizmos,
-    mut phys_info_q: Query<(Forces, &GlobalTransform, &Transform, Option<&LockedAxes>)>,
+    mut phys_info_q: Query<(Forces, &GlobalTransform, &Transform, &Mass)>,
 ) {
-    let Ok((mut forces, item_global_xfrm, xfrm, _)) = phys_info_q.get_mut(grabbed.entity) else {
+    let Ok((mut forces, item_global_xfrm, xfrm, mass)) = phys_info_q.get_mut(grabbed.entity) else {
         commands.write_message(GrabbingCommand::CancelGrabItems);
         return
     };
@@ -350,11 +350,12 @@ fn move_grabbed_item(
     if movement > 0.01 {
         grabbed.speed = (grabbed.speed.max(0.05) * grabbing_force.move_accel).min(grabbing_force.max_speed);
         let vel = offset * grabbed.speed * grabbing_force.force;
-        if grabbing_force.ignore_mass {
-            *forces.linear_velocity_mut() = vel.adjust_precision();
+        let vel = if grabbing_force.ignore_mass {
+            vel
         } else {
-            forces.apply_linear_acceleration(vel.adjust_precision());
-        }
+            vel / mass.0
+        };
+        *forces.linear_velocity_mut() = vel.adjust_precision() ;
         *forces.angular_velocity_mut() = default();
         grabbed.movement += movement;
     } else {
