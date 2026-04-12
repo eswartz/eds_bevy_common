@@ -44,7 +44,7 @@ impl Plugin for DebugPlugin {
             )
             .add_systems(
                 EguiPrimaryContextPass,
-                update_egui_debug_ui
+                update_egui_settings_ui
                 .run_if(is_debug_ui_enabled),
             )
         ;
@@ -289,11 +289,12 @@ pub fn debug_gui_wants_input(r: Option<Res<EguiWantsInput>>) -> bool {
     }
 }
 
-pub fn update_egui_debug_ui(
+pub fn update_egui_settings_ui(
     mut contexts: EguiContexts,
     mut in_state: ResMut<GuiState>,
 ) {
     let Ok(ctx) = contexts.ctx_mut() else { return };
+    // Work on clones to avoid firing mutable change listeners
     let mut state = in_state.clone();
 
     egui::Window::new("Settings")
