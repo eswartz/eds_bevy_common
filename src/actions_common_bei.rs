@@ -183,7 +183,6 @@ fn toggle_context(
         commands.entity(*player_active).insert(ContextActivity::<PlayerContext>::ACTIVE);
         commands.entity(*menu_active).insert(ContextActivity::<MenuContext>::INACTIVE);
     }
-
 }
 
 pub(crate) fn handle_pause(_event: On<Start<actions::Pause>>, mut pause_state: ResMut<PauseState>) {
@@ -293,6 +292,10 @@ pub fn assign_stock_common_actions(
     commands.spawn((
         include.clone(),
         Action::<actions::Interact>::new(),
+        ActionSettings {
+            require_reset: true,
+            ..default()
+        },
         bindings![
             KeyCode::KeyE,
             KeyCode::Enter,
@@ -315,7 +318,7 @@ pub fn assign_stock_menu_actions(
         },
         bindings![
             KeyCode::Escape,
-            GamepadButton::East,
+            GamepadButton::East,    // not GAMEPAD_BUTTON_MENU here
         ],
     ));
 
@@ -475,7 +478,7 @@ pub fn assign_stock_player_actions(
             GamepadButton::LeftTrigger2,
 
             KeyCode::KeyF,
-            
+
             // These are dangerous since they must be used in isolation
             // and not with keyboard combinations.
             KeyCode::AltLeft,
