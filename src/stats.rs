@@ -44,7 +44,6 @@ impl Plugin for StatsOverlayPlugin {
     }
 }
 
-
 /// Implement this to add data to the stats display.
 pub trait StatsProvider: Send + Sync + 'static {
     /// Get the displayed label.
@@ -256,7 +255,7 @@ impl Default for StatsOverlayStyle {
         Self {
             outer_margin: 4.,
             inner_margin: 4.,
-            font_size: 12.,
+            font_size: 10.,
             font: default(),
         }
     }
