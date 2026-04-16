@@ -81,7 +81,7 @@ impl Plugin for DeathboxPlugin {
 }
 
 /// This message is sent when a given [Spawned] or [Player] has hit the deathbox.
-#[derive(Message)]
+#[derive(Message, Debug)]
 pub enum HitDeathboxMessage {
     Player(Entity),
     Spawned(Entity),

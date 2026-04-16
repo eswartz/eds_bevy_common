@@ -1,6 +1,6 @@
 [package]
 name = "eds_bevy_common"
-version = "0.0.8"
+version = "0.1.0"
 edition = "2024"
 authors = ["Ed Swartz (github.com/eswartz)"]
 license = "MIT OR Apache 2"
@@ -148,6 +148,14 @@ bevy_asset_loader = { version = "0.25.0", features = [
     "3d",
     # "progress_tracking",
 ] }
+
+bevy_trenchbroom = { optional = true, version = "0.12", default-features = false, features = [ "bsp", "client", "physics-integration" ] }
+bevy_trenchbroom_avian = { optional = true, version = "0.12", default-features = false }
+
+bevy_skein = { optional = true, version = "0.5.0" }
+
+bevy_mod_outline = { version = "0.12", optional = true }
+
 serde = { version = "1.0", features = ["alloc", "derive", "serde_derive"] }
 rand = { version = "0.10.0" }
 
@@ -157,13 +165,6 @@ wgpu = "27.0.1"
 bytemuck = "1.25.0"
 anyhow = "1.0.101"
 bevy_tweening = "0.15.0"
-
-bevy_trenchbroom = { optional = true, version = "0.12", default-features = false, features = [ "bsp", "client", "physics-integration" ] }
-bevy_trenchbroom_avian = { optional = true, version = "0.12", default-features = false }
-
-bevy_skein = { optional = true, version = "0.5.0" }
-
-bevy_mod_outline = { version = "0.12", optional = true }
 
 sysinfo = { version = "0.37" }
 

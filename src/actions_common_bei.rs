@@ -456,6 +456,10 @@ pub fn assign_stock_player_actions(
     commands.spawn((
         include.clone(),
         Action::<actions::Firing>::new(),
+        ActionSettings {
+            require_reset: true,
+            ..default()
+        },
         bindings![
             MouseButton::Left,
             KeyCode::Enter,
