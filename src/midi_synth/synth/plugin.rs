@@ -2,6 +2,8 @@
 use std::{sync::{Arc, Mutex, atomic::{AtomicBool, Ordering}}, time::Duration};
 #[cfg(not(target_arch = "wasm32"))]
 use std::thread;
+use bevy_seedling::spatial::SpatialListener3D;
+use firewheel::atomic_float::AtomicF32;
 #[cfg(target_arch = "wasm32")]
 use wasm_thread as thread;
 
@@ -34,7 +36,7 @@ impl Plugin for MidiSynthPlugin {
                 PreUpdate,
                 (
                     ensure_synths,
-                    // update_synths,
+                    update_synths,
                     cleanup_synths,
                     check_pause_request_for_synths,
                 )
@@ -77,7 +79,6 @@ impl Default for MidiSynthParams {
     }
 }
 
-/// Can't be Reflect due to SoundFont.
 #[derive(Debug, TypePath)]
 pub(crate) enum SynthState {
     LoadHandle {
@@ -85,7 +86,6 @@ pub(crate) enum SynthState {
         pending: Vec<MidiMessage>,
     },
     Loaded {
-        // render_sender: Sender<MidiRenderMessage>,
         synthesizer: Arc<Mutex<Synthesizer>>,
     },
 }
@@ -96,22 +96,11 @@ pub struct MidiSynth {
     pub(crate) params: MidiSynthParams,
     entity: Entity,
     synth_state: SynthState,
-    // /// We need to keep this else the effect is dropped.
-    // #[allow(unused)]
-    // #[cfg(feature = "kira")]
-    // reverb_send: kira::track::SendTrackHandle,
-    // #[cfg(feature = "kira")]
-    // pub listener: kira::listener::ListenerHandle,
-    // #[cfg(feature = "kira")]
-    // pub spatial_track: Arc<Mutex<kira::track::SpatialTrackHandle>>,
-    // #[cfg(feature = "firewheel")]
-    // // pub stream_writer_handle: Arc<Mutex<firewheel::nodes::stream::writer::StreamWriterState>>,
-    // pub stream_writer_id: firewheel::node::NodeID,
-    pub volume_linear: f32,
     thread_handle: Option<thread::JoinHandle<()>>,
 
     pub thread_quit: Arc<AtomicBool>,
     muted: Arc<AtomicBool>,
+    pub volume_linear: Arc<AtomicF32>,
     render_sender: Sender<MidiRenderMessage>,
     render_receiver: Receiver<MidiRenderMessage>,
     pub sample_receiver: Receiver<Vec<f32>>,
@@ -217,7 +206,7 @@ impl MidiSynth {
             params,
             entity,
             synth_state: SynthState::LoadHandle { sound_font, pending: vec![] },
-            volume_linear: 1.0,
+            volume_linear: Arc::new(AtomicF32::new(1.0)),
             thread_quit: Arc::new(AtomicBool::new(false)),
             muted,
             thread_handle: None,
@@ -276,7 +265,8 @@ impl MidiSynth {
     fn start(
         &mut self,
         synthesizer: Arc<Mutex<Synthesizer>>,
-        mut ent_commands: EntityCommands<'_>,
+        mut commands: Commands,
+        entity: Entity,
     ) -> anyhow::Result<SynthThread> {
         // Shouldn't happen, but in case we start twice...
         self.stop();
@@ -290,7 +280,10 @@ impl MidiSynth {
         let decoder = SynthDecoder::new(
             &thread_params, self.entity, self.render_sender.clone(),
             self.sample_receiver.clone(),
-            muted.clone(), thread_quit.clone());
+            thread_quit.clone(),
+            muted.clone(),
+            self.volume_linear.clone(),
+        );
 
         // let render_sender = self.render_sender.clone();
         let render_receiver = self.render_receiver.clone();
@@ -314,12 +307,19 @@ impl MidiSynth {
             use crate::MusicBus;
 
             use crate::midi_synth::synth::firewheel_nodes::MidiSynthPlayerNodeConfig;
-            ent_commands.insert((
-                Name::new("MidiSynth player"),
+            let fwid = commands.entity(entity).insert((
+                // ChildOf(entity),
+                // Name::new("MidiSynth player"),
                 MidiSynthPlayerNode,
                 MidiSynthPlayerNodeConfig(Arc::new(decoder)),
-            ));
-            ent_commands.connect(MusicBus);
+            )).id();
+            // let id = commands.spawn((
+            //     ChildOf(entity),
+            //     Name::new("MidiSynth player"),
+            //     MidiSynthPlayerNode,
+            //     MidiSynthPlayerNodeConfig(Arc::new(decoder)),
+            // )).id();
+            commands.entity(fwid).connect(MusicBus);
         }
 
         Ok(SynthThread{ thread_quit: self.thread_quit.clone() })
@@ -432,7 +432,8 @@ struct SynthThread {
     thread_quit: Arc<AtomicBool>,
 }
 
-/// Track allocated synths, so we can clean them up.
+/// This maps an Entity with a MidiSynth to the thread that is processing it.
+///
 #[derive(Resource, Default)]
 struct MidiSynths(EntityHashMap<SynthThread>);
 
@@ -458,7 +459,7 @@ fn ensure_synths(
 
         let synthesizer = Arc::new(Mutex::new(Synthesizer::new(&sound_font.content, &synth_settings).unwrap()));
 
-        match synth.start(synthesizer.clone(), commands.entity(ent)) {
+        match synth.start(synthesizer.clone(), commands.reborrow(), ent) {
             Ok(thread) => {
                 let exist = synths.0.insert(ent, thread);
                 if let Some(exist) = exist {
@@ -483,17 +484,17 @@ fn ensure_synths(
     }
 }
 
-// fn update_synths(
-//     synth_q: Query<&MidiSynth, Changed<MidiSynth>>,
-// ) {
-//     // for synth in synth_q.iter() {
-//     //     let vol = synth.volume_linear;
-//     //     synth.spatial_track.lock().unwrap().set_volume(
-//     //         linear_to_decibels(vol),
-//     //         default()
-//     //     );
-//     // }
-// }
+fn update_synths(
+    synth_q: Query<(&MidiSynth, &GlobalTransform)>,
+    listener_q: Query<&GlobalTransform, With<SpatialListener3D>>,
+) {
+    let Ok(listener_xfrm) = listener_q.single() else { return };
+
+    synth_q.par_iter().for_each(|(synth, xfrm)| {
+        let distance = listener_xfrm.translation().distance(xfrm.translation());
+        synth.volume_linear.store(1.0 / distance, Ordering::Relaxed);
+    });
+}
 
 /// Stop any threads when MidiSynth is removed.
 fn cleanup_synths(

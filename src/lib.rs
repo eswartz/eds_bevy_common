@@ -39,7 +39,6 @@ pub mod highlighting;
 pub mod grabbing;
 pub mod app;
 
-#[cfg(feature = "midi_synth")]
 pub mod synth;
 #[cfg(feature = "midi_synth")]
 pub mod client_synth;
@@ -81,7 +80,6 @@ pub use collision_hooks::*;
 pub use areas::*;
 pub use deathbox::*;
 pub use stats::*;
-#[cfg(feature = "midi_synth")]
 pub use synth::*;
 #[cfg(feature = "midi_synth")]
 pub use client_synth::*;

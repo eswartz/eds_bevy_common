@@ -1,6 +1,8 @@
 //! This module models musical audio by allowing
 //! clients to send [SynthEvent] to generate notes on [MidiSynth] components
 //! at some point in the future.
+//!
+//! This defines the basic data model.
 use bevy::prelude::*;
 use crate::midi_synth::synth::MidiSynthParams;
 use std::time::Duration;
@@ -47,10 +49,22 @@ impl SynthClock {
 
 /// A note for the synthesizer.
 /// This represents values as midi notes shifted left 8, to make room for pitch bend.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Reflect, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Copy, PartialEq, Eq, Reflect, serde::Serialize, serde::Deserialize)]
 #[reflect(Clone)]
 #[type_path = "game"]
 pub struct SynthNote(u16);
+
+impl std::fmt::Debug for SynthNote {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "SynthNote:")?;
+        let pitch = self.0 & 0xff;
+        if pitch == 0 {
+            write!(f, "{}", self.0 >> 8)
+        } else {
+            write!(f, "{:.2}", self.0 as f32 / 256.0)
+        }
+    }
+}
 
 #[allow(unused)]
 impl SynthNote {
@@ -153,7 +167,7 @@ impl SynthMessage {
 
 
 /// This component, added by the server, marks an entity as a proxy for
-/// various SynthEvents. Its entity is passed along in SynthEvents.
+/// various [SynthEvent]s. Its entity is passed along in SynthEvents.
 /// The client will farm the events out to actual MidiSynths, based on
 /// the user's CPU capacity.
 #[derive(Component, Reflect)]
@@ -162,5 +176,4 @@ impl SynthMessage {
 pub struct MidiSynthProxy{
     pub params: MidiSynthParams,
     pub bank: String,
-    // pub channel: AudioVirtualChannel,
 }

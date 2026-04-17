@@ -146,6 +146,7 @@ pub fn initialize_audio(master: Single<Entity, With<MainBus>>, mut commands: Com
                 panning_threshold: 0.9,
                 ..default()
             },
+            SpatialScale(Vec3::splat(10.0)),
         )],
     ));
 

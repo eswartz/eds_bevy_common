@@ -1,4 +1,5 @@
-//! This module manages synth listening.
+//! This module manages client synth listening.
+//!
 
 use std::collections::VecDeque;
 use std::sync::atomic::Ordering;
@@ -84,7 +85,6 @@ impl SynthProxyMap {
     pub fn register_synth(&mut self, entity: Entity) {
         self.map.insert(entity, entity);
         self.synths.insert(entity);
-
     }
 }
 

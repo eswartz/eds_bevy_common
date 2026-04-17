@@ -2,7 +2,7 @@
 use bevy::platform::sync::{Arc, atomic::{AtomicBool, Ordering},};
 use bevy_seedling::prelude::ChannelCount;
 use firewheel::{
-    channel_config::ChannelConfig, diff::{Diff, Patch}, node::{AudioNode, AudioNodeInfo, AudioNodeProcessor, ConstructProcessorContext, ProcBuffers}
+    atomic_float::AtomicF32, channel_config::ChannelConfig, diff::{Diff, Patch}, node::{AudioNode, AudioNodeInfo, AudioNodeProcessor, ConstructProcessorContext, ProcBuffers}
 };
 
 use std::collections::VecDeque;
@@ -12,22 +12,16 @@ use crossbeam_channel::{Receiver, Sender};
 
 use super::{MidiRenderMessage, MidiSynthParams};
 
-// /// This needs Default because of [MidiSynthPlayerNodeConfig].
-// #[derive(Default)]
 #[derive(Clone)]
 pub(crate) struct SynthDecoder {
     quit: Arc<AtomicBool>,
     muted: Arc<AtomicBool>,
+    volume_linear: Arc<AtomicF32>,
     handle: Option<Entity>,
     pub sample_rate: u32,
     stereo: bool,
     sender: Option<Sender<MidiRenderMessage>>,
     receiver: Receiver<Vec<f32>>,
-    // writer: Arc<Mutex<firewheel::nodes::stream::writer::StreamWriterState>>,
-    // writer: Arc<Mutex<firewheel::nodes::stream::writer::StreamWriterState>>,
-
-    // /// One sample per channel.
-    // queued_samples: Vec<f32>,
 }
 
 impl PartialEq for SynthDecoder {
@@ -46,21 +40,20 @@ impl SynthDecoder {
         sender: Sender<MidiRenderMessage>,
         receiver: Receiver<Vec<f32>>,
 
-        // writer: Arc<Mutex<firewheel::nodes::stream::writer::StreamWriterState>>,
         quit: Arc<AtomicBool>,
         muted: Arc<AtomicBool>,
+        volume_linear: Arc<AtomicF32>,
     ) -> Self {
         // This always wraps in Some() because we are forced to use Default because of [MidiSynthPlayerNodeConfig].
         Self {
             quit,
             muted,
+            volume_linear,
             handle: Some(handle),
             sample_rate: params.sample_rate as u32,
             stereo: params.channel_count > 1,
             sender: Some(sender),
             receiver,
-            // writer,
-            // queued_samples: Vec::new(),
         }
     }
 }
@@ -74,6 +67,7 @@ pub(crate) struct SynthDecoderNodeProcessor {
     head: VecDeque<f32>,
     quit: Arc<AtomicBool>,
     muted: Arc<AtomicBool>,
+    volume_linear: Arc<AtomicF32>,
     // /// Average dt (secs) from the last few frames.
     // dt: f64,
 }
@@ -86,6 +80,7 @@ impl SynthDecoderNodeProcessor {
         receiver: Receiver<Vec<f32>>,
         quit: Arc<AtomicBool>,
         muted: Arc<AtomicBool>,
+        volume_linear: Arc<AtomicF32>,
     ) -> Self {
         // Kickstart.
         let _ = sender.send(MidiRenderMessage::RenderFrame((sample_rate / 32) as usize));
@@ -97,7 +92,7 @@ impl SynthDecoderNodeProcessor {
             receiver,
             quit,
             muted,
-            // dt: 1.0,
+            volume_linear,
         }
     }
 }
@@ -145,7 +140,7 @@ impl SynthDecoderNodeProcessor {
             return default();
         }
 
-        Some(frame)
+        Some(frame * self.volume_linear.load(Ordering::Relaxed))
     }
 }
 
@@ -168,7 +163,6 @@ impl Default for MidiSynthPlayerNodeConfig {
         panic!("add the MidiSynthPlayerNodeConfig component explicitly")
     }
 }
-
 
 impl AudioNode for MidiSynthPlayerNode {
     type Configuration = MidiSynthPlayerNodeConfig;
@@ -196,6 +190,7 @@ impl AudioNode for MidiSynthPlayerNode {
             decoder.receiver.clone(),
             decoder.quit.clone(),
             decoder.muted.clone(),
+            decoder.volume_linear.clone(),
         )
     }
 }
