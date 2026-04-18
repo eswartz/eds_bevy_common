@@ -43,6 +43,7 @@ pub mod highlighting;
 pub mod grabbing;
 pub mod app;
 
+#[cfg(feature = "midi_synth")]
 pub mod synth;
 #[cfg(feature = "midi_synth")]
 pub mod client_synth;
@@ -86,9 +87,10 @@ pub use deathbox::*;
 pub use stats::*;
 pub use split_into_cubes::*;
 pub use detail_normal::*;
-pub use synth::*;
 pub use app::*;
 
+#[cfg(feature = "midi_synth")]
+pub use synth::*;
 #[cfg(feature = "midi_synth")]
 pub use client_synth::*;
 #[cfg(feature = "highlighting")]

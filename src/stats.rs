@@ -12,12 +12,14 @@ use std::time::Duration;
 
 use avian3d::dynamics::solver::SolverDiagnostics;
 
+use crate::ProgramState;
+
 pub struct StatsOverlayPlugin;
 
 impl Plugin for StatsOverlayPlugin {
     fn build(&self, app: &mut App) {
         app
-            .insert_resource(StatsOverlayVisible(true))
+            .insert_resource(StatsOverlayVisible(false))
             .init_resource::<StatsOverlayStyle>()
             .init_resource::<StatsRegistry>()
             .init_resource::<FpsTimeBuffer>()
@@ -25,7 +27,11 @@ impl Plugin for StatsOverlayPlugin {
 
             .add_systems(
                 Startup,
-                add_default_providers
+                add_default_providers,
+            )
+            .add_systems(
+                OnEnter(ProgramState::LaunchMenu),
+                    update_stats_visibility
             )
             .add_systems(
                 Update,
@@ -303,7 +309,7 @@ fn diagnostic_system(
                     ..Default::default()
                 },
                 BackgroundColor(Color::srgba(0.2, 0.2, 0.2, 0.5)),
-                Visibility::Inherited,
+                Visibility::Hidden,  // updated in `update_stats_visibility`
             )).with_children(|c| {
                 c.spawn(Node {
                     flex_direction: FlexDirection::Column,
