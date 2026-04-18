@@ -1,3 +1,5 @@
+#![feature(iter_array_chunks)]
+
 pub mod base_dir;
 #[cfg(feature = "input_lim")]
 pub mod actions_common_lim;
@@ -33,6 +35,8 @@ pub mod collision_hooks;
 pub mod areas;
 pub mod deathbox;
 pub mod stats;
+pub mod split_into_cubes;
+pub mod detail_normal;
 #[cfg(feature = "highlighting")]
 pub mod highlighting;
 #[cfg(feature = "grabbing")]
@@ -80,11 +84,14 @@ pub use collision_hooks::*;
 pub use areas::*;
 pub use deathbox::*;
 pub use stats::*;
+pub use split_into_cubes::*;
+pub use detail_normal::*;
 pub use synth::*;
+pub use app::*;
+
 #[cfg(feature = "midi_synth")]
 pub use client_synth::*;
 #[cfg(feature = "highlighting")]
 pub use highlighting::*;
 #[cfg(feature = "grabbing")]
 pub use grabbing::*;
-pub use app::*;

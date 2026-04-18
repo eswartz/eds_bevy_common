@@ -9167,30 +9167,30 @@ dependencies = [
 ]
 
 [[patch.unused]]
+name = "fedry"
+version = "0.1.0"
+
+[[patch.unused]]
+name = "fedry_bevy_plugin"
+version = "0.1.0"
+
+[[patch.unused]]
+name = "fedry_runtime"
+version = "0.1.0"
+
+[[patch.unused]]
+name = "fedry"
+version = "0.1.0"
+
+[[patch.unused]]
+name = "fedry_bevy_plugin"
+version = "0.1.0"
+
+[[patch.unused]]
+name = "fedry_runtime"
+version = "0.1.0"
+
+[[patch.unused]]
 name = "avian3d"
 version = "0.7.0-dev"
 source = "git+https://github.com/Jondolf/avian.git?branch=main#891a04d8e48d2534a6ef6c082859a637537a03d6"
-
-[[patch.unused]]
-name = "fedry"
-version = "0.1.0"
-
-[[patch.unused]]
-name = "fedry_bevy_plugin"
-version = "0.1.0"
-
-[[patch.unused]]
-name = "fedry_runtime"
-version = "0.1.0"
-
-[[patch.unused]]
-name = "fedry"
-version = "0.1.0"
-
-[[patch.unused]]
-name = "fedry_bevy_plugin"
-version = "0.1.0"
-
-[[patch.unused]]
-name = "fedry_runtime"
-version = "0.1.0"

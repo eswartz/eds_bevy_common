@@ -18,6 +18,7 @@ use leafwing_input_manager::prelude::*;
 #[cfg(feature = "input_bei")]
 use bevy_enhanced_input::prelude::*;
 
+use crate::GameLayer;
 #[cfg(feature = "input_bei")]
 use crate::Grabbed;
 #[cfg(feature = "input_bei")]
@@ -208,10 +209,13 @@ pub struct GrabbedItem {
     orig_axes: LockedAxes,
     #[cfg(feature = "highlighting")]
     orig_mode: HighlightingMode,
+    /// original layers when grab started
+    orig_layers: Option<CollisionLayers>,
     /// Movement from original location to un-stick item.
     movement: f32,
     /// Movement from original location to un-stick item.
     speed: f32,
+
 }
 
 pub fn is_grabbing_item(res: Option<Res<GrabbedItem>>) -> bool {
@@ -355,7 +359,7 @@ fn move_grabbed_item(
         } else {
             vel / mass.0
         };
-        *forces.linear_velocity_mut() = vel.adjust_precision() ;
+        *forces.linear_velocity_mut() = vel.clamp_length_max(grabbing_force.max_speed).adjust_precision();
         *forces.angular_velocity_mut() = default();
         grabbed.movement += movement;
     } else {
@@ -394,7 +398,7 @@ fn process_grab_changes(
 
     mut raycast: MeshRayCast,
     // mut gizmos: Gizmos,
-    phys_info_q: Query<(Forces, &GlobalTransform, &Transform, Option<&LockedAxes>)>,
+    phys_info_q: Query<(Forces, &GlobalTransform, &Transform, Option<&CollisionLayers>, Option<&LockedAxes>)>,
 ) {
     for command in reader.read() {
         match command {
@@ -406,7 +410,7 @@ fn process_grab_changes(
                     continue
                 };
 
-                let Ok((_, item_global_xfrm, _, axes)) = phys_info_q.get(entity) else {
+                let Ok((_, item_global_xfrm, _, layers, axes)) = phys_info_q.get(entity) else {
                     log::warn!("no physical item {entity}");
                     continue
                 };
@@ -439,6 +443,7 @@ fn process_grab_changes(
                     orig_axes: axes.map_or(default(), |a| *a),
                     movement: 0.,
                     speed: 0.,
+                    orig_layers: layers.cloned(),
                 });
 
                 if cfg!(feature = "highlighting") {
@@ -449,6 +454,14 @@ fn process_grab_changes(
                 commands.entity(entity).try_insert((
                     Grabbed,
                     LockedAxes::ROTATION_LOCKED,
+                    if let Some(layers) = layers {
+                        CollisionLayers::from_bits(
+                            *layers.memberships,
+                            *((layers.filters | GameLayer::Player) ^ GameLayer::Player)
+                        )
+                    } else {
+                        CollisionLayers::default()
+                    }
                 ));
                 commands.queue(SleepBody(entity));
 
@@ -465,6 +478,13 @@ fn process_grab_changes(
                     };
 
                     ent_commands.try_remove::<Grabbed>();
+
+                    // Restore original values.
+                    if let Some(layers) = grabbed.orig_layers {
+                        ent_commands.try_insert(layers);
+                    } else {
+                        ent_commands.try_remove::<CollisionLayers>();
+                    }
 
                     if grabbed.orig_axes.to_bits() != 0 {
                         ent_commands.try_insert(grabbed.orig_axes);

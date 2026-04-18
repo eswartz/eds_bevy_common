@@ -2,7 +2,7 @@
 use std::{sync::{Arc, Mutex, atomic::{AtomicBool, Ordering}}, time::Duration};
 #[cfg(not(target_arch = "wasm32"))]
 use std::thread;
-use bevy_seedling::spatial::SpatialListener3D;
+use bevy_seedling::{context::StreamRestartEvent, spatial::SpatialListener3D};
 use firewheel::atomic_float::AtomicF32;
 #[cfg(target_arch = "wasm32")]
 use wasm_thread as thread;
@@ -41,6 +41,7 @@ impl Plugin for MidiSynthPlugin {
                     check_pause_request_for_synths,
                 )
             )
+            .add_observer(restart_synths)
         ;
     }
 }
@@ -437,6 +438,19 @@ struct SynthThread {
 #[derive(Resource, Default)]
 struct MidiSynths(EntityHashMap<SynthThread>);
 
+fn restart_synths(
+    _event: On<StreamRestartEvent>,
+    mut commands: Commands,
+    synth_q: Query<(Entity, &MidiSynth)>,
+) {
+    for (ent, synth) in synth_q.iter() {
+        log::warn!("restarting synth {ent}");
+        synth.thread_quit.store(true, Ordering::Release);
+        commands.entity(ent).remove::<MidiSynth>();
+    }
+}
+
+
 fn ensure_synths(
     mut commands: Commands,
     sf_assets: Res<Assets<SoundFont>>,
@@ -492,7 +506,11 @@ fn update_synths(
 
     synth_q.par_iter().for_each(|(synth, xfrm)| {
         let distance = listener_xfrm.translation().distance(xfrm.translation());
-        synth.volume_linear.store(1.0 / distance, Ordering::Relaxed);
+        if distance > 50.0 {
+            synth.volume_linear.store(0.0, Ordering::Release);
+        } else {
+            synth.volume_linear.store(1.0 / distance, Ordering::Release);
+        }
     });
 }
 

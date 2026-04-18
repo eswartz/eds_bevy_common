@@ -100,7 +100,7 @@ fn reset_synth_config(
     mut synth_map: ResMut<SynthProxyMap>,
 ) {
     for (ent, synth) in synth_q.iter_mut() {
-        synth.thread_quit.store(true, Ordering::SeqCst);
+        synth.thread_quit.store(true, Ordering::Release);
         commands.entity(ent).remove::<MidiSynth>();
     }
 

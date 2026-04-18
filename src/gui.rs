@@ -69,13 +69,17 @@ impl Plugin for GuiPlugin {
             on_loading_finished)
 
         .add_systems(
+            PostUpdate,
+            check_grab_focus_state.run_if(in_state(ProgramState::InGame))
+        )
+
+        .add_systems(
             Update,
             update_gui_state.run_if(resource_changed::<GuiState>),
         )
         .add_systems(
             Update,
             (
-                check_grab_focus_state,
                 update_pause_ui,
                 update_mute_ui,
             )
