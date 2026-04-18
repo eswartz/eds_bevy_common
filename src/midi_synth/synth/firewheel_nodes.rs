@@ -1,9 +1,11 @@
 
+use crate::midi_synth::synth::firewheel_nodes::firewheel::diff;
 use bevy::platform::sync::{Arc, atomic::{AtomicBool, Ordering},};
-use bevy_seedling::prelude::ChannelCount;
-use firewheel::{
+use bevy_seedling::{firewheel::node::NodeError, prelude::ChannelCount};
+use bevy_seedling::firewheel::{
     atomic_float::AtomicF32, channel_config::ChannelConfig, diff::{Diff, Patch}, node::{AudioNode, AudioNodeInfo, AudioNodeProcessor, ConstructProcessorContext, ProcBuffers}
 };
+use bevy_seedling::firewheel;
 
 use std::collections::VecDeque;
 
@@ -179,24 +181,24 @@ impl Default for MidiSynthPlayerNodeConfig {
 impl AudioNode for MidiSynthPlayerNode {
     type Configuration = MidiSynthPlayerNodeConfig;
 
-    fn info(&self, configuration: &Self::Configuration) -> AudioNodeInfo {
+    fn info(&self, configuration: &Self::Configuration) -> Result<AudioNodeInfo, NodeError> {
         let decoder = &configuration.0;
-        AudioNodeInfo::new()
+        Ok(AudioNodeInfo::new()
             .debug_name("midi synth")
             .channel_config(ChannelConfig {
                 num_inputs: ChannelCount::ZERO,
                 num_outputs: if decoder.stereo { ChannelCount::STEREO } else { ChannelCount::MONO },
-            })
+            }))
     }
 
     fn construct_processor(
         &self,
         configuration: &Self::Configuration,
         cx: ConstructProcessorContext,
-    ) -> impl AudioNodeProcessor {
+    ) -> Result<impl AudioNodeProcessor, NodeError> {
 
         let decoder = &configuration.0;
-        SynthDecoderNodeProcessor::new(decoder.stereo,
+        Ok(SynthDecoderNodeProcessor::new(decoder.stereo,
             cx.stream_info.sample_rate.get(),
             decoder.sender.clone().unwrap(),
             decoder.receiver.clone(),
@@ -205,7 +207,7 @@ impl AudioNode for MidiSynthPlayerNode {
             decoder.volume_linear.clone(),
             decoder.panning_l.clone(),
             decoder.panning_r.clone(),
-        )
+        ))
     }
 }
 
@@ -223,14 +225,14 @@ impl AudioNodeProcessor for SynthDecoderNodeProcessor {
         &mut self,
         proc_info: &firewheel::node::ProcInfo,
         ProcBuffers { inputs: _, outputs }: ProcBuffers,
-        events: &mut firewheel::event::ProcEvents,
+        // events: &mut firewheel::event::ProcEvents,
         _extra: &mut firewheel::node::ProcExtra,
     ) -> firewheel::node::ProcessStatus {
 
-        for _patch in events.drain_patches::<MidiSynthPlayerNode>() {
-            unreachable!("we have no config state, right?")
-            // self.params.apply(patch);
-        }
+        // for _patch in events.drain_patches::<MidiSynthPlayerNode>() {
+        //     unreachable!("we have no config state, right?")
+        //     // self.params.apply(patch);
+        // }
 
         let to_fill = proc_info.frames;
         let _avail = self.fetch_data();

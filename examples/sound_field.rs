@@ -1,3 +1,4 @@
+use bevy::time::common_conditions::repeating_after_delay;
 use eds_bevy_common::*;
 
 use avian3d::PhysicsPlugins;
@@ -18,9 +19,11 @@ use bevy::winit::WinitSettings;
 
 #[cfg(feature = "input_lim")]
 use leafwing_input_manager::prelude::{ActionState, InputMap};
+use rand::RngExt;
 use strum::VariantArray;
 use std::time::Duration;
 
+use eds_bevy_common::midi_synth::prelude::*;
 
 fn main() -> AppExit {
     let mut app = App::new();
@@ -58,10 +61,14 @@ fn main() -> AppExit {
         .add_plugins(GuiPlugin)
         .add_plugins(WorldUiPlugin)
         .add_plugins(WorldStatePlugin)
-        .add_plugins(AudioCommonPlugin)
         .add_plugins(EffectsPlugin)
         .add_plugins(LevelsPlugin)
         .add_plugins(DeathboxPlugin::default())
+
+        .add_plugins(AudioCommonPlugin)
+        .add_plugins(MidiSynthPlugin)
+        .add_plugins(SynthPlugin)
+        .add_plugins(ClientSynthPlugin)
 
         .add_plugins(PlayerCameraPlugin)
         .add_plugins(PlayerInputPlugin)
@@ -90,6 +97,21 @@ fn main() -> AppExit {
         .add_systems(
             OnEnter(GameplayState::Playing),
             ensure_3d_camera,
+        )
+
+        .add_systems(First,
+            spawn_midi_synths.run_if(resource_exists::<CommonSoundFontAssets>)
+                .run_if(not(is_in_menu))
+                .run_if(in_state(ProgramState::InGame)),
+        )
+        .add_systems(Startup, initialize_audio)
+
+
+        .add_systems(Update,
+            trigger_midi_notes
+                .run_if(repeating_with_delay(Duration::from_secs(1)))
+                .run_if(not(is_in_menu))
+                .run_if(in_state(ProgramState::InGame)),
         )
 
         // .add_systems(
@@ -251,7 +273,7 @@ impl Plugin for MyMenuPlugin {
             .add_systems(OnEnter(OverlayState::GameMenu), on_enter_game_menu)
             .add_systems(OnEnter(OverlayState::OptionsMenu), on_enter_options_menu)
             .add_systems(OnEnter(OverlayState::AudioMenu), on_enter_audio_menu)
-            .add_systems(OnEnter(OverlayState::VideoMenu), on_enter_video_menu)
+            // .add_systems(OnEnter(OverlayState::VideoMenu), on_enter_video_menu)
             .add_systems(OnEnter(OverlayState::ControlsMenu), on_enter_controls_menu);
     }
 }
@@ -478,7 +500,7 @@ fn on_enter_options_menu(
         &history,
     )
     .add_item("Audio", (), SimpleMenuActions::AudioMenu)
-    .add_item("Video", (), SimpleMenuActions::VideoMenu)
+    // .add_item("Video", (), SimpleMenuActions::VideoMenu)
     .add_item("Controls", (), SimpleMenuActions::ControlsMenu)
     .add_item("Back", (), SimpleMenuActions::Back)
     .finish(&mut history);
@@ -504,7 +526,7 @@ fn on_enter_escape_menu(
     )
     // (), SimpleMenuActions::ResumeGame)
     .add_item("Audio", (), SimpleMenuActions::AudioMenu)
-    .add_item("Video", (), SimpleMenuActions::VideoMenu)
+    // .add_item("Video", (), SimpleMenuActions::VideoMenu)
     .add_item("Controls", (), SimpleMenuActions::ControlsMenu)
     .add_item("Stop", (), SimpleMenuActions::StopGame)
     .add_item(format!("Resume ({})", current_level.label), (), SimpleMenuActions::ResumeGame)
@@ -822,103 +844,6 @@ fn on_enter_controls_menu(
     .finish(&mut history);
 }
 
-fn on_enter_video_menu(
-    font: Res<UiFont>,
-    program_state: Res<State<ProgramState>>,
-    mut commands: Commands,
-    mut history: ResMut<MenuItemSelectionHistory>,
-) {
-    let get_fov = commands.register_system(IntoSystem::into_system(
-        |In(entity): In<Entity>, s: Res<VideoSettings>, mut slider_q: Query<&mut MenuSlider>| {
-            slider_q.get_mut(entity).unwrap().current = Some(s.fov_degrees);
-        },
-    ));
-    let set_fov = commands.register_system(IntoSystem::into_system(
-        |In(v): In<f32>, mut commands: Commands, mut s: ResMut<VideoSettings>| {
-            s.fov_degrees = v;
-            commands.init_resource::<VideoCameraSettingsChanged>();
-        },
-    ));
-
-    macro_rules! make_res_enum_getter_setter {
-        ($getter:ident $setter:ident => $enum:ident $res:ident $field:tt) => {
-            let $getter = commands.register_system(IntoSystem::into_system(
-                |In(entity): In<Entity>, mut enum_q: Query<&mut MenuEnum>, res: Res<$res>| {
-                    enum_q.get_mut(entity).unwrap().current = Some(
-                        $enum::VARIANTS
-                            .iter()
-                            .position(|e| *e == res.$field)
-                            .unwrap(),
-                    );
-                },
-            ));
-            let $setter = commands.register_system(IntoSystem::into_system(
-                |In(v): In<usize>, mut res: ResMut<$res>, mut commands: Commands| {
-                    res.$field = $enum::VARIANTS[v];
-                    commands.init_resource::<VideoEffectSettingsChanged>();
-                },
-            ));
-        };
-    }
-
-    make_res_enum_getter_setter!(get_anti set_anti => Antialiasing VideoSettings antialiasing);
-    make_res_enum_getter_setter!(get_tex_qual set_tex_qual => TextureQuality VideoSettings texture_quality);
-
-    MenuItemBuilder::new(
-        commands,
-        OverlayState::VideoMenu,
-        *program_state.get(),
-        font.0.clone(),
-        1.0,
-        &history,
-    )
-    .add_item(
-        "Field of View",
-        MenuSlider::new(
-            get_fov,
-            set_fov,
-            || Some(VideoSettings::default().fov_degrees),
-            |v| v,
-            |v| v.round(),
-            5.0f32..=120.0f32,
-            5.0,
-        ),
-        SliderMenuActions::FovSlider,
-    )
-    .add_item(
-        "Antialiasing",
-        MenuEnum::new(
-            get_anti,
-            set_anti,
-            || Antialiasing::VARIANTS.len(),
-            |index| Antialiasing::VARIANTS[index].to_string(),
-        ),
-        EnumMenuActions::AntialiasingEnum,
-    )
-    // .add_item(
-    //     "Mesh Quality",
-    //     MenuEnum::new(
-    //         get_mesh_qual,
-    //         set_mesh_qual,
-    //         || MeshQuality::VARIANTS.len(),
-    //         |index| MeshQuality::VARIANTS[index].to_string(),
-    //     ),
-    //     EnumMenuActions::MeshQualityEnum,
-    // )
-    .add_item(
-        "Texture Quality",
-        MenuEnum::new(
-            get_tex_qual,
-            set_tex_qual,
-            || TextureQuality::VARIANTS.len(),
-            |index| TextureQuality::VARIANTS[index].to_string(),
-        ),
-        EnumMenuActions::TextureQualityEnum,
-    )
-    .add_item("Back", (), SimpleMenuActions::Back)
-    .finish(&mut history);
-}
-
 fn start_game(mut commands: Commands) {
     commands.set_state(OverlayState::Loading);
     commands.set_state(ProgramState::InGame);
@@ -981,21 +906,15 @@ impl Plugin for MyGamePlugin {
             .add_systems(
                 OnTransition{ exited: GameplayState::Playing, entered: GameplayState::Setup },
                 (
-                    hide_instructions,
                     despawn_level,
                 )
             )
             .add_systems(OnEnter(LevelState::LevelLoaded),
                 (
                     add_player,
-                    start_skybox_setup,
-                    show_instructions,
+                    start_configuring,
                 ).chain()
                 .run_if(in_state(ProgramState::InGame))
-            )
-
-            .add_systems(OnExit(LevelState::Playing),
-                hide_instructions,
             )
 
             .add_systems(
@@ -1090,34 +1009,9 @@ fn add_player(
     ));
 }
 
-fn start_skybox_setup(
+fn start_configuring(
     mut commands: Commands,
-    // world_camera_q: Query<Entity, (With<Camera3d>, With<WorldCamera>)>,
-    // skyboxes: Res<SkyboxAssets>,
 ) {
-    // let cam = world_camera_q.single().unwrap();
-
-    // let (brightness, skybox) = (light_consts::lux::CLEAR_SUNRISE, skyboxes.pure_sky.clone());
-    // let with_reflection_probe = Some((cam, 100.0));
-    // commands.entity(cam).insert(SkyboxModel {
-    //     skybox: Skybox {
-    //         image: skybox,
-    //         brightness,
-    //         ..default()
-    //     },
-    //     xfrm: SkyboxTransform::From1_0_2f_3f_4_5,
-    //     with_reflection_probe,
-    //     enabled: true, //state.show_skybox,
-    // });
-
-    // commands.insert_resource(SkyboxSetup {
-    //     waiting_skybox: true,
-    //     waiting_reflections: false,
-    // });
-    // commands.set_state(LevelState::Configuring);
-    // } else {
-    // }
-
     // None in this game.
     commands.set_state(LevelState::Playing);
 }
@@ -1132,35 +1026,42 @@ pub(crate) fn level_spawn_started(mut commands: Commands, mut pause: ResMut<Paus
     commands.remove_resource::<AutoEndLevelTimer>();
 }
 
-// fn observe_spawn_mesh(
-//     event: On<SceneInstanceReady>,
-//     child_q: Query<&Children>,
-//     meshes: Query<&Mesh3d>,
-//     mut commands: Commands,
-// ) {
-//     dbg!(event.event_target());
-//     for ent in child_q.iter_descendants(event.event_target()) {
-//         if meshes.contains(ent) {
-//             commands.entity(ent).insert((
-//                 ColliderConstructor::ConvexHullFromMesh,
-//                 CollisionLayers::new(
-//                     GameLayer::World,
-//                     [
-//                         GameLayer::Default,
-//                         GameLayer::World,
-//                         GameLayer::Player,
-//                         GameLayer::Projectiles,
-//                     ],
-//                 ),
-//             ));
-//         }
-//     }
-// }
-
 pub(crate) fn level_spawn_finished(
     mut commands: Commands,
     mut pause: ResMut<PauseState>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    mut meshes: ResMut<Assets<Mesh>>,
 ) {
+    let cube_mesh = meshes.add(Cuboid::default());
+
+    // Add some synths
+    const HALF_SIDE: i32 = 10;
+    const DIST: f32 = 2.0;
+    for x in -HALF_SIDE..(HALF_SIDE-1) {
+        for z in -HALF_SIDE..(HALF_SIDE-1) {
+            let pos = Vec3::new((x as f32) * DIST, ((x + z) % 4 + 4) as f32, (z as f32) * DIST);
+            let id = commands.spawn((
+                Name::new("Synth"),
+                Transform::from_translation(pos),
+                OurMidiSynth,
+
+                Mesh3d(cube_mesh.clone()),
+                MeshMaterial3d(materials.add(Color::srgb(1.0, 0.4, 0.8))),
+
+            )).id();
+            dbg!(&id);
+        }
+    }
+
+    commands.spawn((
+        DirectionalLight {
+            illuminance: 5000.0,
+            shadows_enabled: true,
+            ..default()
+        },
+        Transform::default().looking_at(Vec3::new(-1.0, -2.5, -1.5), Vec3::Y),
+    ));
+
     commands.set_state(OverlayState::Hidden);
     commands.set_state(LevelState::LevelLoaded);
 
@@ -1260,74 +1161,6 @@ pub(crate) fn setup_level(
     commands.insert_resource(CurrentLevel(level.clone()));
 }
 
-fn show_instructions(
-    mut commands: Commands,
-    // showed: Option<Res<ShowedTutorial>>,
-    ui_font: Res<UiFont>,
-    instructions_q: Single<Entity, With<InstructionsArea>>,
-) {
-    // if showed.is_some() {
-    //     return;
-    // }
-
-    // commands.insert_resource(ShowedTutorial);
-
-    let mut text_ent = Entity::PLACEHOLDER;
-
-    commands.entity(*instructions_q).insert(Visibility::Inherited)  // show
-    .with_children(|builder| {
-        text_ent = builder.spawn((
-            DespawnOnExit(GameplayState::Playing),
-            Text::new("Move around with WASD.",
-            ),
-            TextLayout::new(Justify::Center, LineBreak::WordBoundary),
-            TextFont {
-                font: ui_font.0.clone(),
-                font_size: 32.0,
-                .. default()
-            },
-            TextColor(Color::WHITE.with_alpha(0.5)),
-            TextShadow {
-                offset: Vec2::splat(2.),
-                color: Color::linear_rgba(0., 0., 0., 0.0),
-            },
-        )).id();
-    });
-
-    // Fade in and out.
-
-    let color_tween = Tween::new(
-        EaseMethod::EaseFunction(EaseFunction::CubicOut),
-        Duration::from_secs_f32(3.0),
-        TextColorLens {
-            start: Color::WHITE.with_alpha(0.0),
-            end: Color::WHITE.with_alpha(1.0),
-        }
-    )
-    .with_repeat(2, bevy_tweening::RepeatStrategy::MirroredRepeat);
-
-    let shadow_tween = Tween::new(
-        EaseMethod::EaseFunction(EaseFunction::CubicOut),
-        Duration::from_secs_f32(3.0),
-        TextShadowColorLens {
-            start: Color::linear_rgba(0., 0., 0., 0.0),
-            end: Color::linear_rgba(0., 0., 0., 1.0),
-        }
-    )
-    .with_repeat(2, bevy_tweening::RepeatStrategy::MirroredRepeat);
-
-    commands.entity(text_ent).try_insert((
-        DespawnOnExit(GameplayState::Playing),
-        TweenAnim::new(color_tween).with_destroy_on_completed(true),
-
-        // Add another TweenAnim.
-        children![(
-            TweenAnim::new(shadow_tween).with_destroy_on_completed(true),
-            AnimTarget::component::<TextShadow>(text_ent),
-        )]
-    ));
-}
-
 pub(crate) fn advance_level(
     mut commands: Commands,
     spawned_q: Query<Entity, With<Spawned>>,
@@ -1337,4 +1170,94 @@ pub(crate) fn advance_level(
     }
     commands.set_state(OverlayState::Loading);
     commands.set_state(GameplayState::Setup);
+}
+
+/////////
+
+#[derive(Component, Reflect)]
+#[reflect(Component)]
+pub(crate) struct OurMidiSynth;
+
+pub(crate) fn spawn_midi_synths(
+    mut commands: Commands,
+    sf_assets: Res<CommonSoundFontAssets>,
+    muted: Res<MidiSynthsPaused>,
+    synth_q: Query<Entity, (With<OurMidiSynth>, Without<MidiSynth>)>,
+    mut synth_map: ResMut<SynthProxyMap>,
+) -> Result<()> {
+    let params = MidiSynthParams::default();
+
+    for ent in synth_q.iter() {
+        let (sample_sender, sample_receiver) = crossbeam_channel::unbounded();
+        let synth = MidiSynth::new(
+            params.clone(),
+            sf_assets.timgm6mb.clone(),
+            muted.0.clone(),
+            ent,
+            sample_sender,
+            sample_receiver,
+        )?;
+        commands.entity(ent).insert((
+            synth,
+            Sfx,
+        ));
+
+        synth_map.register_synth(ent);
+
+        commands.write_message(SynthMessage::new(ent, SynthCommand::Reset));
+
+        // let volume_id = commands.spawn(VolumeNode::default()).id();
+        // commands.entity(ent).connect(volume_id);
+    }
+
+    Ok(())
+}
+
+fn repeating_with_delay(
+    duration: Duration,
+) -> impl FnMut(Res<Time>) -> bool + Clone {
+    let mut timer = Timer::new(duration, TimerMode::Repeating);
+    move |time: Res<Time>| {
+        timer.tick(time.delta());
+        timer.is_finished()
+    }
+}
+
+pub(crate) fn trigger_midi_notes(
+    mut commands: Commands,
+    synth_q: Query<Entity, (With<OurMidiSynth>, With<MidiSynth>)>,
+    mut counter: Local<usize>,
+) {
+    for ent in synth_q.iter() {
+        let channel = (ent.to_bits() % 15) as u8;
+
+        *counter = counter.wrapping_add(13);
+        let program = (*counter as u64 + ent.to_bits() % 127) as u8;
+        let note = (*counter as u64 + ent.to_bits()) % 80 + 20;
+
+        commands.write_message(SynthMessage(
+            ent, SynthCommand::ProgramChange(
+                SynthChannel::Voice(channel),
+                program,
+            ), Duration::ZERO
+        ));
+        commands.write_message(SynthMessage(
+            ent, SynthCommand::NoteOn(
+                SynthChannel::Voice(channel),
+                SynthNote::midi(note as _),
+                0.5
+            ), Duration::ZERO
+        ));
+        commands.write_message(SynthMessage(
+            ent,
+            SynthCommand::NoteOff(
+                SynthChannel::Voice(channel),
+                SynthNote::midi(note as _)
+            ),
+            // SynthCommand::ChannelOff(
+            //     SynthChannel::Voice(channel),
+            // ),
+            Duration::from_secs_f32(0.125),
+        ));
+    }
 }

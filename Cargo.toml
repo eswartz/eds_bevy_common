@@ -22,6 +22,10 @@ avian3d = { git = "https://github.com/Jondolf/avian.git", branch = "main" }
 # Support webp.
 # See above to fix error: feature `reqs` includes `gltf/EXT_texture_webp`, but `gltf` is not a dependency
 gltf = { git = "https://github.com/gltf-rs/gltf.git", branch = "main" }
+
+#bevy_seedling = { git = "https://github.com/CorvusPrudens/bevy_seedling.git", rev = "b610bb1a9c40370eacc7a9e49239ce74addb826a" }
+#firewheel = { git = "https://github.com/BillyDM/Firewheel.git", rev = "8a53202905b4da7c587a85b7d2345a0dd37bf388" }
+
 #########
 
 [features]
@@ -37,7 +41,7 @@ grabbing = ["dep:bevy_mod_outline"]
 
 # kira = ["dep:kira", "dep:bevy_kira_audio"]
 kira = []
-firewheel = ["dep:firewheel", "dep:bevy_seedling"]
+firewheel = ["dep:bevy_seedling", "dep:firewheel"]
 
 webgpu = []
 
@@ -126,15 +130,24 @@ bevy_egui = { version = "0.39", features = ["render", "serde"] }
 bevy-inspector-egui = "0.36"
 egui = { version = "0.33", features = ["bytemuck"] }
 
-firewheel = { version = "0.10", optional = true }
+firewheel = { git = "https://github.com/BillyDM/Firewheel", rev = "fff0eb1", optional = true }
 
-bevy_seedling = { version = "0.7.0", default-features = false, features = [
-    "wav", "ogg", "rand", "reflect",
+# bevy_seedling = { version = "0.8", default-features = false, optional = true, features = [
+bevy_seedling = { git = "https://github.com/CorvusPrudens/bevy_seedling.git", rev = "b610bb1a9c40370eacc7a9e49239ce74addb826a", default-features = false, optional = true, features = [
+    "wav", "ogg", "rand", "loudness", "reflect",
 
     "dev",
-    "stream", "loudness", "hrtf",
-    # "web_audio",
-], optional = true }
+    "hrtf",
+    "web_audio",
+
+    # 0.10
+    # "stream",
+    # "scheduled_events",
+
+    # 0.11
+    "effects",
+] }
+
 rustc-hash = "2.1.1"
 
 strum = { version = "0.27.2", features = ["derive", "strum_macros"] }
@@ -204,7 +217,10 @@ debug-assertions = false
 lto = "thin"
 # opt-level = 1
 
-
 [[example]]
 name = "game_menu"
 required-features = ["input_bei", "bevy_skein"]
+
+[[example]]
+name = "sound_field"
+required-features = ["input_bei", "bevy_skein", "midi_synth"]

@@ -17,13 +17,14 @@ pub struct AudioCommonPlugin;
 impl Plugin for AudioCommonPlugin {
     fn build(&self, app: &mut App) {
         app
-            .add_plugins(SeedlingPlugin {
-                config: FirewheelConfig {
-                    scheduled_event_capacity: 16384,
-                    ..default()
-                },
-                ..default()
-            })
+            .add_plugins(SeedlingPlugins)
+            // .add_plugins(SeedlingPlugins {
+            //     config: FirewheelConfig {
+            //         scheduled_event_capacity: 16384,
+            //         ..default()
+            //     },
+            //     ..default()
+            // })
 
             .configure_loading_state(
                 LoadingStateConfig::new(ProgramState::Initializing)

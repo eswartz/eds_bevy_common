@@ -3,7 +3,7 @@ use std::{sync::{Arc, Mutex, atomic::{AtomicBool, Ordering}}, time::Duration};
 #[cfg(not(target_arch = "wasm32"))]
 use std::thread;
 use bevy_seedling::{context::StreamRestartEvent, spatial::SpatialListener3D};
-use firewheel::atomic_float::AtomicF32;
+use bevy_seedling::firewheel::atomic_float::AtomicF32;
 #[cfg(target_arch = "wasm32")]
 use wasm_thread as thread;
 
