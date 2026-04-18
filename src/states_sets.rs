@@ -122,9 +122,10 @@ pub enum LevelState {
     /// Gameplay content has been loaded and initialized.
     /// then switch to Configuring or Playing.
     LevelLoaded,
-    /// Intermediate state where (e.g.) skybox is being loaded,
-    /// music is being stated, etc. when the player shouldn't be
-    /// able to play.
+    /// Intermediate state between loading and playing where
+    /// items in the world need to be configured before playing.
+    /// Systems should process items with the [crate::markers::ConfigureBeforePlaying]
+    /// marker before switching to [Self::Playing].
     Configuring,
     /// Ready to play.
     Playing,

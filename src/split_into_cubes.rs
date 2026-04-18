@@ -10,6 +10,8 @@ use bevy::prelude::*;
 
 use crate::AssignDetailNormal;
 use crate::GameLayer;
+use crate::ConfigureBeforePlaying;
+use crate::LevelState;
 
 pub struct SplitIntoCubesPlugin;
 
@@ -17,15 +19,18 @@ impl Plugin for SplitIntoCubesPlugin {
     fn build(&self, app: &mut App) {
         app
             .add_systems(
-                Update,
+                PreUpdate,
                 handle_split_into_cubes
+                    .run_if(in_state(LevelState::Configuring))
             )
+
         ;
     }
 }
 
 /// Mark a mesh that needs to be split into cubes (and then [TrimeshFromMesh])
 #[derive(Component, Clone, Reflect, Default)]
+#[require(ConfigureBeforePlaying)]
 #[reflect(Component, Clone, Default)]
 #[type_path = "game"]
 pub struct SplitIntoCubes {
@@ -79,7 +84,10 @@ fn handle_split_into_cubes(
                             mat.clone(),
 
                             Name::new(if let Some(name) = name_opt { format!("{name} split {xi}.{yi}.{zi}") } else { "split".to_string() }),
-                            ColliderConstructor::Trimesh { indices, vertices },
+                            ColliderConstructor::TrimeshWithConfig {
+                                indices, vertices,
+                                flags: TrimeshFlags::FIX_INTERNAL_EDGES | TrimeshFlags::MERGE_DUPLICATE_VERTICES
+                            },
                             RigidBody::Static,
 
                             CollisionLayers::new(
@@ -104,10 +112,13 @@ fn handle_split_into_cubes(
         }
 
         // Remove the original large object.
-        commands.entity(ent).remove::<Mesh3d>();
-        commands.entity(ent).remove::<MeshMaterial3d<StandardMaterial>>();
-        commands.entity(ent).remove::<RigidBody>();
-        commands.entity(ent).remove::<ColliderConstructor>();
+        let mut ent_commands = commands.entity(ent);
+        ent_commands.remove::<Mesh3d>();
+        ent_commands.remove::<MeshMaterial3d<StandardMaterial>>();
+        ent_commands.remove::<RigidBody>();
+        ent_commands.remove::<ColliderConstructor>();
+
+        ent_commands.remove::<ConfigureBeforePlaying>();
     }
 }
 

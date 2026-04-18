@@ -6,8 +6,8 @@ use bevy::prelude::*;
 use bevy::core_pipeline::Skybox;
 use image::imageops::FilterType;
 
-use crate::LevelState;
 use crate::WorldMarkerEntity;
+use crate::ConfigureBeforePlaying;
 
 use super::states_sets::ProgramState;
 use super::texutils::SkyboxTransform;
@@ -52,7 +52,7 @@ pub struct SkyboxSetup {
 #[derive(Resource, Default, Reflect)]
 #[reflect(Resource, Default)]
 #[type_path = "game"]
-pub struct SkyboxCache {
+struct SkyboxCache {
     /// Cache of width (narrow dimension) to cubemapped image.
     mapped_skyboxes: HashMap<(Handle<Image>, u32), Handle<Image>>,
 }
@@ -98,10 +98,13 @@ impl SkyboxCache {
 /// Set this component when you wish to load a skybox asynchronously
 /// (given that it may take a long time to load the texture).
 /// The `Skybox::image` will be scaled to the desired video settings'
-/// resolution, converted to a cubemap, then provide a Skybox directly
-/// in place of the component.
+/// resolution, converted to a cubemap, then provide a Skybox directly.
+///
 /// If the reflection probe option is set, apply it with the given brightness.
+///
+/// The [ConfigureBeforePlaying] component will be removed upon setup.
 #[derive(Component, Reflect)]
+#[require(ConfigureBeforePlaying)]
 #[reflect(Component)]
 #[type_path = "game"]
 pub struct SkyboxModel{
@@ -113,19 +116,22 @@ pub struct SkyboxModel{
 
 fn check_skybox_setup(
     mut commands: Commands,
+    skybox_q: Query<Entity, (With<ConfigureBeforePlaying>, With<SkyboxModel>)>,
     setup: Res<SkyboxSetup>,
 ) {
     // Done?
     if *setup == SkyboxSetup::default() {
         commands.remove_resource::<SkyboxSetup>();
-        commands.set_state(LevelState::Playing);
+        skybox_q.iter().for_each(|ent| {
+            commands.entity(ent).remove::<ConfigureBeforePlaying>();
+        });
     }
 }
 
 /// Generic system to check for any [SkyboxModel] component, and if found,
 /// make sure its image is loaded. Once loaded, convert it to a cubemap
 /// and apply to the camera, then remove the component.
-pub fn check_load_skybox(
+fn check_load_skybox(
     load_skybox_q: Query<(Entity, &SkyboxModel), Changed<SkyboxModel>>,
     mut commands: Commands,
     video_settings: Res<VideoSettings>,
@@ -182,7 +188,7 @@ pub struct ReflectionProbeModel {
 /// Generic system to check for any LoadSkybox component, and if found,
 /// make sure its image is loaded. Once loaded, convert it to a cubemap
 /// and apply to the camera, then remove the component.
-pub fn check_load_reflection_probe(
+fn check_load_reflection_probe(
     load_probe_q: Query<(Entity, &ReflectionProbeModel), Changed<ReflectionProbeModel>>,
     world: Res<WorldMarkerEntity>,
     mut commands: Commands,

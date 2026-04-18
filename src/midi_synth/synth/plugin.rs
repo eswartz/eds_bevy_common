@@ -7,7 +7,7 @@ use firewheel::atomic_float::AtomicF32;
 #[cfg(target_arch = "wasm32")]
 use wasm_thread as thread;
 
-use bevy::{ecs::entity::EntityHashMap, prelude::*};
+use bevy::{ecs::entity::EntityHashMap, math::FloatPow as _, prelude::*};
 #[cfg(feature = "firewheel")]
 use bevy_seedling::node::RegisterNode as _;
 use crossbeam_channel::{Receiver, Sender};
@@ -36,7 +36,7 @@ impl Plugin for MidiSynthPlugin {
                 PreUpdate,
                 (
                     ensure_synths,
-                    update_synths,
+                    update_synth_distances,
                     cleanup_synths,
                     check_pause_request_for_synths,
                 )
@@ -56,13 +56,7 @@ pub struct MidiSynthParams {
     /// Number of channels (1 or 2).
     pub channel_count: u8,
 
-    /// Amount of samples per each channel. Allows you to tweak audio latency, the more the value the more
-    /// latency will be and vice versa. Keep in mind, that your data callback must be able to render the
-    /// samples while previous portion of data is being played, otherwise you'll get a glitchy audio.
-    pub channel_sample_count: usize,
-
-    /// Sample rate of your audio data. Typical values are: 11025 Hz, 22050 Hz, 44100 Hz (default), 48000 Hz,
-    /// 96000 Hz
+    /// Sample rate of your audio data.
     pub sample_rate: usize,
 
     /// Reverb level, 0 = none.
@@ -72,9 +66,8 @@ pub struct MidiSynthParams {
 impl Default for MidiSynthParams {
     fn default() -> Self {
         Self {
-            channel_count: 1,
+            channel_count: 2,
             sample_rate: 48000,
-            channel_sample_count: 512,
             reverb: 0.0,
         }
     }
@@ -101,7 +94,10 @@ pub struct MidiSynth {
 
     pub thread_quit: Arc<AtomicBool>,
     muted: Arc<AtomicBool>,
+    /// 0 = silence, 1 = full
     pub volume_linear: Arc<AtomicF32>,
+    /// Between -1 and 1.
+    pub panning: Arc<AtomicF32>,
     render_sender: Sender<MidiRenderMessage>,
     render_receiver: Receiver<MidiRenderMessage>,
     pub sample_receiver: Receiver<Vec<f32>>,
@@ -208,6 +204,7 @@ impl MidiSynth {
             entity,
             synth_state: SynthState::LoadHandle { sound_font, pending: vec![] },
             volume_linear: Arc::new(AtomicF32::new(1.0)),
+            panning: Arc::new(AtomicF32::new(0.0)),
             thread_quit: Arc::new(AtomicBool::new(false)),
             muted,
             thread_handle: None,
@@ -284,6 +281,7 @@ impl MidiSynth {
             thread_quit.clone(),
             muted.clone(),
             self.volume_linear.clone(),
+            self.panning.clone(),
         );
 
         // let render_sender = self.render_sender.clone();
@@ -498,19 +496,82 @@ fn ensure_synths(
     }
 }
 
-fn update_synths(
+// Lifted from https://github.com/BillyDM/Firewheel/blob/486f409a141ded2bdc98904c041295dcbe8654a3/crates/firewheel-nodes/src/spatial_basic.rs
+fn compute_gains(pan: f32) -> (f32, f32) {
+    if pan <= -1.0 {
+        (1.0, 0.0)
+    } else if pan >= 1.0 {
+        (0.0, 1.0)
+    } else {
+        let pan = (pan + 1.0) * 0.5;
+        let pan = std::f32::consts::FRAC_PI_2 * pan;
+        let pan_cos = pan.cos();
+        let pan_sin = pan.sin();
+
+        (pan_cos, pan_sin)
+    }
+}
+
+/// Given a cue (with its own idea of panning and volume), compute the
+/// spatially mapped linear volume and -1..1 panning.
+fn compute_distance_panning_values(
+    offset: Vec3,
+    default_damping_distance: f32,
+) -> (f32, f32) {
+    const PANNING_THRESHOLD: f32 = 0.5;
+    const DAMP_FUNCTION: EaseFunction = EaseFunction::Linear;
+    const DISTANCE_GAIN_PSCALE: f32 = 0.003;
+
+    let x2_z2 = offset.x.squared() + offset.z.squared();
+    let xyz_distance = (x2_z2 + offset.y.squared()).sqrt();
+    let xz_distance = x2_z2.sqrt();
+
+    let distance_gain = 10.0f32.powf(-DISTANCE_GAIN_PSCALE * xyz_distance);
+
+    let pan = if xz_distance > 0.0 {
+            ((offset[0] / xz_distance) * PANNING_THRESHOLD).clamp(-1.0, 1.0)
+        } else {
+            0.0
+        };
+    let (pan_gain_l, pan_gain_r) = compute_gains(pan);
+
+    let damping_distance = default_damping_distance;
+    // let damping_distance = match cue.spatial_radius {
+    //     Some(d) if d > 0.0 => d,
+    //     _ => default_damping_distance,
+    // };
+
+    let damp_normal: f32 = EasingCurve::new(1., 0., DAMP_FUNCTION)
+        .sample_unchecked(xyz_distance.min(damping_distance) / damping_distance)
+        .clamp(0., 1.);
+
+    (
+        distance_gain * damp_normal,
+        -pan_gain_l + pan_gain_r,
+    )
+}
+
+fn update_synth_distances(
     synth_q: Query<(&MidiSynth, &GlobalTransform)>,
     listener_q: Query<&GlobalTransform, With<SpatialListener3D>>,
 ) {
     let Ok(listener_xfrm) = listener_q.single() else { return };
+    let listener_pos = listener_xfrm.translation();
+
+    let rot_inv = listener_xfrm.rotation().inverse();
 
     synth_q.par_iter().for_each(|(synth, xfrm)| {
-        let distance = listener_xfrm.translation().distance(xfrm.translation());
-        if distance > 50.0 {
-            synth.volume_linear.store(0.0, Ordering::Release);
-        } else {
-            synth.volume_linear.store(1.0 / distance, Ordering::Release);
-        }
+        let emitter_pos = xfrm.translation();
+        let listener_emitter_offs = emitter_pos - listener_pos;
+
+        // Attenuation and panning from distance and position.
+        let sound_offs: Vec3 = rot_inv * listener_emitter_offs;
+
+        let (volume_scale, panning_delta) =
+            compute_distance_panning_values(sound_offs, 25.0);
+
+        synth.volume_linear.store(volume_scale, Ordering::Release);
+        synth.panning.store(panning_delta, Ordering::Release);
     });
 }
 

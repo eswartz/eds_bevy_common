@@ -92,7 +92,17 @@ pub struct PlayerCameraMode(pub PlayerMode);
 pub struct DeathboxCollider;
 
 /////
-///
+
+/// Marker for an item that needs to be processed
+/// during [LevelState::Configuration] before playing.
+#[derive(Component, Reflect, Default, Debug)]
+#[reflect(Component, Default)]
+#[type_path = "game"]
+pub struct ConfigureBeforePlaying;
+
+/////
+
+
 /// Mark the world camera (for 3D).
 #[derive(Component, Reflect, Debug)]
 #[reflect(Component)]

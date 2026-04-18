@@ -3,6 +3,8 @@ use avian3d::prelude::PhysicsTime as _;
 use bevy::prelude::*;
 use bevy_tweening::TweenAnim;
 
+use crate::ConfigureBeforePlaying;
+use crate::LevelState;
 use crate::is_paused;
 
 use super::markers::DespawnAfter;
@@ -14,10 +16,10 @@ impl Plugin for LifecyclePlugin {
         app
             .register_type::<PauseState>()
             .init_resource::<PauseState>()
-            // .add_message::<PostStatusMessage>()
             .add_systems(Update, (
                 check_pause_request,
-                check_despawners.run_if(not(is_paused))
+                check_despawners.run_if(not(is_paused)),
+                check_configure_before_loading,
             ))
         ;
     }
@@ -96,5 +98,17 @@ pub fn check_pause_request(
         // for mut runner in time_runner_q.iter_mut() {
         //     runner.set_paused(false);
         // }
+    }
+}
+
+fn check_configure_before_loading(
+    mut commands: Commands,
+    state: Res<State<LevelState>>,
+    configure_q: Query<&ConfigureBeforePlaying>,
+) {
+    if *state.get() == LevelState::Configuring {
+        if configure_q.count() == 0 {
+            commands.set_state(LevelState::Playing);
+        }
     }
 }
