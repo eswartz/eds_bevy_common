@@ -96,8 +96,10 @@ pub struct MidiSynth {
     muted: Arc<AtomicBool>,
     /// 0 = silence, 1 = full
     pub volume_linear: Arc<AtomicF32>,
-    /// Between -1 and 1.
-    pub panning: Arc<AtomicF32>,
+    /// Between 0 and 1.
+    pub panning_l: Arc<AtomicF32>,
+    /// Between 0 and 1.
+    pub panning_r: Arc<AtomicF32>,
     render_sender: Sender<MidiRenderMessage>,
     render_receiver: Receiver<MidiRenderMessage>,
     pub sample_receiver: Receiver<Vec<f32>>,
@@ -204,7 +206,8 @@ impl MidiSynth {
             entity,
             synth_state: SynthState::LoadHandle { sound_font, pending: vec![] },
             volume_linear: Arc::new(AtomicF32::new(1.0)),
-            panning: Arc::new(AtomicF32::new(0.0)),
+            panning_l: Arc::new(AtomicF32::new(0.0)),
+            panning_r: Arc::new(AtomicF32::new(0.0)),
             thread_quit: Arc::new(AtomicBool::new(false)),
             muted,
             thread_handle: None,
@@ -281,7 +284,8 @@ impl MidiSynth {
             thread_quit.clone(),
             muted.clone(),
             self.volume_linear.clone(),
-            self.panning.clone(),
+            self.panning_l.clone(),
+            self.panning_r.clone(),
         );
 
         // let render_sender = self.render_sender.clone();
@@ -517,7 +521,7 @@ fn compute_gains(pan: f32) -> (f32, f32) {
 fn compute_distance_panning_values(
     offset: Vec3,
     default_damping_distance: f32,
-) -> (f32, f32) {
+) -> (f32, (f32, f32)) {
     const PANNING_THRESHOLD: f32 = 0.5;
     const DAMP_FUNCTION: EaseFunction = EaseFunction::Linear;
     const DISTANCE_GAIN_PSCALE: f32 = 0.003;
@@ -529,10 +533,10 @@ fn compute_distance_panning_values(
     let distance_gain = 10.0f32.powf(-DISTANCE_GAIN_PSCALE * xyz_distance);
 
     let pan = if xz_distance > 0.0 {
-            ((offset[0] / xz_distance) * PANNING_THRESHOLD).clamp(-1.0, 1.0)
-        } else {
-            0.0
-        };
+        ((offset[0] / xz_distance) * PANNING_THRESHOLD).clamp(-1.0, 1.0)
+    } else {
+        0.0
+    };
     let (pan_gain_l, pan_gain_r) = compute_gains(pan);
 
     let damping_distance = default_damping_distance;
@@ -547,7 +551,7 @@ fn compute_distance_panning_values(
 
     (
         distance_gain * damp_normal,
-        -pan_gain_l + pan_gain_r,
+        (pan_gain_l, pan_gain_r),
     )
 }
 
@@ -567,11 +571,12 @@ fn update_synth_distances(
         // Attenuation and panning from distance and position.
         let sound_offs: Vec3 = rot_inv * listener_emitter_offs;
 
-        let (volume_scale, panning_delta) =
+        let (volume_scale, panning) =
             compute_distance_panning_values(sound_offs, 25.0);
 
         synth.volume_linear.store(volume_scale, Ordering::Release);
-        synth.panning.store(panning_delta, Ordering::Release);
+        synth.panning_l.store(panning.0, Ordering::Release);
+        synth.panning_r.store(panning.1, Ordering::Release);
     });
 }
 

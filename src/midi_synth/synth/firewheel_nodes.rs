@@ -17,7 +17,8 @@ pub(crate) struct SynthDecoder {
     quit: Arc<AtomicBool>,
     muted: Arc<AtomicBool>,
     volume_linear: Arc<AtomicF32>,
-    panning: Arc<AtomicF32>,
+    panning_l: Arc<AtomicF32>,
+    panning_r: Arc<AtomicF32>,
     handle: Option<Entity>,
     pub sample_rate: u32,
     stereo: bool,
@@ -44,14 +45,16 @@ impl SynthDecoder {
         quit: Arc<AtomicBool>,
         muted: Arc<AtomicBool>,
         volume_linear: Arc<AtomicF32>,
-        panning: Arc<AtomicF32>,
+        panning_l: Arc<AtomicF32>,
+        panning_r: Arc<AtomicF32>,
     ) -> Self {
         // This always wraps in Some() because we are forced to use Default because of [MidiSynthPlayerNodeConfig].
         Self {
             quit,
             muted,
             volume_linear,
-            panning,
+            panning_l,
+            panning_r,
             handle: Some(handle),
             sample_rate: params.sample_rate as u32,
             stereo: params.channel_count > 1,
@@ -71,7 +74,8 @@ pub(crate) struct SynthDecoderNodeProcessor {
     quit: Arc<AtomicBool>,
     muted: Arc<AtomicBool>,
     volume_linear: Arc<AtomicF32>,
-    panning: Arc<AtomicF32>,
+    panning_l: Arc<AtomicF32>,
+    panning_r: Arc<AtomicF32>,
     // /// Average dt (secs) from the last few frames.
     // dt: f64,
 }
@@ -85,7 +89,8 @@ impl SynthDecoderNodeProcessor {
         quit: Arc<AtomicBool>,
         muted: Arc<AtomicBool>,
         volume_linear: Arc<AtomicF32>,
-        panning: Arc<AtomicF32>,
+        panning_l: Arc<AtomicF32>,
+        panning_r: Arc<AtomicF32>,
     ) -> Self {
         // Kickstart.
         let _ = sender.send(MidiRenderMessage::RenderFrame((sample_rate / 32) as usize));
@@ -98,7 +103,8 @@ impl SynthDecoderNodeProcessor {
             quit,
             muted,
             volume_linear,
-            panning,
+            panning_l,
+            panning_r,
         }
     }
 }
@@ -197,7 +203,8 @@ impl AudioNode for MidiSynthPlayerNode {
             decoder.quit.clone(),
             decoder.muted.clone(),
             decoder.volume_linear.clone(),
-            decoder.panning.clone(),
+            decoder.panning_l.clone(),
+            decoder.panning_r.clone(),
         )
     }
 }
@@ -233,7 +240,8 @@ impl AudioNodeProcessor for SynthDecoderNodeProcessor {
             return firewheel::node::ProcessStatus::ClearAllOutputs
         }
 
-        let panning_phys = self.panning.load(Ordering::Relaxed);
+        let panning_l = self.panning_l.load(Ordering::Relaxed);
+        let panning_r = self.panning_r.load(Ordering::Relaxed);
 
         let mut last_defined_sample_index = 0;
         let mut underrun = false;
@@ -243,8 +251,8 @@ impl AudioNodeProcessor for SynthDecoderNodeProcessor {
 
             for i in 0..to_fill {
                 if let (Some(l), Some(r)) = (self.next_sample(), self.next_sample()) {
-                    out_left[i] = l * volume_phys * (-panning_phys + 0.5).max(0.0).min(1.0);
-                    out_right[i] = r * volume_phys * (panning_phys + 0.5).max(0.0).min(1.0);
+                    out_left[i] = l * volume_phys * panning_l;
+                    out_right[i] = r * volume_phys * panning_r;
                     last_defined_sample_index = i;
                 } else {
                     // Underrun. Have clear the buffers otherwise.
