@@ -8,7 +8,6 @@ use bevy_asset_loader::prelude::*;
 use image::imageops::FilterType;
 
 use crate::WorldCamera;
-use crate::WorldMarkerEntity;
 use crate::ConfigureBeforePlaying;
 use crate::CommonSkyboxAssets;
 

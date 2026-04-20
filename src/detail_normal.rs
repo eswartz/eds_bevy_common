@@ -1,14 +1,8 @@
-use std::sync::Arc;
-
-use bevy::asset::StrongHandle;
-use bevy::camera::primitives::Aabb;
 use bevy::prelude::*;
 use bevy::{
     pbr::{ExtendedMaterial, MaterialExtension},
     render::render_resource::*,
 };
-use bevy_inspector_egui::inspector_egui_impls::{InspectorEguiImpl, InspectorPrimitive};
-use bevy_inspector_egui::quick::ResourceInspectorPlugin;
 
 use crate::{ProgramState, SplitIntoCubes};
 
