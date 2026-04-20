@@ -11,68 +11,6 @@ use wgpu::TextureViewDescriptor;
 // use noise::{NoiseFn, Perlin};
 use thiserror::Error;
 
-// /// Create an animated sprite sheet texture.
-// ///
-// /// Create a texture composed of individual sprites of size `size` pixels,
-// /// arranged into a grid of `grid` size into the texture image. The final image
-// /// has a pixel size of `size * grid`.
-// ///
-// /// The texture is based on a 3D Perlin noise scaled with `scale.xy`. Each
-// /// sprite is a layer at a different height, scaled by `scale.z`, giving the
-// /// impression of animation.
-// ///
-// /// This produces an R8Unorm texture where the R component is equal to the
-// /// opacity, to be used with the [`ImageSampleMapping::ModulateOpacityFromR`]
-// /// mode of the [`ParticleTextureModifier`].
-// ///
-// /// This code is a utility for examples. It's nowhere near efficient or clean as
-// /// could be for production.
-// pub fn make_anim_img(size: UVec2, grid: UVec2, scale: Vec3) -> Image {
-//     let w = Perlin::new(42);
-//     let tile_cols = size.x as usize;
-//     let tile_rows = size.y as usize;
-//     let grid_cols = grid.x as usize;
-//     let grid_rows = grid.y as usize;
-//     let tex_cols = tile_cols * grid_cols;
-//     let tex_rows = tile_rows * grid_rows;
-//     let tex_len = tex_cols * tex_rows * 4;
-//     let mut data = vec![0; tex_len];
-//     let mut k = 0.;
-//     let dk = scale.z as f64;
-//     for v in 0..grid.y as usize {
-//         let index0 = v * tex_cols * tile_rows;
-//         for u in 0..grid.x as usize {
-//             let index1 = index0 + u * tile_cols;
-//             for j in 0..size.y as usize {
-//                 let index2 = index1 + j * tex_cols;
-//                 for i in 0..size.x as usize {
-//                     let index3 = (index2 + i) * 4;
-//                     let pt = Vec2::new(i as f32 * scale.x, j as f32 * scale.y);
-//                     let value = w.get([pt.x as f64, pt.y as f64, k]) * 256.; // * (1.0 - falloff as f64);
-//                     let height = (value as u32).clamp(0, 255) as u8;
-//                     data[index3] = 255;
-//                     data[index3 + 1] = 255;
-//                     data[index3 + 2] = 255;
-//                     data[index3 + 3] = height;
-//                 }
-//             }
-//             k += dk;
-//         }
-//     }
-//     Image::new(
-//         Extent3d {
-//             width: tex_cols as u32,
-//             height: tex_rows as u32,
-//             depth_or_array_layers: 1,
-//         },
-//         TextureDimension::D2,
-//         data,
-//         TextureFormat::Rgba8Unorm,
-//         RenderAssetUsages::RENDER_WORLD,
-//     )
-// }
-
-
 #[derive(Debug, Error)]
 #[allow(unused)]
 pub enum ImageError {
@@ -338,11 +276,6 @@ pub fn resize_for_quality(input_image: &Image, new_width: u32, new_height: u32, 
             return None
         };
         Some(dyn_image.resize(new_width, new_height, filter))
-        // &Image::from_dynamic(
-        //     dyn_image.resize(side_res, side_res * 6, image::imageops::FilterType::CatmullRom),
-        //     true,
-        //     RenderAssetUsages::RENDER_WORLD
-        // )
     } else {
         None
     }
