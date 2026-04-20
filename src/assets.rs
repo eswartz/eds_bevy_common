@@ -207,3 +207,12 @@ pub struct CommonSoundFontAssets {
     #[asset(path = "common://soundfonts/TimGM6mb.sf2")]
     pub timgm6mb: Handle<SoundFont>,
 }
+
+#[derive(Resource, AssetCollection)]
+#[allow(unused)]
+pub struct CommonSkyboxAssets {
+    #[asset(path = "common://skyboxes/dresden_station_night.exr")]
+    pub dresden_station_night: Handle<Image>,
+    #[asset(path = "common://skyboxes/farm_field_puresky_4k.exr")]
+    pub farm_field_puresky: Handle<Image>,
+}

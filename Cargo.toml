@@ -29,7 +29,8 @@ gltf = { git = "https://github.com/gltf-rs/gltf.git", branch = "main" }
 #########
 
 [features]
-default = ["firewheel"]
+default = ["input_bei", "highlighting", "grabbing", "firewheel"]
+
 trenchbroom = ["bevy_trenchbroom"]
 input_lim = ["dep:leafwing-input-manager"]
 input_bei = ["dep:bevy_enhanced_input"]
@@ -186,15 +187,6 @@ xsynth-core = { version = "0.3", optional = true }
 crossbeam-channel = { version = "0.5", optional = true }
 thiserror = { version = "2.0.12", optional = true }
 fuzzy-matcher = "0.3.7"
-
-# Idiomatic Bevy code often triggers these lints, and the CI workflow treats them as errors.
-# In some cases they may still signal poor code quality however, so consider commenting out these lines.
-[lints.clippy]
-# Bevy supplies arguments to systems via dependency injection, so it's natural for systems to
-# request more than 7 arguments -- which triggers this lint.
-too_many_arguments = "allow"
-# Queries that access many components may trigger this lint.
-type_complexity = "allow"
 
 # Enable a small amount of optimization in the dev profile.
 [profile.dev]
