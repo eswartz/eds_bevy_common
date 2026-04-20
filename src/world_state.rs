@@ -11,6 +11,8 @@ impl Plugin for WorldStatePlugin {
     fn build(&self, app: &mut App) {
         app
             .insert_resource(Gravity((9.8 * Vec3::NEG_Y).into()))
+
+            // Runs basically once after startup.
             .add_systems(OnEnter(GameplayState::AssetsLoaded),
                 (
                     transition_from_loading,

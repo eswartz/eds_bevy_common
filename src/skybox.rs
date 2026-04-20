@@ -44,9 +44,11 @@ impl Plugin for SkyboxPlugin {
 #[derive(Resource, Debug, Default, Reflect, PartialEq)]
 #[reflect(Resource, Default)]
 #[type_path = "game"]
-pub struct SkyboxSetup {
-    pub waiting_skybox: bool,
-    pub waiting_reflections: bool,
+pub enum SkyboxSetup {
+    WaitingSkybox,
+    WaitingReflections,
+    #[default]
+    Finished,
 }
 
 #[derive(Resource, Default, Reflect)]
@@ -120,7 +122,7 @@ fn check_skybox_setup(
     setup: Res<SkyboxSetup>,
 ) {
     // Done?
-    if *setup == SkyboxSetup::default() {
+    if *setup == SkyboxSetup::Finished {
         commands.remove_resource::<SkyboxSetup>();
         skybox_q.iter().for_each(|ent| {
             commands.entity(ent).remove::<ConfigureBeforePlaying>();
@@ -141,7 +143,7 @@ fn check_load_skybox(
 ) {
     // use bevy::render::render_resource::*;
     let Some((cam, SkyboxModel{ skybox, xfrm, with_reflection_probe, enabled })) = load_skybox_q.iter().next() else {
-        setup.waiting_skybox = false;
+        *setup = SkyboxSetup::Finished;
         return
     };
 
@@ -149,7 +151,7 @@ fn check_load_skybox(
         commands.entity(cam).remove::<Skybox>();
         commands.entity(cam).remove::<LightProbe>();
         commands.entity(cam).remove::<EnvironmentMapLight>();
-        setup.waiting_skybox = false;
+        *setup = SkyboxSetup::Finished;
         return;
     }
 
@@ -164,7 +166,6 @@ fn check_load_skybox(
     let mut sky = skybox.clone();
     sky.image = skybox_image.clone();
     commands.entity(cam).insert(sky);
-    setup.waiting_skybox = false;
 
     if let Some((ent, brightness)) = with_reflection_probe {
         commands.entity(*ent).insert((
@@ -173,7 +174,9 @@ fn check_load_skybox(
                 brightness: *brightness,
             },
         ));
-        setup.waiting_reflections = true;
+        *setup = SkyboxSetup::WaitingReflections;
+    } else {
+        *setup = SkyboxSetup::Finished;
     }
 }
 
@@ -190,14 +193,13 @@ pub struct ReflectionProbeModel {
 /// and apply to the camera, then remove the component.
 fn check_load_reflection_probe(
     load_probe_q: Query<(Entity, &ReflectionProbeModel), Changed<ReflectionProbeModel>>,
-    world: Res<WorldMarkerEntity>,
     mut commands: Commands,
     mut images: ResMut<Assets<Image>>,
     mut setup: ResMut<SkyboxSetup>,
 ) {
     use bevy::render::render_resource::*;
-    let Some((entity, ReflectionProbeModel{ image, brightness })) = load_probe_q.iter().next() else {
-        setup.waiting_reflections = false;
+    let Some((cam_entity, ReflectionProbeModel{ image, brightness })) = load_probe_q.iter().next() else {
+        *setup = SkyboxSetup::Finished;
         return
     };
 
@@ -217,7 +219,7 @@ fn check_load_reflection_probe(
         depth_or_array_layers: 6
     };
 
-    const B: u8 = 192;
+    const B: u8 = 255;
     let mut diffuse = Image::new_fill(
         extents,
         TextureDimension::D2,
@@ -245,7 +247,7 @@ fn check_load_reflection_probe(
         ..default()
     });
 
-    commands.entity(entity).insert((
+    commands.entity(cam_entity).insert((
         LightProbe,
         EnvironmentMapLight {
             diffuse_map: diffuse.clone(),
@@ -256,19 +258,19 @@ fn check_load_reflection_probe(
         },
     ));
 
-    commands.spawn((
-        Name::new("Reflection Probe"),
-        LightProbe,
-        EnvironmentMapLight {
-            diffuse_map: diffuse.clone(),
-            specular_map: image.clone(),
-            intensity: *brightness,
-            affects_lightmapped_mesh_diffuse: false,
-            ..default()
-        },
-        Transform::from_scale(Vec3::splat(100.0)),
-        ChildOf(world.0),
-    ));
+    // commands.spawn((
+    //     Name::new("Reflection Probe"),
+    //     LightProbe,
+    //     EnvironmentMapLight {
+    //         diffuse_map: diffuse.clone(),
+    //         specular_map: image.clone(),
+    //         intensity: *brightness,
+    //         affects_lightmapped_mesh_diffuse: false,
+    //         ..default()
+    //     },
+    //     xfrm,
+    //     ChildOf(world.0),
+    // ));
 
-    setup.waiting_reflections = false;
+    *setup = SkyboxSetup::Finished;
 }
