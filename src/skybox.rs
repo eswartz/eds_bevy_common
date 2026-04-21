@@ -197,7 +197,7 @@ fn check_load_skybox(
 
     // Do we have any skybox?
     let mut p0 = params.p0();
-    let Some(mut model) = p0.iter_mut().next() else {
+    let Some(model) = p0.iter_mut().next() else {
         // Keep waiting.
         return Ok(())
     };
