@@ -186,7 +186,6 @@ fn check_load_skybox(
     assets: Res<AssetServer>,
     mut images: ResMut<Assets<Image>>,
     mut skyboxes: ResMut<SkyboxCache>,
-    setup: Option<Res<SkyboxSetup>>,
 ) -> Result {
     let Ok(cam) = cam_q.single() else {
         // Keep waiting.
@@ -230,8 +229,6 @@ fn check_load_skybox(
         // Still waiting. Try again next tick.
         return Ok(());
     }
-
-    // model.image = Some(skybox_image.clone());
 
     // Here's the actual work. (Yes, I'm sure the above could be done in a better way.)
     commands.entity(cam).insert(Skybox {

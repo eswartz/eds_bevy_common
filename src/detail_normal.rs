@@ -134,7 +134,7 @@ fn handle_assign_detail_normals(
             CustomMaterialNormalExtension {
                 std: mat.clone(),
                 ext: extension,
-                base: new_handle,
+                // base: new_handle,
             },
         ));
     }
@@ -145,8 +145,8 @@ fn handle_assign_detail_normals(
 struct CustomMaterialNormalExtension {
     std: MeshMaterial3d<StandardMaterial>,
     ext: DetailNormalExtension,
-    #[reflect(ignore)]
-    base: Handle<ExtendedMaterial<StandardMaterial, DetailNormalExtension>>,
+    // #[reflect(ignore)]
+    // base: Handle<ExtendedMaterial<StandardMaterial, DetailNormalExtension>>,
 }
 
 /// When modifying materials via [CustomMaterialNormalExtension],

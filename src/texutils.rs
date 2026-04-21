@@ -40,7 +40,6 @@ pub enum CubemapMapping {
 /// Workhorse of the mapper.
 struct CubeTextureMapper<'a> {
     image: &'a Image,
-    mapping:  CubemapMapping,
     in_image_data: &'a Vec<u8>,
     out_image_data: Vec<u8>,
     pixel_size: usize,
@@ -51,7 +50,7 @@ struct CubeTextureMapper<'a> {
 }
 
 impl<'a> CubeTextureMapper<'a> {
-    pub fn new(image: &'a bevy::image::Image, mapping: CubemapMapping) -> Result<Self, ImageError> {
+    pub fn new(image: &'a bevy::image::Image) -> Result<Self, ImageError> {
         let width = image.width() as usize;
         let height = image.height() as usize;
         let pixel_size = image.texture_descriptor.format.pixel_size().map_err(|e| ImageError::TextureError(e))?;
@@ -74,7 +73,6 @@ impl<'a> CubeTextureMapper<'a> {
 
         Ok(Self {
             image,
-            mapping,
             pixel_size,
             in_image_data,
             out_image_data,
@@ -92,16 +90,12 @@ impl<'a> CubeTextureMapper<'a> {
 
     // Write an entire side (e.g. `side_byte_size * N`) from input to output as-is.
     pub fn write_side(&mut self, side_offset: usize) {
-        let out_image_data = Vec::<u8>::with_capacity(self.side_byte_size);
         self.out_image_data.extend_from_slice(&self.in_image_data[side_offset..side_offset + self.side_byte_size]);
     }
 
     // Write an entire side by transforming (e.g. `side_byte_size * N`) from input to output as-is.
     // The `map` function maps the input (x,y) to the output (x,y).
     pub fn write_side_map(&mut self, side_offset: usize, map_x_y: impl Fn(usize, usize) -> (usize, usize)) {
-        let width = self.image.width() as usize;
-        let height = self.image.height() as usize;
-
         for o_row in 0..self.side_height {
             for o_col in 0..self.side_width {
                 let (i_col, i_row) = map_x_y(o_col, o_row);
@@ -156,7 +150,7 @@ impl<'a> CubeTextureMapper<'a> {
 ///
 pub fn convert_strip_to_cubemap(image: &bevy::image::Image, mapping: CubemapMapping) -> Result<Image, ImageError> {
 
-    let mut mapper = CubeTextureMapper::new(image, mapping)?;
+    let mut mapper = CubeTextureMapper::new(image)?;
     let side_byte_size = mapper.side_byte_size;
     let side_width = mapper.side_width;
     let side_height = mapper.side_height;
