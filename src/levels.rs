@@ -40,7 +40,7 @@ pub fn is_in_level(id: &str) -> impl Fn(Option<Res<CurrentLevel>>) -> bool {
 }
 
 /// The current level, which holds a copy of the current level info.
-#[derive(Resource, Reflect, Debug, Deref)]
+#[derive(Resource, Reflect, Debug, Deref, Clone)]
 #[reflect(Resource)]
 #[type_path = "game"]
 pub struct CurrentLevel(pub LevelInfo);

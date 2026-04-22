@@ -271,6 +271,10 @@ impl<'w, 's> MenuItemBuilder<'w, 's> {
         }
     }
 
+    pub fn commands(&mut self) -> Commands<'_, '_> {
+        self.commands.reborrow()
+    }
+
     pub fn add_item(
         &mut self,
         text: impl Into<String>,
