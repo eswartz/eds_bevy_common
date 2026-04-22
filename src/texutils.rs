@@ -100,9 +100,9 @@ impl<'a> CubeTextureMapper<'a> {
             for o_col in 0..self.side_width {
                 let (i_col, i_row) = map_x_y(o_col, o_row);
                 // Copy the pixel... yes, just one pixel here.
-                let pixel_offs = side_offset + i_row * self.side_row_stride + i_col * self.pixel_size;
-                // Wrap to buffer to avoid panic (so we see the error)
-                let pixel_offs = pixel_offs % self.side_byte_size;
+                let pixel_offs = i_row * self.side_row_stride + i_col * self.pixel_size;
+                // Wrap to buffer to avoid panic (so we see the error rendered)
+                let pixel_offs = side_offset + pixel_offs % self.side_byte_size;
                 self.out_image_data.extend_from_slice(&self.in_image_data[pixel_offs..pixel_offs + self.pixel_size]);
             }
         }
@@ -171,13 +171,13 @@ pub fn convert_strip_to_cubemap(image: &bevy::image::Image, mapping: CubemapMapp
             // +Y side, but flipped on both axes.
             let in_plus_y = side_byte_size * 2;
             mapper.write_side_map(in_plus_y, &|col, row| {
-                    (side_height - row - 1, side_width - col - 1)
+                (side_width - col - 1, side_height - row - 1)
             });
 
             // -Y side, but rotated.
             let in_minus_y = side_byte_size * 3;
             mapper.write_side_map(in_minus_y, &|col, row| {
-                (side_height - col - 1, side_width - row - 1)
+                (side_height - row - 1, side_width - col - 1)
             });
 
             // +Z side.
