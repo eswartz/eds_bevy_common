@@ -477,6 +477,8 @@ dependencies = [
  "itertools 0.14.0",
  "obvhs",
  "parry3d",
+ "parry3d-f64",
+ "serde",
  "smallvec",
  "thiserror 2.0.18",
  "thread_local",
@@ -1216,6 +1218,7 @@ dependencies = [
  "bevy_math",
  "bevy_reflect",
  "glam_matrix_extras",
+ "serde",
 ]
 
 [[package]]
@@ -1985,6 +1988,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "88545c8b0fa8f3502b9a439c71fa6b596ee9e808bfb16f27a51c8c6f7405a657"
 dependencies = [
  "bevy",
+ "serde",
 ]
 
 [[package]]
@@ -4020,6 +4024,7 @@ checksum = "c4664468a60479272b880a8bfc00ad2915229b93d2b2d585556fb33f9ba80e72"
 dependencies = [
  "bevy_reflect",
  "glam 0.30.10",
+ "serde",
 ]
 
 [[package]]
@@ -4031,6 +4036,7 @@ dependencies = [
  "approx",
  "glam 0.30.10",
  "num-traits",
+ "serde",
  "simba",
 ]
 
@@ -5835,11 +5841,42 @@ dependencies = [
  "num-traits",
  "ordered-float",
  "rstar",
+ "serde",
+ "serde_arrays",
  "simba",
  "slab",
  "smallvec",
  "spade",
  "static_assertions",
+ "thiserror 2.0.18",
+]
+
+[[package]]
+name = "parry3d-f64"
+version = "0.26.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "38558e45fda09a243836f590b9890f7f21dd2078dd7aafc876a9e8998d378d42"
+dependencies = [
+ "approx",
+ "arrayvec",
+ "bitflags 2.11.1",
+ "downcast-rs 2.0.2",
+ "either",
+ "ena",
+ "foldhash 0.2.0",
+ "glamx",
+ "hashbrown 0.16.1",
+ "log",
+ "num-derive",
+ "num-traits",
+ "ordered-float",
+ "rstar",
+ "serde",
+ "serde_arrays",
+ "simba",
+ "slab",
+ "smallvec",
+ "spade",
  "thiserror 2.0.18",
 ]
 
@@ -6732,6 +6769,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "serde_arrays"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "94a16b99c5ea4fe3daccd14853ad260ec00ea043b2708d1fd1da3106dcd8d9df"
+dependencies = [
+ "serde",
+]
+
+[[package]]
 name = "serde_core"
 version = "1.0.228"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6960,6 +7006,7 @@ dependencies = [
  "hashbrown 0.16.1",
  "num-traits",
  "robust",
+ "serde",
  "smallvec",
 ]
 
@@ -9260,6 +9307,11 @@ dependencies = [
 ]
 
 [[patch.unused]]
+name = "avian3d"
+version = "0.7.0-dev"
+source = "git+https://github.com/Jondolf/avian.git?branch=main#891a04d8e48d2534a6ef6c082859a637537a03d6"
+
+[[patch.unused]]
 name = "fedry"
 version = "0.1.0"
 
@@ -9270,11 +9322,6 @@ version = "0.1.0"
 [[patch.unused]]
 name = "fedry_runtime"
 version = "0.1.0"
-
-[[patch.unused]]
-name = "avian3d"
-version = "0.7.0-dev"
-source = "git+https://github.com/Jondolf/avian.git?branch=main#891a04d8e48d2534a6ef6c082859a637537a03d6"
 
 [[patch.unused]]
 name = "fedry"

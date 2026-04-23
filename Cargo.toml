@@ -126,6 +126,7 @@ avian3d = { version = "0.6.0", default-features = false, features = [
     "debug-plugin",
     # "validate",  # has crash
     "xpbd_joints", # optional
+    "serialize",
 ] }
 bevy_egui = { version = "0.39", features = ["render", "serde"] }
 bevy-inspector-egui = "0.36"
