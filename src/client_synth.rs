@@ -113,7 +113,6 @@ fn handle_synth_events(
     synth_map: Res<SynthProxyMap>,
     mut synth_q: Query<&mut MidiSynth>,
     mut waiting: ResMut<PendingSynthEvents>,
-    // mut active: ResMut<ActiveNotes>,
     time: Res<Time>,
     mut clock: ResMut<SynthClock>,
 ) {
@@ -133,12 +132,16 @@ fn handle_synth_events(
         }
         if matches!(event, SynthMessage(_, SynthCommand::Reset, _)) {
             need_reset = true;
+            need_sort = true;
         }
         waiting.push_back((delay, event.clone()));
     }
 
     if need_sort {
         waiting.make_contiguous().sort_by(|a, b| {
+            if a.0 == b.0 && matches!(a.1, SynthMessage(_, SynthCommand::Reset, _)) {
+                return std::cmp::Ordering::Less
+            }
             a.0.cmp(&b.0)
         });
     }
