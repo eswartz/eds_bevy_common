@@ -52,16 +52,17 @@ impl SynthClock {
 #[derive(Clone, Copy, PartialEq, Eq, Reflect, serde::Serialize, serde::Deserialize)]
 #[reflect(Clone)]
 #[type_path = "game"]
-pub struct SynthNote(u16);
+pub enum SynthNote {
+    Midi(u8),
+    Hertz(u16),
+}
 
 impl std::fmt::Debug for SynthNote {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "SynthNote:")?;
-        let pitch = self.0 & 0xff;
-        if pitch == 0 {
-            write!(f, "{}", self.0 >> 8)
-        } else {
-            write!(f, "{:.2}", self.0 as f32 / 256.0)
+        write!(f, "SynthNote ")?;
+        match self {
+            Self::Midi(midi) => write!(f, "Midi:{}", *midi),
+            Self::Hertz(hz) => write!(f, "Hertz:{}", *hz),
         }
     }
 }
@@ -70,23 +71,29 @@ impl std::fmt::Debug for SynthNote {
 impl SynthNote {
     /// Create from a frequency in Hz.
     pub fn hz(freq: f32) -> Self {
-        let note = ((12.0 * (freq / 440.).log2() + 69.0) * 256.0).clamp(0., 255.) as u16;
-        Self(note)
+        Self::Hertz(freq as u16)
     }
     /// Create from a MIDI note.
     pub fn midi(note: u8) -> Self {
-        Self((note as u16) << 8)
+        Self::Midi(note)
     }
-    /// Add a pitch bend, range -1...1.
-    pub fn with_bend(self, bend: f32) -> Self {
-        Self(
-            self.0
-                .saturating_add_signed((bend.clamp(-1.0, 1.0) * 256.0) as i16),
-        )
-    }
+    // /// Add a pitch bend, range -1...1.
+    // pub fn with_bend(self, bend: f32) -> Self {
+    //     let hz = self.to_hz() as f32;
+    //     Self::Hertz(self.to_hz() as f32 + bend)
+    // }
 
+    pub fn to_hz(&self) -> u16 {
+        match self {
+            SynthNote::Midi(midi) => (440.0 * (2.0f32.powf((*midi as f32 - 69.0) / 12.0))) as u16,
+            SynthNote::Hertz(hz) => *hz,
+        }
+    }
     pub fn to_midi(&self) -> u8 {
-        (((self.0.saturating_add(128)) >> 8) as u8).clamp(0, 127)
+        match self {
+            SynthNote::Midi(midi) => *midi,
+            SynthNote::Hertz(hz) => (69.0 + (12.0 * (*hz as f32 / 440.0).log2())).clamp(0., 127.) as u8,
+        }
     }
 }
 
@@ -102,7 +109,7 @@ pub struct SynthVirtualChannel();
 /// Specifies the target of synth notes and events.
 ///
 /// The indices of the voice and drum do NOT have any relationship with midi.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Reflect, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Copy, PartialEq, Eq, Reflect, serde::Serialize, serde::Deserialize)]
 #[reflect(Clone)]
 #[type_path = "game"]
 pub enum SynthChannel {
@@ -113,6 +120,16 @@ pub enum SynthChannel {
 impl Default for SynthChannel {
     fn default() -> Self {
         Self::Voice(0)
+    }
+}
+
+impl std::fmt::Debug for SynthChannel {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "SynthChannel ")?;
+        match self {
+            Self::Voice(v) => write!(f, "Voice:{v}"),
+            Self::Drums(d) => write!(f, "Drums:{d}"),
+        }
     }
 }
 
@@ -131,8 +148,8 @@ impl SynthChannel {
 }
 
 /// The different kinds of commands for the synth layer.
-#[derive(Clone, Debug, PartialEq, Reflect, serde::Serialize, serde::Deserialize)]
-#[reflect(Clone)]
+#[derive(Clone, Default, Debug, PartialEq, Reflect, serde::Serialize, serde::Deserialize)]
+#[reflect(Clone, Default)]
 #[type_path = "game"]
 pub enum SynthCommand {
     NoteOn(SynthChannel, SynthNote, f32),
@@ -141,6 +158,7 @@ pub enum SynthCommand {
     /// Program is 0-based.
     ProgramChange(SynthChannel, u8),
     ChannelVolume(SynthChannel, f32),
+    #[default]
     Reset,
 }
 

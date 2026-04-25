@@ -149,7 +149,6 @@ fn handle_synth_events(
             }
             waiting.pop_front();
         }
-        // active.reset();
     }
 
     while let Some((delay, event)) = waiting.front_mut() {

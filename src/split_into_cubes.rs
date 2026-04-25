@@ -63,19 +63,15 @@ fn handle_split_into_cubes(
 
         let root = ent;
 
-        // dbg!(aabb.max(), aabb.center.to_vec3() + Vec3::new(xs * xn as f32, ys * yn as f32, zs * zn as f32));
-        // dbg!(aabb.min(), aabb.center.to_vec3() + Vec3::new(xs * -xn as f32, ys * -yn as f32, zs * -zn as f32));
         let aabb_min = aabb.min().to_vec3();
         for zi in 0..zn {
             let z0 = aabb_min.z + zs * zi as f32;
             for yi in 0..yn {
                 let y0 = aabb_min.y + ys * yi as f32;
                 for xi in 0..xn {
-                    // dbg!((xi, yi, zi));
                     let x0 = aabb_min.x + xs * xi as f32;
 
                     let cube_center = Vec3::new(x0, y0, z0) + cube_half_size;
-                    // dbg!((cube_center, cube_half_size));
 
                     if let Some((partial_mesh, indices, vertices)) = extract_mesh_cube(&mesh, cube_center, cube_half_size) {
                         let id = commands.spawn((
