@@ -8,7 +8,7 @@ use crate::*;
 #[derive(SystemParam)]
 pub struct GeometryCollisionHooks<'w, 's> {
     player_q: Query<'w, 's, &'static PlayerMovement, With<Player>>,
-    spawned_q: Query<'w, 's, (), With<Spawned>>,
+    projectile_q: Query<'w, 's, (), With<Projectile>>,
     parent_q: Query<'w, 's, &'static ChildOf>,
     cb_opt: Option<Res<'w, GeometryCollisionHooksCallbacks>>,
 }
@@ -41,8 +41,8 @@ impl GeometryCollisionHooks<'_, '_> {
         }
     }
 
-    fn is_spawned(&self, body_opt: Option<Entity>, body: Entity) -> bool {
-        self.spawned_q.contains(
+    fn is_projectile(&self, body_opt: Option<Entity>, body: Entity) -> bool {
+        self.projectile_q.contains(
             if let Some(the_body) = body_opt {
                 the_body
             } else {
@@ -61,24 +61,24 @@ impl CollisionHooks for GeometryCollisionHooks<'_, '_> {
             };
 
             // See what things are colliding.
-            let ((player1, spawn1), (player2, spawn2)) = (
-                (self.is_player(contacts.body1), self.is_spawned(contacts.body1, contacts.collider1)),
-                (self.is_player(contacts.body2), self.is_spawned(contacts.body2, contacts.collider2)),
+            let ((player1, proj1), (player2, proj2)) = (
+                (self.is_player(contacts.body1), self.is_projectile(contacts.body1, contacts.collider1)),
+                (self.is_player(contacts.body2), self.is_projectile(contacts.body2, contacts.collider2)),
             );
             if player1 && player2 {
                 // Player V. Player, ignore
                 return true
             }
-            if !player1 && !spawn1 && !player2 && !spawn2 {
+            if !player1 && !proj1 && !player2 && !proj2 {
                 // Shouldn't be here unless we added an ActiveCollisionHooks and forgot to handle it
                 warn!("not handling hook for {:?} and {:?}", contacts.body1, contacts.body2);
                 return true
             }
 
-            // Make player or spawn first.
+            // Make player or projectile first.
             let body1 = contacts.body1.unwrap_or(contacts.collider1);
             let body2 = contacts.body2.unwrap_or(contacts.collider2);
-            if player1 || spawn1 {
+            if player1 || proj1 {
                 (false, body1, body2, *deepest)
             } else {
                 (true, body2, body1, deepest.flipped())
@@ -94,17 +94,18 @@ impl CollisionHooks for GeometryCollisionHooks<'_, '_> {
             }
 
         // Ignore cases where we hit an embedded and invisible collider face in the ground.
-        if deepest.penetration < 0.1 /* && deepest.local_point2.y < -0.05 */ && deepest.normal_impulse.abs() < 0.01
-        {
+        if deepest.penetration < 0.1 /* && deepest.local_point2.y < -0.05 */ && deepest.normal_impulse.abs() < 0.01 {
             // let mut any_edges = false;
-            for man in &contacts.manifolds {
+            for man in &mut contacts.manifolds {
                 for pt in &man.points {
                     if if is_flipped {
                         pt.feature_id2.is_edge()
                     } else {
                         pt.feature_id1.is_edge()
                     } {
-                        return false
+                        // man.normal = Vec3::Y;
+                        // man.tangent_velocity = Vec3::ZERO;
+                        // return false
                     }
                 }
             }
