@@ -56,6 +56,9 @@ pub trait StatsProvider: Send + Sync + 'static {
     fn get_label(&self) -> String;
     /// Compute the value string.
     fn format_value(&self, world: &World) -> String;
+    /// Tell if the stat is important (needs highlighting).
+    /// This is only checked once and is used to construct the UI.
+    fn is_important(&self) -> bool { false }
 }
 
 /// This organizes all the stats providers.
@@ -291,6 +294,10 @@ fn diagnostic_system(
         }
         let text_ents = cached.get_or_init(|| {
             // Generate the UI once.
+
+            let plain_color = Color::Srgba(bevy::color::palettes::tailwind::GRAY_50);
+            let important_color = Color::Srgba(bevy::color::palettes::tailwind::RED_500);
+
             let mut result  = Vec::with_capacity(stats_registry.len());
             let font = TextFont {
                 font_size: style.font_size,
@@ -345,12 +352,13 @@ fn diagnostic_system(
                     stats_registry
                         .providers()
                         .iter()
-                        .for_each(|_| result.push(c.spawn((
+                        .for_each(|provider| result.push(c.spawn((
                             Node::default(),
                             font.clone(),
-                            Text::default())).id())
-                        );
-
+                            Text::default(),
+                            TextColor(if provider.is_important() { important_color } else { plain_color }),
+                        )).id()
+                    ));
                 });
             });
 
