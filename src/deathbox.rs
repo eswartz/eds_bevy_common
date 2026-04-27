@@ -68,6 +68,15 @@ impl Plugin for DeathboxPlugin {
                 .run_if(in_state(ProgramState::InGame)),
             )
             .add_systems(
+                PostUpdate,
+                (
+                    enforce_visibility
+                )
+                .run_if(not(is_user_paused))
+                .run_if(in_state(LevelState::Playing))
+                .run_if(in_state(ProgramState::InGame)),
+            )
+            .add_systems(
                 Update,
                 (
                     handle_out_of_bounds,
@@ -151,5 +160,14 @@ fn handle_out_of_bounds(
                 }
             }
         }
+    }
+}
+
+fn enforce_visibility(
+    mut deathbox_q: Query<&mut Visibility, With<DeathboxCollider>>,
+) {
+    // SOMETHING in toggling dev tools makes the deathbox visible
+    for mut vis in deathbox_q.iter_mut() {
+        vis.set_if_neq(Visibility::Hidden);
     }
 }
