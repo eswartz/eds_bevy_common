@@ -1,6 +1,6 @@
 //! Stock widgetry for handling menus.
 //!
-use std::collections::HashMap;
+use bevy::platform::collections::HashMap;
 use std::hash::BuildHasher as _;
 use std::marker::PhantomData;
 use std::ops::RangeInclusive;
