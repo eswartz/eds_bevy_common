@@ -58,10 +58,17 @@ pub struct MenuAction;
 pub mod actions {
     use super::*;
 
+    /// Pause gameplay ([Time<Physics>] according to [crate::lifecycle]).
     #[derive(InputAction)]
     #[action_output(bool)]
-    pub struct Pause;
+    pub struct PauseGameplay;
 
+    /// Pause scripting.
+    #[derive(InputAction)]
+    #[action_output(bool)]
+    pub struct PauseScripting;
+
+    /// Mute all audio.
     #[derive(InputAction)]
     #[action_output(bool)]
     pub struct Mute;
@@ -71,6 +78,7 @@ pub mod actions {
     #[action_output(bool)]
     pub struct Menu;
 
+    /// Indicate toggle of debug UI.
     #[derive(InputAction)]
     #[action_output(bool)]
     pub struct DebugUi;
@@ -185,12 +193,18 @@ fn toggle_context(
     }
 }
 
-pub(crate) fn handle_pause(_event: On<Start<actions::Pause>>, mut pause_state: ResMut<PauseState>) {
+pub(crate) fn handle_pause(_event: On<Start<actions::PauseGameplay>>, keys: Res<ButtonInput<KeyCode>>, mut pause_state: ResMut<PauseState>) {
+    // Ignore overlap with PauseScripting
+    if keys.any_pressed([KeyCode::ShiftLeft, KeyCode::ShiftRight]) {
+        return
+    }
     // Toggle from whatever means we are paused, as an
     // escape hatch.
     let paused = !pause_state.is_paused();
     pause_state.set_user_paused(paused);
 }
+
+// scripting plugin needs to handle PauseScripting
 
 pub(crate) fn handle_debug_ui(
     _event: On<Start<actions::DebugUi>>,
@@ -258,11 +272,19 @@ pub fn assign_stock_common_actions(
 ) {
     commands.spawn((
         include.clone(),
-        Action::<actions::Pause>::new(),
+        Action::<actions::PauseGameplay>::new(),
         bindings![
             KeyCode::Pause,
             KeyCode::KeyP.with_mod_keys(ModKeys::CONTROL),
             GamepadButton::Mode,
+        ],
+    ));
+    commands.spawn((
+        include.clone(),
+        Action::<actions::PauseScripting>::new(),
+        bindings![
+            KeyCode::Pause.with_mod_keys(ModKeys::SHIFT),
+            KeyCode::KeyP.with_mod_keys(ModKeys::SHIFT | ModKeys::CONTROL),
         ],
     ));
     commands.spawn((
@@ -471,6 +493,23 @@ pub fn assign_stock_player_actions(
         Action::<actions::Reset>::new(),
         bindings![
             KeyCode::Backslash,
+        ],
+    ));
+
+    commands.spawn((
+        include.clone(),
+        Action::<actions::ToggleSelect>::new(),
+        bindings![
+            // MouseButton::Right,
+            // GamepadButton::LeftTrigger2,
+
+            KeyCode::KeyE,
+
+            // These are dangerous since they must be used in isolation
+            // and not with keyboard combinations.
+            // See code in [actions_common::handle_escape].
+            KeyCode::AltLeft,
+            KeyCode::AltRight,
         ],
     ));
 

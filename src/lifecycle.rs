@@ -32,6 +32,10 @@ fn check_despawners(
 ) {
     let dt = time.delta();
     for (ent, mut despawn) in despawn_q.iter_mut() {
+        if despawn.0.is_zero() {
+            // Ignore these as in a default component.
+            continue
+        }
         if despawn.0 <= dt {
             commands.entity(ent).try_despawn();
         } else {

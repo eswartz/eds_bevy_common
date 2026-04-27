@@ -77,23 +77,29 @@ impl Plugin for CommonAssetsPlugin {
                 }
             }
 
-            eprintln!("error: did not find eds_bevy_common git repo checkout");
+            log::error!("error: did not find eds_bevy_common git repo checkout");
         }
 
         // Assets better be installed.
         if let Ok(base_dir) = find_runtime_base_directory_by_folder("assets") {
             log::info!("Using {base_dir:?} for 'common' assets");
+            let assets = if cfg!(target_arch = "wasm32") {
+                "assets".to_string()
+            } else {
+                base_dir.join("assets").display().to_string()
+            };
+            log::info!("adding common assets at {assets:?}");
             app.register_asset_source(
                 "common",
                 AssetSourceBuilder::platform_default(
-                    &base_dir.join("assets").display().to_string(),
+                    &assets,
                     None,
                 ),
             );
             return;
         }
 
-        eprintln!("error: did not find eds_bevy_common/assets");
+        log::error!("error: did not find eds_bevy_common/assets");
     }
 }
 

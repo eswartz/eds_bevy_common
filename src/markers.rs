@@ -10,9 +10,11 @@ use crate::PlayerMode;
 #[type_path = "game"]
 pub struct Saveable;
 
-/// Mark an entity as temporary.
-#[derive(Component, Clone, Reflect, Debug)]
-#[reflect(Component, Clone)]
+/// Mark an entity to be culled after the given time has passed.
+/// (The value 0.0 will *not* despawn immediately but instead means "ignore".
+/// This is for the benefit of default-initialized components.)
+#[derive(Component, Clone, Reflect, Debug, Default)]
+#[reflect(Component, Clone, Default)]
 #[type_path = "game"]
 pub struct DespawnAfter(pub Duration);
 

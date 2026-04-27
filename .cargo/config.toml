@@ -7,7 +7,7 @@ rustflags = ["-Z", "threads=8",
 [unstable]
 codegen-backend = true
 
-[profile.dev]
+[profile.'not(any(cfg(target_os = "macos"), cfg(target_arch = "wasm32")))'.dev]
 codegen-backend = "cranelift"
 
 [profile.dev.package."*"]

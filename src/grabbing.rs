@@ -261,7 +261,10 @@ fn on_start_grab(
     grabbable_q: Query<Entity, With<Grabbable>>,
     grabbed_opt: Option<Res<GrabbedItem>>,
 ) {
-    if grabbed_opt.is_some() || (inputs.pressed(KeyCode::AltLeft) || inputs.pressed(KeyCode::AltRight)) {
+    if grabbed_opt.is_some()
+    // be careful with these keys triggering false re-starts e.g. on tabbing into a window
+    || (inputs.pressed(KeyCode::AltLeft) || inputs.pressed(KeyCode::AltRight))
+    {
         // Still holding, release.
         commands.write_message(GrabbingCommand::ReleaseItems);
     } else {
@@ -389,7 +392,6 @@ fn process_grab_changes(
     mut commands: Commands,
     grabbed_opt: Option<Res<GrabbedItem>>,
     styler: Res<GrabbedItemStyle>,
-    // grabbing_force: Res<GrabbingForce>,
 
     camera_q: Query<&GlobalTransform, (With<Camera3d>, With<WorldCamera>)>,
 

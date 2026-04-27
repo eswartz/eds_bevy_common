@@ -11,16 +11,13 @@ pub const GAMEPAD_BUTTON_MENU: GamepadButton = GamepadButton::Start;
 pub(crate) fn handle_escape(
     mut commands: Commands,
     overlay_state: Res<State<OverlayState>>,
+    program_state: Res<State<ProgramState>>,
     going_back: Option<Res<GoBackInMenuRequest>>,
     mut previous_menu: ResMut<PreviousMenuStack>,
     mut keyboard_reader: MessageReader<KeyboardInput>,
     mut gamepad_reader: MessageReader<GamepadButtonChangedEvent>,
     mut pause: ResMut<PauseState>,
 ) {
-    // // Menu logic handles this itself.
-    // if overlay_state.is_menu() {
-    //     return;
-    // }
     if going_back.is_some() {
         return;
     }
@@ -43,13 +40,16 @@ pub(crate) fn handle_escape(
         // If we reach the root, handle it here.
         match overlay_state.get() {
             OverlayState::Hidden => {
-                // The one case where Escape *opens* the menu the first time.
-                previous_menu.0.clear();
-                commands.set_state(OverlayState::EscapeMenu);
+                if matches!(**program_state, ProgramState::InGame) {
+                    // The one case where Escape *opens* the menu the first time.
+                    previous_menu.0.clear();
+                    commands.set_state(OverlayState::EscapeMenu);
+                } else {
+                    // This is a hack to avoid freezing a game forever at Loading... (allows exiting at least)
+                    commands.set_state(OverlayState::MainMenu);
+                }
             }
             OverlayState::EscapeMenu => {
-                // commands.write_message(MenuActionMessage::ResumeGame);   // nope
-
                 // Go back to gameplay, like the ResumeGame command.
                 pause.set_menu_paused(false);
 

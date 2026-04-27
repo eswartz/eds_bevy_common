@@ -19,6 +19,7 @@ impl Plugin for CrosshairPlugin {
     fn build(&self, app: &mut App) {
         app
         .init_resource::<CrosshairTargets>()
+        .init_resource::<CrosshairMode>()
         .add_systems(
             OnEnter(ProgramState::InGame),
             init_crosshair
@@ -30,6 +31,7 @@ impl Plugin for CrosshairPlugin {
         .add_systems(
             Update,
             check_crosshair_visibility
+            .run_if(resource_exists_and_equals(CrosshairMode::AimFromCenter))
             .run_if(resource_changed::<State<OverlayState>>)
         )
         .add_systems(
@@ -38,8 +40,9 @@ impl Plugin for CrosshairPlugin {
                 check_crosshair_activity_mouse,
                 check_crosshair_activity_gamepad,
                 update_crosshair,
-                check_crosshair_target,
+                update_crosshair_targets,
             )
+            .run_if(resource_exists_and_equals(CrosshairMode::AimFromCenter))
             .run_if(not(is_paused))
             .run_if(not(is_in_menu))
             .run_if(is_level_active)
@@ -53,7 +56,9 @@ impl Plugin for CrosshairPlugin {
 /// Marker for the GUI node representing the crosshair,
 /// providing in itself a
 ///
-#[derive(Component)]
+#[derive(Component, Reflect)]
+#[reflect(Component)]
+#[type_path = "game"]
 pub struct Crosshair {
     /// The current "strength" of  in the range [0..1],
     /// 0 corresponding to no pointer movement and 1 to active motion.
@@ -69,66 +74,84 @@ impl Crosshair {
     }
 }
 
-/// Client marker for an entity that can be targeted by the crosshair.
+/// Client marker for an entity that can be "targeted" by the crosshair
+/// and thus appear in [CrosshairTargets].
 #[derive(Default, Component, Reflect)]
 #[reflect(Component)]
 #[type_path = "game"]
 pub struct CrosshairTargetable;
 
+/// Client marker for an entity that can be "targeted" by the crosshair
+/// and thus appear in [CrosshairTargets].
+#[derive(Default, Resource, Reflect, PartialEq, Eq, Hash)]
+#[reflect(Resource)]
+#[type_path = "game"]
+pub enum CrosshairMode {
+    /// Don't show it.
+    Off,
+    /// Show in center, "strengthening" as pointer moves.
+    #[default]
+    AimFromCenter,
+}
+
 fn init_crosshair(
     mut commands: Commands,
     gui_assets: Res<CommonGuiAssets>,
-    mut crosshair_q: Query<&mut Visibility, With<Crosshair>>,
 ) {
-    if let Ok(mut vis) = crosshair_q.single_mut() {
-        *vis = Visibility::Visible;
-    } else {
-        commands.spawn((
-            Name::new("Crosshair"),
-            DespawnOnExit(ProgramState::InGame),
-            Crosshair { current_strength: 0. },
-            RenderLayers::from_layers(&[RENDER_LAYER_DEFAULT, RENDER_LAYER_VIEW]),
-            Transform::from_xyz(0., 0., -10.),
-            Visibility::Visible,
+    // TODO: make this simpler. It looks like hacks.
+    commands.spawn((
+        Name::new("Crosshair"),
+        DespawnOnExit(ProgramState::InGame),
+        Crosshair { current_strength: 0. },
+
+        RenderLayers::from_layers(&[RENDER_LAYER_DEFAULT, RENDER_LAYER_VIEW]),
+        Transform::from_xyz(0., 0., -10.),
+
+        // Hidden until CrosshairMode changes.
+        Visibility::Hidden,
+        Node {
+            width: Val::Percent(100.),
+            height: Val::Percent(100.),
+            position_type: PositionType::Absolute,
+            justify_content: JustifyContent::Center,
+            align_items: AlignItems::Center,
+            ..default()
+        }
+    ))
+    .with_children(|builder| {
+        builder.spawn((
+            ImageNode::new(gui_assets.crosshair.clone()),
             Node {
-                width: Val::Percent(100.),
-                height: Val::Percent(100.),
-                position_type: PositionType::Absolute,
-                justify_content: JustifyContent::Center,
-                align_items: AlignItems::Center,
+                width: Val::Px(16.),
+                height: Val::Px(16.),
                 ..default()
             }
-        ))
-        .with_children(|builder| {
-            builder.spawn((
-                ImageNode::new(gui_assets.crosshair.clone()),
-                Node {
-                    width: Val::Px(16.),
-                    height: Val::Px(16.),
-                    ..default()
-                }
-            ));
-        });
+        ));
+    });
+}
+
+fn term_crosshair(mut commands: Commands, crosshair_q: Query<Entity, With<Crosshair>>) {
+    for ent in crosshair_q.iter() {
+        commands.entity(ent).try_despawn();
     }
 }
 
-fn term_crosshair(mut vis: Single<&mut Visibility, With<Crosshair>>) {
-    **vis = Visibility::Hidden;
-}
-
 fn check_crosshair_visibility(
-    crosshair_q: Single<Entity, With<Crosshair>>,
+    crosshair_q: Query<Entity, With<Crosshair>>,
+    mode: Res<CrosshairMode>,
     mut vis_q: Query<&mut Visibility>,
     overlay: Res<State<OverlayState>>,
 ) {
-    let visible = !is_in_menu(overlay);
-    if let Ok(mut vis) = vis_q.get_mut(*crosshair_q) {
-        *vis = if visible { Visibility::Inherited } else { Visibility::Hidden };
+    let visible = !is_in_menu(overlay) && *mode == CrosshairMode::AimFromCenter;
+    for crosshair in crosshair_q.iter() {
+        if let Ok(mut vis) = vis_q.get_mut(crosshair) {
+            *vis = if visible { Visibility::Inherited } else { Visibility::Hidden };
+        }
     }
 }
 
 fn check_crosshair_activity_mouse(
-    mut crosshair_q: Single<&mut Crosshair>,
+    mut crosshair_q: Query<&mut Crosshair>,
     movement: Res<AccumulatedMouseMotion>,
     time: Res<Time>,
 ) {
@@ -138,11 +161,13 @@ fn check_crosshair_activity_mouse(
     } else {
         dt * 4.0
     };
-    crosshair_q.add_activity(activity_delta);
+    for mut crosshair in crosshair_q.iter_mut() {
+        crosshair.add_activity(activity_delta);
+    }
 }
 
 fn check_crosshair_activity_gamepad(
-    mut crosshair_q: Single<&mut Crosshair>,
+    mut crosshair_q: Query<&mut Crosshair>,
     gamepad_q: Query<&Gamepad>,
     time: Res<Time>,
 ) {
@@ -160,7 +185,9 @@ fn check_crosshair_activity_gamepad(
     } else {
         dt * 4.0
     };
-    crosshair_q.add_activity(activity_delta);
+    for mut crosshair in crosshair_q.iter_mut() {
+        crosshair.add_activity(activity_delta);
+    }
 }
 
 fn update_crosshair(
@@ -194,20 +221,15 @@ pub struct CrosshairTargets {
     pub index: usize,
 }
 
-/// See if we're looking at something clickable.
-fn check_crosshair_target(
-    crosshair_q: Single<&Crosshair>,
+/// This always runs, regardless of [CrosshairMode],
+/// to populate [CrosshairTargets].
+pub fn update_crosshair_targets(
     camera_q: Single<&GlobalTransform, (With<Camera3d>, With<WorldCamera>)>,
     targetable_q: Query<&CrosshairTargetable>,
     parent_q: Query<&ChildOf>,
     mut raycast: MeshRayCast,
     mut crosshair_targets: ResMut<CrosshairTargets>,
 ) {
-    let crosshair = *crosshair_q;
-    if !crosshair.is_active() {
-        return;
-    }
-
     let gxfrm = *camera_q;
     let ray = Ray3d::new(gxfrm.translation(), gxfrm.rotation() * Dir3::NEG_Z);
     let filter = |ent: Entity| {
@@ -224,14 +246,12 @@ fn check_crosshair_target(
         }
         false
     };
-
     let settings = MeshRayCastSettings::default()
         .with_visibility(RayCastVisibility::Any)    // allow for hidden controller ents
         .never_early_exit()
         .with_filter(&filter)
         ;
     let hits = raycast.cast_ray(ray, &settings);
-
     let targets = hits.iter().map(|(target, _)| *target).collect::<Vec<_>>();
     let target_opt = crosshair_targets.targets.get(crosshair_targets.index);
     let index = if let Some(old_target) = target_opt.cloned() {
@@ -240,14 +260,12 @@ fn check_crosshair_target(
         None
     };
     let new_crosshair_targets = CrosshairTargets{ targets, index: index.unwrap_or(0) };
-
     crosshair_targets.set_if_neq(new_crosshair_targets);
 }
 
 /// Format a string reporting which items are currently visible
 /// in the crosshair, indicating the selected index.
 pub fn report_crosshair_targets(
-    // mut info_q: Single<(&mut Text, &mut TextColor, &mut Visibility), With<InfoArea>>,
     crosshair_target: &CrosshairTargets,
     targets_q: &Query<Option<&Name>>,
 ) -> Option<String> {

@@ -378,9 +378,9 @@ dependencies = [
 
 [[package]]
 name = "atomic_refcell"
-version = "0.1.13"
+version = "0.1.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "41e67cd8309bbd06cd603a9e693a784ac2e5d1e955f11286e355089fcab3047c"
+checksum = "21e4227379beff4205943696e6c3e0cd809bacdf3f0edd6e3dd153e2269571a4"
 
 [[package]]
 name = "atomicow"
@@ -400,20 +400,19 @@ checksum = "f93ebbf82d06013f4c41fe71303feb980cddd78496d904d06be627972de51a24"
 
 [[package]]
 name = "audioadapter"
-version = "2.0.1"
+version = "3.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "98e72b98fa467adcb7a88c5d1b8b686193185c81b9bf9c3fa3ac3524180cd55c"
+checksum = "91f87b70b051c5866680ad79f6743a42ccab264c009d1a71f4d33a3872ae60c8"
 dependencies = [
  "audio-core",
- "libm 0.2.16",
  "num-traits",
 ]
 
 [[package]]
 name = "audioadapter-buffers"
-version = "2.0.0"
+version = "3.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a6af89882334c4e501faa08992888593ada468f9e1ab211635c32f9ada7786e0"
+checksum = "9097d67933fb083d382ce980430afdb758aada60846010aee6be068c06cef0ca"
 dependencies = [
  "audioadapter",
  "audioadapter-sample",
@@ -422,9 +421,9 @@ dependencies = [
 
 [[package]]
 name = "audioadapter-sample"
-version = "2.0.0"
+version = "3.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4e9a3d502fec0b21aa420febe0b110875cf8a7057c49e83a0cace1df6a73e03e"
+checksum = "34ab94f2bc04a14e1f49ee5f222f66460e8a1b51627bdfedf34eed394d747938"
 dependencies = [
  "audio-core",
  "num-traits",
@@ -1744,7 +1743,7 @@ dependencies = [
 [[package]]
 name = "bevy_seedling"
 version = "0.8.0"
-source = "git+https://github.com/CorvusPrudens/bevy_seedling.git?rev=b610bb1a9c40370eacc7a9e49239ce74addb826a#b610bb1a9c40370eacc7a9e49239ce74addb826a"
+source = "git+https://github.com/CorvusPrudens/bevy_seedling.git?rev=a47482ef69d8d4c7d85cba0e003ea36030af627f#a47482ef69d8d4c7d85cba0e003ea36030af627f"
 dependencies = [
  "bevy_app",
  "bevy_asset",
@@ -1771,7 +1770,7 @@ dependencies = [
 [[package]]
 name = "bevy_seedling_macros"
 version = "0.7.0"
-source = "git+https://github.com/CorvusPrudens/bevy_seedling.git?rev=b610bb1a9c40370eacc7a9e49239ce74addb826a#b610bb1a9c40370eacc7a9e49239ce74addb826a"
+source = "git+https://github.com/CorvusPrudens/bevy_seedling.git?rev=a47482ef69d8d4c7d85cba0e003ea36030af627f#a47482ef69d8d4c7d85cba0e003ea36030af627f"
 dependencies = [
  "bevy_macro_utils",
  "proc-macro2",
@@ -2279,9 +2278,9 @@ dependencies = [
 
 [[package]]
 name = "blake3"
-version = "1.8.4"
+version = "1.8.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4d2d5991425dfd0785aed03aedcf0b321d61975c9b5b3689c774a2610ae0b51e"
+checksum = "0aa83c34e62843d924f905e0f5c866eb1dd6545fc4d719e803d9ba6030371fce"
 dependencies = [
  "arrayref",
  "arrayvec",
@@ -2427,9 +2426,9 @@ checksum = "37b2a672a2cb129a2e41c10b1224bb368f9f37a2b16b612598138befd7b37eb5"
 
 [[package]]
 name = "cc"
-version = "1.2.60"
+version = "1.2.61"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "43c5703da9466b66a946814e1adf53ea2c90f10063b86290cc9eb67ce3478a20"
+checksum = "d16d90359e986641506914ba71350897565610e87ce0ad9e6f28569db3dd5c6d"
 dependencies = [
  "find-msvc-tools",
  "jobserver",
@@ -2607,6 +2606,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "console_log"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "be8aed40e4edbf4d3b4431ab260b63fdc40f5780a4766824329ea0f1eefe3c0f"
+dependencies = [
+ "log",
+ "web-sys",
+]
+
+[[package]]
 name = "const-fnv1a-hash"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2629,9 +2638,9 @@ checksum = "87ca1caa64ef4ed453e68bb3db612e51cf1b2f5b871337f0fcab1c8f87cc3dff"
 
 [[package]]
 name = "constant_time_eq"
-version = "0.4.3"
+version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7dab3fe76c1571ecd5cfe878b61bce3fedf4adbde5d8a8653b2a7956ffd14628"
+checksum = "3d52eff69cd5e647efe296129160853a42795992097e8af39800e1060caeea9b"
 
 [[package]]
 name = "constgebra"
@@ -3010,9 +3019,9 @@ checksum = "0c87e182de0887fd5361989c677c4e8f5000cd9491d6d563161a8f3a5519fc7f"
 
 [[package]]
 name = "data-encoding"
-version = "2.10.0"
+version = "2.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d7a1e2f27636f116493b8b860f5546edb47c8d8f8ea73e1d2a20be88e28d1fea"
+checksum = "a4ae5f15dda3c708c0ade84bfee31ccab44a3da4f88015ed22f63732abe300c8"
 
 [[package]]
 name = "default-struct-builder"
@@ -3226,6 +3235,7 @@ dependencies = [
  "bevy_trenchbroom_avian",
  "bevy_tweening",
  "bytemuck",
+ "console_log",
  "crossbeam-channel",
  "egui",
  "firewheel",
@@ -3543,7 +3553,7 @@ checksum = "5baebc0774151f905a1a2cc41989300b1e6fbb29aff0ceffa1064fdd3088d582"
 [[package]]
 name = "firewheel"
 version = "0.10.0"
-source = "git+https://github.com/BillyDM/Firewheel?rev=fff0eb1#fff0eb18a7ef00cc0a22188e343ddc98190a4256"
+source = "git+https://github.com/BillyDM/Firewheel?rev=f1e8219#f1e821988d133de54c97c8accf105da35420165d"
 dependencies = [
  "firewheel-core",
  "firewheel-cpal",
@@ -3558,9 +3568,12 @@ dependencies = [
 [[package]]
 name = "firewheel-core"
 version = "0.10.1"
-source = "git+https://github.com/BillyDM/Firewheel?rev=fff0eb1#fff0eb18a7ef00cc0a22188e343ddc98190a4256"
+source = "git+https://github.com/BillyDM/Firewheel?rev=f1e8219#f1e821988d133de54c97c8accf105da35420165d"
 dependencies = [
  "arrayvec",
+ "audioadapter",
+ "audioadapter-buffers",
+ "audioadapter-sample",
  "bevy_ecs",
  "bevy_platform",
  "bevy_reflect",
@@ -3581,7 +3594,7 @@ dependencies = [
 [[package]]
 name = "firewheel-cpal"
 version = "0.10.0"
-source = "git+https://github.com/BillyDM/Firewheel?rev=fff0eb1#fff0eb18a7ef00cc0a22188e343ddc98190a4256"
+source = "git+https://github.com/BillyDM/Firewheel?rev=f1e8219#f1e821988d133de54c97c8accf105da35420165d"
 dependencies = [
  "audioadapter-buffers",
  "bevy_platform",
@@ -3596,12 +3609,13 @@ dependencies = [
 [[package]]
 name = "firewheel-graph"
 version = "0.10.1"
-source = "git+https://github.com/BillyDM/Firewheel?rev=fff0eb1#fff0eb18a7ef00cc0a22188e343ddc98190a4256"
+source = "git+https://github.com/BillyDM/Firewheel?rev=f1e8219#f1e821988d133de54c97c8accf105da35420165d"
 dependencies = [
  "arrayvec",
  "audioadapter",
  "bevy_platform",
  "bevy_reflect",
+ "bitflags 2.11.1",
  "firewheel-core",
  "num-traits",
  "ringbuf",
@@ -3615,7 +3629,7 @@ dependencies = [
 [[package]]
 name = "firewheel-ircam-hrtf"
 version = "0.5.0"
-source = "git+https://github.com/CorvusPrudens/firewheel-ircam-hrtf?rev=fa5e6d1#fa5e6d1aa0c5b0d5148d1e951a0c097f971a3e21"
+source = "git+https://github.com/CorvusPrudens/bevy_seedling.git?rev=a47482ef69d8d4c7d85cba0e003ea36030af627f#a47482ef69d8d4c7d85cba0e003ea36030af627f"
 dependencies = [
  "bevy_ecs",
  "bevy_reflect",
@@ -3627,7 +3641,7 @@ dependencies = [
 [[package]]
 name = "firewheel-macros"
 version = "0.10.0"
-source = "git+https://github.com/BillyDM/Firewheel?rev=fff0eb1#fff0eb18a7ef00cc0a22188e343ddc98190a4256"
+source = "git+https://github.com/BillyDM/Firewheel?rev=f1e8219#f1e821988d133de54c97c8accf105da35420165d"
 dependencies = [
  "bevy_macro_utils",
  "proc-macro2",
@@ -3639,7 +3653,7 @@ dependencies = [
 [[package]]
 name = "firewheel-nodes"
 version = "0.10.0"
-source = "git+https://github.com/BillyDM/Firewheel?rev=fff0eb1#fff0eb18a7ef00cc0a22188e343ddc98190a4256"
+source = "git+https://github.com/BillyDM/Firewheel?rev=f1e8219#f1e821988d133de54c97c8accf105da35420165d"
 dependencies = [
  "bevy_ecs",
  "bevy_platform",
@@ -3655,7 +3669,7 @@ dependencies = [
 [[package]]
 name = "firewheel-pool"
 version = "0.10.0"
-source = "git+https://github.com/BillyDM/Firewheel?rev=fff0eb1#fff0eb18a7ef00cc0a22188e343ddc98190a4256"
+source = "git+https://github.com/BillyDM/Firewheel?rev=f1e8219#f1e821988d133de54c97c8accf105da35420165d"
 dependencies = [
  "bevy_platform",
  "firewheel-core",
@@ -3669,7 +3683,7 @@ dependencies = [
 [[package]]
 name = "firewheel-rtaudio"
 version = "0.10.0"
-source = "git+https://github.com/BillyDM/Firewheel?rev=fff0eb1#fff0eb18a7ef00cc0a22188e343ddc98190a4256"
+source = "git+https://github.com/BillyDM/Firewheel?rev=f1e8219#f1e821988d133de54c97c8accf105da35420165d"
 dependencies = [
  "audioadapter-buffers",
  "bevy_platform",
@@ -3683,24 +3697,23 @@ dependencies = [
 [[package]]
 name = "firewheel-symphonium"
 version = "0.10.0"
-source = "git+https://github.com/BillyDM/Firewheel?rev=fff0eb1#fff0eb18a7ef00cc0a22188e343ddc98190a4256"
+source = "git+https://github.com/BillyDM/Firewheel?rev=f1e8219#f1e821988d133de54c97c8accf105da35420165d"
 dependencies = [
  "bevy_platform",
  "firewheel-core",
- "fixed-resample",
  "symphonium",
 ]
 
 [[package]]
 name = "fixed-resample"
-version = "0.10.0"
+version = "0.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6d9129be532767f30d94695cf6b75969a757dd322c00390de87e57c39635c1e3"
+checksum = "f155339ce723060339d41cb8dd3ed25c37191c4ff90011367e99910aa85eb3ba"
 dependencies = [
  "audioadapter",
  "audioadapter-buffers",
  "ringbuf",
- "rubato 1.0.1",
+ "rubato 2.0.0",
 ]
 
 [[package]]
@@ -4155,9 +4168,9 @@ dependencies = [
 
 [[package]]
 name = "grid"
-version = "1.0.0"
+version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f9e2d4c0a8296178d8802098410ca05d86b17a10bb5ab559b3fb404c1f948220"
+checksum = "b40ca9252762c466af32d0b1002e91e4e1bc5398f77455e55474deb466355ff5"
 
 [[package]]
 name = "guillotiere"
@@ -4839,9 +4852,9 @@ dependencies = [
 
 [[package]]
 name = "libc"
-version = "0.2.185"
+version = "0.2.186"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "52ff2c0fe9bc6cb6b14a0592c2ff4fa9ceb83eea9db979b0487cd054946a2b8f"
+checksum = "68ab91017fe16c622486840e4c83c9a37afeff978bd239b5293d61ece587de66"
 
 [[package]]
 name = "libloading"
@@ -6592,9 +6605,9 @@ dependencies = [
 
 [[package]]
 name = "rubato"
-version = "1.0.1"
+version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "90173154a8a14e6adb109ea641743bc95ec81c093d94e70c6763565f7108ebeb"
+checksum = "ce96ead1a91f7895704a9f08ea5947dfc8bd7c1f2936a22295b655ec67e5c6ef"
 dependencies = [
  "audioadapter",
  "audioadapter-buffers",
@@ -7256,9 +7269,9 @@ dependencies = [
 
 [[package]]
 name = "symphonium"
-version = "0.8.0"
+version = "0.9.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "490fc9c4fa555ac9708d2e5466aacdb0eb92e8a080cf5d5c0f3690bd0cbabfff"
+checksum = "24b8a298133bb9835bcc0c95f85b96de1a46bfc7ddb3435f84a64cf66594e8a3"
 dependencies = [
  "fixed-resample",
  "symphonia",
@@ -7599,7 +7612,7 @@ dependencies = [
  "indexmap",
  "toml_datetime 1.1.1+spec-1.1.0",
  "toml_parser",
- "winnow 1.0.1",
+ "winnow 1.0.2",
 ]
 
 [[package]]
@@ -7608,7 +7621,7 @@ version = "1.1.2+spec-1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a2abe9b86193656635d2411dc43050282ca48aa31c2451210f4202550afb7526"
 dependencies = [
- "winnow 1.0.1",
+ "winnow 1.0.2",
 ]
 
 [[package]]
@@ -8954,9 +8967,9 @@ dependencies = [
 
 [[package]]
 name = "winnow"
-version = "1.0.1"
+version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "09dac053f1cd375980747450bfc7250c264eaae0583872e845c0c7cd578872b5"
+checksum = "2ee1708bef14716a11bae175f579062d4554d95be2c6829f518df847b7b3fdd0"
 dependencies = [
  "memchr",
 ]
@@ -9057,9 +9070,9 @@ dependencies = [
 
 [[package]]
 name = "wmidi"
-version = "4.0.10"
+version = "4.0.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4e55f35b40ad0178422d06e9ba845041baf2faf04627b91fde928d0f6a21c712"
+checksum = "2b1b1e28ac6301b1c097d21c11130090f7ecc5db9d5ef4e52595ab942f8d76d5"
 
 [[package]]
 name = "writeable"
@@ -9319,11 +9332,6 @@ name = "fedry_runtime"
 version = "0.1.0"
 
 [[patch.unused]]
-name = "avian3d"
-version = "0.7.0-dev"
-source = "git+https://github.com/Jondolf/avian.git?branch=main#891a04d8e48d2534a6ef6c082859a637537a03d6"
-
-[[patch.unused]]
 name = "fedry"
 version = "0.1.0"
 
@@ -9334,3 +9342,8 @@ version = "0.1.0"
 [[patch.unused]]
 name = "fedry_runtime"
 version = "0.1.0"
+
+[[patch.unused]]
+name = "avian3d"
+version = "0.7.0-dev"
+source = "git+https://github.com/Jondolf/avian.git?branch=main#891a04d8e48d2534a6ef6c082859a637537a03d6"

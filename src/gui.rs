@@ -506,7 +506,7 @@ fn setup_gui_nodes(
         },
         Node {
             position_type: PositionType::Absolute,
-            top: Val::Px(128.0),
+            top: Val::Px(160.0),
             left: Val::Px(12.0),
             ..default()
         },
