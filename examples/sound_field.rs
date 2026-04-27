@@ -16,6 +16,7 @@ use bevy_skein::SkeinPlugin;
 use bevy_tweening::lens::TextColorLens;
 use bevy_tweening::{AnimTarget, EaseMethod, Tween, TweenAnim};
 use bevy::winit::WinitSettings;
+use bevy::asset::AssetMetaCheck;
 
 #[cfg(feature = "input_lim")]
 use leafwing_input_manager::prelude::{ActionState, InputMap};
@@ -23,9 +24,19 @@ use rand::RngExt;
 use strum::VariantArray;
 use std::time::Duration;
 
+#[cfg(target_arch = "wasm32")]
+use console_log::log;
+
 use eds_bevy_common::midi_synth::prelude::*;
 
 fn main() -> AppExit {
+    // Toggle to debug startup issues (only)
+    // // Init early to catch all the wasm32 logs.
+    // #[cfg(target_arch = "wasm32")]
+    // {
+    //     let _ = console_log::init_with_level(log::Level::Info);
+    // }
+
     let mut app = App::new();
     app
         .insert_resource(WinitSettings {
