@@ -1,4 +1,4 @@
-use bevy::time::common_conditions::repeating_after_delay;
+use bevy_seedling::prelude::{SpatialBasicNode, SpatialScale, sample_effects};
 use eds_bevy_common::*;
 
 use avian3d::PhysicsPlugins;
@@ -13,10 +13,7 @@ use bevy::sprite::Text2dShadow;
 use bevy_seedling::spatial::SpatialListener3D;
 #[cfg(feature = "bevy_skein")]
 use bevy_skein::SkeinPlugin;
-use bevy_tweening::lens::TextColorLens;
-use bevy_tweening::{AnimTarget, EaseMethod, Tween, TweenAnim};
 use bevy::winit::WinitSettings;
-use bevy::asset::AssetMetaCheck;
 
 #[cfg(feature = "input_lim")]
 use leafwing_input_manager::prelude::{ActionState, InputMap};
@@ -92,10 +89,13 @@ fn main() -> AppExit {
 
         // req'd by player plugins
         .insert_resource(OurUser(default()))
-        .insert_resource(PlayerMode::Fps)
-        .insert_resource(PlayerInputSettings::for_fps())
-        // .insert_resource(PlayerMode::Space)
-        // .insert_resource(PlayerInputSettings::for_space())
+        // .insert_resource(PlayerMode::Fps)
+        // .insert_resource(PlayerInputSettings::for_fps())
+        .insert_resource(PlayerMode::Space)
+        .insert_resource(PlayerInputSettings {
+            max_xz_speed: 128,
+            .. PlayerInputSettings::for_space()
+        })
 
         .add_plugins(MyMenuPlugin)
         .init_resource::<LevelDifficulty>()
@@ -111,32 +111,26 @@ fn main() -> AppExit {
         )
 
         .add_systems(First,
-            spawn_midi_synths.run_if(resource_exists::<CommonSoundFontAssets>)
+            ensure_midi_synths.run_if(resource_exists::<CommonSoundFontAssets>)
                 .run_if(not(is_in_menu))
                 .run_if(in_state(ProgramState::InGame)),
         )
         .add_systems(Startup, initialize_audio)
 
 
-        .add_systems(Update,
+        .add_systems(FixedUpdate,
             trigger_midi_notes
-                .run_if(repeating_with_delay(Duration::from_secs(1)))
+                .run_if(not(is_paused))
+                .run_if(not(is_in_menu))
+                .run_if(in_state(ProgramState::InGame)),
+        )
+        .add_systems(Update,
+            move_midi_spheres
+                .run_if(not(is_paused))
                 .run_if(not(is_in_menu))
                 .run_if(in_state(ProgramState::InGame)),
         )
 
-        // .add_systems(
-        //     FixedUpdate,
-        //     (
-        //         check_actions,
-        //     )
-        //         .run_if(not(is_in_menu))
-        //         .run_if(is_level_active)
-        //         .run_if(not(is_paused))
-        //         .run_if(not(debug_gui_wants_direct_input))
-        //         .run_if(in_state(ProgramState::InGame))
-        //     ,
-        // )
     ;
 
     #[cfg(feature = "input_lim")]
@@ -284,7 +278,6 @@ impl Plugin for MyMenuPlugin {
             .add_systems(OnEnter(OverlayState::GameMenu), on_enter_game_menu)
             .add_systems(OnEnter(OverlayState::OptionsMenu), on_enter_options_menu)
             .add_systems(OnEnter(OverlayState::AudioMenu), on_enter_audio_menu)
-            // .add_systems(OnEnter(OverlayState::VideoMenu), on_enter_video_menu)
             .add_systems(OnEnter(OverlayState::ControlsMenu), on_enter_controls_menu);
     }
 }
@@ -295,7 +288,6 @@ pub(crate) enum SimpleMenuActions {
     GameMenu,
     OptionsMenu,
     AudioMenu,
-    VideoMenu,
     ControlsMenu,
     Quit,
     Back,
@@ -331,9 +323,6 @@ impl MenuItemHandler for SimpleMenuActions {
                 }
                 SimpleMenuActions::AudioMenu => {
                     commands.insert_resource(GoIntoMenuRequest(OverlayState::AudioMenu));
-                }
-                SimpleMenuActions::VideoMenu => {
-                    commands.insert_resource(GoIntoMenuRequest(OverlayState::VideoMenu));
                 }
                 SimpleMenuActions::ControlsMenu => {
                     commands.insert_resource(GoIntoMenuRequest(OverlayState::ControlsMenu));
@@ -511,7 +500,6 @@ fn on_enter_options_menu(
         &history,
     )
     .add_item("Audio", (), SimpleMenuActions::AudioMenu)
-    // .add_item("Video", (), SimpleMenuActions::VideoMenu)
     .add_item("Controls", (), SimpleMenuActions::ControlsMenu)
     .add_item("Back", (), SimpleMenuActions::Back)
     .finish(&mut history);
@@ -537,7 +525,6 @@ fn on_enter_escape_menu(
     )
     // (), SimpleMenuActions::ResumeGame)
     .add_item("Audio", (), SimpleMenuActions::AudioMenu)
-    // .add_item("Video", (), SimpleMenuActions::VideoMenu)
     .add_item("Controls", (), SimpleMenuActions::ControlsMenu)
     .add_item("Stop", (), SimpleMenuActions::StopGame)
     .add_item(format!("Resume ({})", current_level.label), (), SimpleMenuActions::ResumeGame)
@@ -552,7 +539,6 @@ fn on_exit_escape_menu(mut pause: ResMut<PauseState>) {
 
 #[derive(Debug, Clone)]
 pub(crate) enum SliderMenuActions {
-    FovSlider,
     MoveSensitivityXSlider,
     MoveSensitivityYSlider,
     MoveSensitivityZSlider,
@@ -567,8 +553,6 @@ impl MenuItemHandler for SliderMenuActions {}
 pub(crate) enum EnumMenuActions {
     DifficultyEnum,
     SelectStartLevelEnum,
-    AntialiasingEnum,
-    TextureQualityEnum,
 }
 
 impl MenuItemHandler for EnumMenuActions {
@@ -590,7 +574,6 @@ pub(crate) enum VolumeMenuActions {
     MusicVolumeSlider,
     EffectsVolumeSlider,
     UiVolumeSlider,
-    // AmbientVolumeSlider,
 }
 
 impl MenuItemHandler for VolumeMenuActions {}
@@ -1037,32 +1020,16 @@ pub(crate) fn level_spawn_started(mut commands: Commands, mut pause: ResMut<Paus
     commands.remove_resource::<AutoEndLevelTimer>();
 }
 
+#[derive(Component, Deref)]
+struct OrigPosition(Vec3);
+
 pub(crate) fn level_spawn_finished(
     mut commands: Commands,
     mut pause: ResMut<PauseState>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut meshes: ResMut<Assets<Mesh>>,
 ) {
-    let cube_mesh = meshes.add(Cuboid::default());
-
-    // Add some synths
-    const HALF_SIDE: i32 = 10;
-    const DIST: f32 = 2.0;
-    for x in -HALF_SIDE..(HALF_SIDE-1) {
-        for z in -HALF_SIDE..(HALF_SIDE-1) {
-            let pos = Vec3::new((x as f32) * DIST, ((x + z) % 4 + 4) as f32, (z as f32) * DIST);
-            let id = commands.spawn((
-                Name::new("Synth"),
-                Transform::from_translation(pos),
-                OurMidiSynth,
-
-                Mesh3d(cube_mesh.clone()),
-                MeshMaterial3d(materials.add(Color::srgb(1.0, 0.4, 0.8))),
-
-            )).id();
-            dbg!(&id);
-        }
-    }
+    spawn_midi_spheres(commands.reborrow(), &mut materials, &mut meshes);
 
     commands.spawn((
         DirectionalLight {
@@ -1189,7 +1156,7 @@ pub(crate) fn advance_level(
 #[reflect(Component)]
 pub(crate) struct OurMidiSynth;
 
-pub(crate) fn spawn_midi_synths(
+pub(crate) fn ensure_midi_synths(
     mut commands: Commands,
     sf_assets: Res<CommonSoundFontAssets>,
     muted: Res<MidiSynthsPaused>,
@@ -1211,64 +1178,122 @@ pub(crate) fn spawn_midi_synths(
         commands.entity(ent).insert((
             synth,
             Sfx,
+
+            sample_effects![
+                SpatialBasicNode::default(),
+                SpatialScale::default(),
+            ],
         ));
 
         synth_map.register_synth(ent);
 
         commands.write_message(SynthMessage::new(ent, SynthCommand::Reset));
-
-        // let volume_id = commands.spawn(VolumeNode::default()).id();
-        // commands.entity(ent).connect(volume_id);
     }
 
     Ok(())
 }
 
-fn repeating_with_delay(
-    duration: Duration,
-) -> impl FnMut(Res<Time>) -> bool + Clone {
-    let mut timer = Timer::new(duration, TimerMode::Repeating);
-    move |time: Res<Time>| {
-        timer.tick(time.delta());
-        timer.is_finished()
+pub(crate) fn spawn_midi_spheres(
+    mut commands: Commands,
+    materials: &mut ResMut<Assets<StandardMaterial>>,
+    meshes: &mut ResMut<Assets<Mesh>>,
+) {
+    let the_mesh = meshes.add(Sphere::default());
+
+    let mut rng = rand::rng();
+
+    // Add some synth producers
+    const HALF_SIDE: i32 = 6;
+    const DIST: f32 = 10.0;
+    for x in -HALF_SIDE..(HALF_SIDE-1) {
+        for z in -HALF_SIDE..(HALF_SIDE-1) {
+
+            let pos = Vec3::new((x as f32) * DIST, ((x * z) % 8 + 4) as f32, (z as f32) * DIST);
+            commands.spawn((
+                Name::new("Synth"),
+                OrigPosition(pos),
+                Transform::from_translation(pos),
+                OurMidiSynth,
+
+                Mesh3d(the_mesh.clone()),
+                MeshMaterial3d(materials.add(Color::oklab(
+                    rng.random_range(0.5 .. 1.0),
+                    rng.random_range(-1.0 .. 1.0),
+                    rng.random_range(-1.0 .. 1.0),
+                ))),
+
+            ));
+        }
+    }
+}
+
+pub(crate) fn move_midi_spheres(
+    mut xfrm_q: Query<(Entity, &mut Transform, &OrigPosition), (With<OurMidiSynth>, With<MidiSynth>)>,
+    time: Res<Time>,
+) {
+    for (ent, mut xfrm, orig) in xfrm_q.iter_mut() {
+        let ent_int = ent.to_bits();
+
+        let ang = ((ent_int % 17) as f32 * time.elapsed_secs()).to_radians();
+        let (s, c) = f32::sin_cos(ang);
+        xfrm.translation = Vec3::new(s * orig.x, xfrm.translation.y, c * orig.z);
     }
 }
 
 pub(crate) fn trigger_midi_notes(
     mut commands: Commands,
     synth_q: Query<Entity, (With<OurMidiSynth>, With<MidiSynth>)>,
-    mut counter: Local<usize>,
-) {
-    for ent in synth_q.iter() {
-        let channel = (ent.to_bits() % 15) as u8;
+    mut counter: Local<u64>,
 
-        *counter = counter.wrapping_add(13);
-        let program = (*counter as u64 + ent.to_bits() % 127) as u8;
-        let note = (*counter as u64 + ent.to_bits()) % 80 + 20;
+    time: Res<Time>,
+    mut timer: Local<Timer>,
+) {
+    timer.tick(time.delta());
+
+    for ent in synth_q.iter() {
+        let ent_int = ent.to_bits();
+
+        let channel = if ent_int % 2 == 0 { SynthChannel::Voice(1) } else { SynthChannel::Drums(1) };
+        let program = (ent_int % 127) as u8;
+        let note = SynthNote::midi(((ent_int.wrapping_add(*counter)) % 90 + 20) as u8);
+
+        *counter = counter.wrapping_add(1);
+
+        let time_tick = (timer.elapsed_secs() * 71.0) as u64;
+        let ent_clock = ent_int.wrapping_mul(time_tick).wrapping_add(*counter) % 51;
+        let should_fire = ent_clock == 0;
+
+        if !should_fire {
+            continue
+        }
 
         commands.write_message(SynthMessage(
             ent, SynthCommand::ProgramChange(
-                SynthChannel::Voice(channel),
+                channel,
                 program,
             ), Duration::ZERO
         ));
         commands.write_message(SynthMessage(
             ent, SynthCommand::NoteOn(
-                SynthChannel::Voice(channel),
-                SynthNote::midi(note as _),
+                channel,
+                note,
                 0.5
             ), Duration::ZERO
         ));
         commands.write_message(SynthMessage(
             ent,
             SynthCommand::NoteOff(
-                SynthChannel::Voice(channel),
-                SynthNote::midi(note as _)
+                channel,
+                note,
             ),
-            // SynthCommand::ChannelOff(
-            //     SynthChannel::Voice(channel),
-            // ),
             Duration::from_secs_f32(0.125),
+        ));
+        commands.write_message(SynthMessage(
+            ent,
+            SynthCommand::ChannelOff(
+                channel,
+            ),
+            Duration::from_secs_f32(0.5),
         ));
     }
 }

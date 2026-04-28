@@ -338,6 +338,8 @@ pub fn assign_stock_menu_actions(
             require_reset: true,
             ..default()
         },
+        Hold::new(0.125),
+        Cooldown::new(0.125),
         bindings![
             KeyCode::Escape,
             GamepadButton::East,    // not GAMEPAD_BUTTON_MENU here
