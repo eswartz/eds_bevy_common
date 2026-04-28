@@ -42,7 +42,6 @@ impl Plugin for AudioCommonPlugin {
             )
             .add_systems(PostUpdate,
                 (
-                    apply_spatial_fixes,
                     apply_volumes,
                 )
             )
@@ -162,20 +161,6 @@ pub fn initialize_audio(master: Single<Entity, With<MainBus>>, mut commands: Com
     ));
 }
 
-/// Apply the correct offset to new SpatialBasicNodes.
-///
-/// Workaround for https://github.com/CorvusPrudens/bevy_seedling/issues/87
-pub fn apply_spatial_fixes(
-    listener_q: Query<&Transform, With<SpatialListener3D>>,
-    mut spatial_q: Query<(&Transform, &mut SpatialBasicNode), Added<SpatialBasicNode>>,
-) {
-    // Fetch the spatializer location.
-    let Some(spat_xfrm) = listener_q.iter().next() else { return };
-
-    for (xfrm, mut node) in spatial_q.iter_mut() {
-        node.offset = (Into::<Vec3>::into(spat_xfrm.translation) - xfrm.translation).into();
-    }
-}
 
 /// Apply mute-able UserVolume to VolumeNodes.
 pub fn apply_volumes(
