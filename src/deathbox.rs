@@ -100,16 +100,23 @@ fn check_out_of_bounds(
     parent_q: Query<&ChildOf>,
     sensor_q: Query<&CollidingEntities, With<DeathboxCollider>>,
     player_q: Query<&Player>,
-    spawned_q: Query<&Spawned, Without<DespawnAfter>>,
+    spawned_q: Query<(&Spawned, Option<&DespawnAfter>)>,
     mut writer: MessageWriter<HitDeathboxMessage>,
 ) {
+    let can_despawn = |ent| {
+        if let Ok((_, after_opt)) = spawned_q.get(ent) {
+            return after_opt.is_none_or(|after| after.0.is_zero())
+        } else {
+            false
+        }
+    };
     for coll in sensor_q.iter() {
         for ent in coll.iter() {
             if player_q.contains(*ent) {
                 writer.write(HitDeathboxMessage::Player(*ent));
                 continue;
             }
-            if spawned_q.contains(*ent) {
+            if can_despawn(*ent) {
                 writer.write(HitDeathboxMessage::Spawned(*ent));
                 continue;
             }
@@ -119,7 +126,7 @@ fn check_out_of_bounds(
                     writer.write(HitDeathboxMessage::Player(parent));
                     break;
                 }
-                if spawned_q.contains(parent) {
+                if can_despawn(parent) {
                     writer.write(HitDeathboxMessage::Spawned(parent));
                     break;
                 }

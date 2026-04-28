@@ -89,7 +89,7 @@ bevy = { version = "0.18.0", default-features = false, features = [
     # And these optional:
     # "dev",
     "bevy_dev_tools",
-    "file_watcher",   # crashes in glTF
+    # "file_watcher",
     # "async-io", # no-go for web
     # "bevy_remote", # not gonna add it from a lib, but go for it (most is Reflect'able)
     "jpeg",
