@@ -214,5 +214,5 @@ name = "game_menu"
 required-features = ["input_bei", "bevy_skein"]
 
 [[example]]
-name = "sound_field"
+name = "sound_chain"
 required-features = ["input_bei", "bevy_skein", "midi_synth"]
