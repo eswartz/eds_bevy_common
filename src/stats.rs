@@ -23,7 +23,7 @@ impl Plugin for StatsOverlayPlugin {
             .insert_resource(StatsOverlayVisible(false))
             .init_resource::<StatsOverlayStyle>()
             .init_resource::<StatsRegistry>()
-            .init_resource::<FpsTimeBuffer>()
+            .init_resource::<DeltaBuffer>()
             .init_resource::<SysInfoBuffer>()
 
             .add_systems(
@@ -87,9 +87,13 @@ impl StatsRegistry {
     }
 }
 
+
+const DELTA_BUFFER_LEN: usize = 16;
+
+/// Track the .delta counts from the last [DELTA_BUFFER_LEN] frames.
 #[derive(Resource, Default, Reflect)]
 #[reflect(Resource)]
-struct FpsTimeBuffer(pub VecDeque<f32>);
+struct DeltaBuffer(pub VecDeque<Duration>);
 
 pub struct FpsProvider;
 
@@ -99,9 +103,21 @@ impl StatsProvider for FpsProvider {
     }
 
     fn format_value(&self, world: &mut World) -> String {
-        if let Some(time_buffer) = world.get_resource::<FpsTimeBuffer>() {
-            let fps = time_buffer.0.len() as f32 / time_buffer.0.iter().sum::<f32>();
-            format!("{:.0}", fps)
+        if let Some(time_buffer) = world.get_resource::<DeltaBuffer>() {
+            // fps = time_buffer.0.len() as f32 / time_buffer.0.iter().sum::<f32>();
+            let mut time_it = time_buffer.0.iter();
+            let Some(time) = time_it.next() else {
+                return "???".to_string();
+            };
+            let mut total_time = time.as_secs_f32();
+            // Each successive time is less relevant.
+            let mut total = 1;
+            for (index, time) in time_it.enumerate() {
+                total_time = total_time + time.as_secs_f32() * index as f32;
+                total += index;
+            }
+            let fps = total as f32 / total_time;
+            format!("{:.0}", if fps.is_infinite() { 0.0 } else { fps })
         } else {
             "???".to_string()
         }
@@ -116,11 +132,11 @@ impl StatsProvider for FpsMaxProvider {
     }
 
     fn format_value(&self, world: &mut World) -> String {
-        if let Some(time_buffer) = world.get_resource::<FpsTimeBuffer>() {
+        if let Some(time_buffer) = world.get_resource::<DeltaBuffer>() {
             let max_ft = time_buffer.0.iter().max_by(|a, b|
                 a.partial_cmp(b).unwrap_or(::core::cmp::Ordering::Equal)
-                ).unwrap_or(&0.0);
-            format!("{:.2}ms", max_ft * 1000.)
+                ).unwrap_or(&Duration::ZERO);
+            format!("{:.2?}", max_ft)
         } else {
             "???".to_string()
         }
@@ -160,11 +176,11 @@ impl StatsProvider for ContactCountProvider {
 #[derive(Resource, Default)]
 struct SysInfoBuffer(pub sysinfo::System, pub Timer);
 
-fn refresh_fps_info(mut time_buffer: ResMut<FpsTimeBuffer>, time: Res<Time>) {
+fn refresh_fps_info(mut time_buffer: ResMut<DeltaBuffer>, time: Res<Time>) {
     let delta = time.delta();
 
-    time_buffer.0.push_back(delta.as_secs_f32());
-    while time_buffer.0.len() > TIME_BUFFER_LEN {
+    time_buffer.0.push_back(delta);
+    while time_buffer.0.len() > DELTA_BUFFER_LEN {
         let _ = time_buffer.0.pop_front();
     }
 }
@@ -297,8 +313,6 @@ impl Default for StatsOverlayStyle {
         }
     }
 }
-
-const TIME_BUFFER_LEN: usize = 16;
 
 #[allow(clippy::too_many_arguments)]
 fn diagnostic_system(
