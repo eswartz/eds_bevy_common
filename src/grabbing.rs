@@ -230,6 +230,8 @@ pub struct GrabbingBehavior {
     /// N/s to apply to move a grabbed object.
     pub force: f32,
     /// If true, multiply force by mass to achieve consistent movement.
+    /// Using false (the default) is more physically realistic, but heavier
+    /// things will take longer to move.
     pub ignore_mass: bool,
     /// Amount (N) by which to accelerate an item per second.
     /// Should be > 1.0 usually.

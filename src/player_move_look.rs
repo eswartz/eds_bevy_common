@@ -997,6 +997,7 @@ pub fn process_player_input_movement_for_space(
 
         let Ok((mut forces, /* cheats, */ mut movement, mut look, mut transform)) = res
         else {
+            // FIXME: machinations since ForcesItem is not Debug
             let e = unsafe { res.unwrap_err_unchecked() };
             warn!("invalid player entity {}: {:?}", input.player_entity(), e);
             continue;
@@ -1041,8 +1042,11 @@ pub fn process_player_input_movement_for_space(
                     instant_thrust.y = up_down;
                 }
 
-                let dir_velocity = transform.rotation * instant_thrust;
-                // let dir_velocity = look.rotation * instant_thrust;
+                let dir_velocity = if camera_settings.freecam {
+                    look.rotation * instant_thrust
+                } else {
+                    transform.rotation * instant_thrust
+                };
 
                 let delta = dir_velocity * overall_speed;
                 if delta.length_squared() > 0.01 {
