@@ -12,6 +12,7 @@ use std::time::Duration;
 
 use avian3d::dynamics::solver::SolverDiagnostics;
 
+use crate::Player;
 use crate::ProgramState;
 
 pub struct StatsOverlayPlugin;
@@ -55,7 +56,7 @@ pub trait StatsProvider: Send + Sync + 'static {
     /// Get the displayed label.
     fn get_label(&self) -> String;
     /// Compute the value string.
-    fn format_value(&self, world: &World) -> String;
+    fn format_value(&self, world: &mut World) -> String;
     /// Tell if the stat is important (needs highlighting).
     /// This is only checked once and is used to construct the UI.
     fn is_important(&self) -> bool { false }
@@ -97,7 +98,7 @@ impl StatsProvider for FpsProvider {
         "FPS".to_string()
     }
 
-    fn format_value(&self, world: &World) -> String {
+    fn format_value(&self, world: &mut World) -> String {
         if let Some(time_buffer) = world.get_resource::<FpsTimeBuffer>() {
             let fps = time_buffer.0.len() as f32 / time_buffer.0.iter().sum::<f32>();
             format!("{:.0}", fps)
@@ -114,7 +115,7 @@ impl StatsProvider for FpsMaxProvider {
         "Max Frame".to_string()
     }
 
-    fn format_value(&self, world: &World) -> String {
+    fn format_value(&self, world: &mut World) -> String {
         if let Some(time_buffer) = world.get_resource::<FpsTimeBuffer>() {
             let max_ft = time_buffer.0.iter().max_by(|a, b|
                 a.partial_cmp(b).unwrap_or(::core::cmp::Ordering::Equal)
@@ -133,7 +134,7 @@ impl StatsProvider for EntCountProvider {
         "Entities".to_string()
     }
 
-    fn format_value(&self, world: &World) -> String {
+    fn format_value(&self, world: &mut World) -> String {
         let count = world.entities().count_spawned() as usize;
         format!("{count}")
     }
@@ -146,7 +147,7 @@ impl StatsProvider for ContactCountProvider {
         "Contacts".to_string()
     }
 
-    fn format_value(&self, world: &World) -> String {
+    fn format_value(&self, world: &mut World) -> String {
         if let Some(solver_diags) = world.get_resource::<SolverDiagnostics>() {
             format!("{}", solver_diags.contact_constraint_count)
         } else {
@@ -188,7 +189,7 @@ impl StatsProvider for CpuUsageProvider {
         "CPU Usage".to_string()
     }
 
-    fn format_value(&self, world: &World) -> String {
+    fn format_value(&self, world: &mut World) -> String {
          if let Some(info) = world.get_resource::<SysInfoBuffer>() {
             format!("{}%", info.0.global_cpu_usage() as i32)
          } else {
@@ -209,13 +210,39 @@ impl StatsProvider for MemoryUsageProvider {
         "Memory Usage".to_string()
     }
 
-    fn format_value(&self, world: &World) -> String {
+    fn format_value(&self, world: &mut World) -> String {
         if let Some(sys_info) = world.get_resource::<SysInfoBuffer>() {
             let pct = (sys_info.0.used_memory() * 100).checked_div(sys_info.0.total_memory()).unwrap_or(0);
             format!("{}%", pct)
          } else {
             String::new()
          }
+    }
+}
+
+#[derive(Default)]
+pub struct PlayerInfoProvider {
+}
+
+impl PlayerInfoProvider {
+}
+
+impl StatsProvider for PlayerInfoProvider {
+    fn get_label(&self) -> String {
+        "Player Pos & Ang".to_string()
+    }
+
+    fn format_value(&self, world: &mut World) -> String {
+        let mut xfrm_q = world.query_filtered::<&Transform, With<Player>>();
+        for xfrm in xfrm_q.iter(world) {
+            return format!("[{:.1?},{:.1?},{:.1?}] @{:.1?}",
+                xfrm.translation.x,
+                xfrm.translation.y,
+                xfrm.translation.z,
+                xfrm.rotation.to_euler(EulerRot::default()).0
+            );
+        }
+        String::new()
     }
 }
 
@@ -226,6 +253,7 @@ fn add_default_providers(mut regy: ResMut<StatsRegistry>) {
     regy.add_provider(Box::new(ContactCountProvider));
     regy.add_provider(Box::new(CpuUsageProvider::default()));
     regy.add_provider(Box::new(MemoryUsageProvider::default()));
+    regy.add_provider(Box::new(PlayerInfoProvider::default()));
 }
 
 #[derive(Resource, Debug, Reflect)]
@@ -369,16 +397,19 @@ fn diagnostic_system(
         if *refresh_timer > 0.05 {
             *refresh_timer = 0.;
 
-            let Some(stats_registry) = world.get_resource::<StatsRegistry>() else { return };
-            let values = stats_registry.providers().iter().map(|prov| prov.format_value(world)).collect::<Vec<_>>();
+            let _ = world.resource_scope::<StatsRegistry, Result>(|world, stats_registry| {
+                // let Some(stats_registry) = world.get_resource::<StatsRegistry>() else { return };
+                let values = stats_registry.providers().iter().map(|prov| prov.format_value(world)).collect::<Vec<_>>();
 
-            let mut text = world.query::<&mut Text>();
-            for (index, value) in values.into_iter().enumerate() {
-                if let Ok(mut text) = text.get_mut(world, text_ents[index]) {
-                    text.0.clear();
-                    text.0 = value;
+                let mut text = world.query::<&mut Text>();
+                for (index, value) in values.into_iter().enumerate() {
+                    if let Ok(mut text) = text.get_mut(world, text_ents[index]) {
+                        text.0.clear();
+                        text.0 = value;
+                    }
                 }
-            }
+                Ok(())
+            });
         }
 
     }
