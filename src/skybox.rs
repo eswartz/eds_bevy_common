@@ -67,7 +67,7 @@ pub struct SkyboxModel{
     pub mapping: CubemapMapping,
 
     /// If set, apply [LightProbe] and [EnvironmentMapLight] to the given Camera entity.
-    pub with_reflection_probe: Option<(Entity, f32)>,
+    pub with_reflection_probe: Option<SkyboxReflectionProbeModel>,
 
     /// Scale factor applied to the skybox image.
     /// After applying this multiplier to the image samples, the resulting values should
@@ -80,6 +80,19 @@ pub struct SkyboxModel{
     /// as the vertical axis.
     /// see: [Skybox::rotation]
     pub rotation: Quat,
+}
+
+#[derive(Debug, Reflect, PartialEq)]
+#[reflect(Debug, Default)]
+#[type_path = "game"]
+pub struct SkyboxReflectionProbeModel {
+    pub brightness: f32,
+}
+
+impl Default for SkyboxReflectionProbeModel {
+    fn default() -> Self {
+        Self { brightness: bevy::prelude::light_consts::lux::FULL_DAYLIGHT }
+    }
 }
 
 impl Default for SkyboxModel {
@@ -238,14 +251,14 @@ fn check_load_skybox(
     });
 
     // Do we want a reflection probe?
-    let Some((ent, brightness)) = model.with_reflection_probe else {
+    let Some(SkyboxReflectionProbeModel{ brightness }) = model.with_reflection_probe else {
         // Nope, all done!
         commands.insert_resource(SkyboxSetup::Finished);
         return Ok(())
     };
 
     // Set up reflection probe machinery.
-    commands.entity(ent).insert((
+    commands.entity(cam).insert((
         ReflectionProbeModel{
             image: skybox_image,
             brightness,
