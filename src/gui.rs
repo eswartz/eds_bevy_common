@@ -425,6 +425,8 @@ fn check_grab_focus_state(
     gui_state: ResMut<GuiState>,
     mut grab_state: ResMut<GrabState>,
     mut cursor_options: Single<&mut CursorOptions, With<PrimaryWindow>>,
+
+    mut awaiting: Local<Option<bool>>,
 ) {
     let mut desired_grab: Option<bool> = None;
 
@@ -440,13 +442,23 @@ fn check_grab_focus_state(
         desired_grab = Some(event.0);
     }
 
+    if desired_grab.is_none() && awaiting.is_some() {
+        if cursor_options.grab_mode == CursorGrabMode::None {
+            desired_grab = Some(true);
+        } else {
+            *awaiting = None;
+        }
+    }
+
     if let Some(grab) = desired_grab {
         if grab {
+            *awaiting = Some(true);
             cursor_options.grab_mode = GRABBED_MODE;
             cursor_options.visible = false;
 
             grab_state.was_grabbed = true;
         } else {
+            *awaiting = None;
             if grab_state.was_grabbed {
                 grab_state.was_grabbed = false;
                 grab_state.options = cursor_options.clone();
