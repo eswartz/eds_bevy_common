@@ -16,8 +16,6 @@ categories = ["game"]
 #########
 [patch.crates-io]
 # bevy = { path = "../bevy-fork" }
-avian3d = { git = "https://github.com/Jondolf/avian.git", branch = "main" }
-# avian3d = { path = "../avian/crates/avian3d" }
 
 # Support webp.
 # See above to fix error: feature `reqs` includes `gltf/EXT_texture_webp`, but `gltf` is not a dependency
@@ -68,8 +66,8 @@ dev_native = [
     "bevy/webgpu",
 ]
 web = [
-    # "bevy/webgpu",
-    # "cpal/audioworklet",
+    "bevy/webgpu",
+    "cpal/audioworklet",
     "bevy_seedling/web_audio",
 ]
 
@@ -113,7 +111,8 @@ log = { version = "0.4", features = [
 tracing = { version = "0.1", features = [
     "max_level_debug",
 ] }
-avian3d = { version = "0.6.0", default-features = false, features = [
+# avian3d = { version = "0.6.0", default-features = false, features = [
+avian3d = { git = "https://github.com/Jondolf/avian.git", branch = "main", default-features = false, features = [
 	"3d",
 	"collider-from-mesh",
     "f32", "parry-f32",
@@ -131,13 +130,28 @@ bevy-inspector-egui = "0.36"
 egui = { version = "0.33", features = ["bytemuck"] }
 
 firewheel = { git = "https://github.com/BillyDM/Firewheel", rev = "f1e8219", optional = true }
+# firewheel = { git = "https://github.com/BillyDM/Firewheel", rev = "f1e8219", optional = true, default-features = false, features = [
+#     "bevy",
+#   "spatial_basic_node",
+#   "scheduled_events",
+#   "musical_transport",
+#   "glam-30",
+#   "sampler_node",
+#   "std",
+#   "tracing",
+
+#     # "resample_inputs",
+#   "fast_filter_nodes",
+#  ] }
 
 # bevy_seedling = { version = "0.8", default-features = false, optional = true, features = [
-bevy_seedling = { git = "https://github.com/CorvusPrudens/bevy_seedling.git", rev = "a47482ef69d8d4c7d85cba0e003ea36030af627f", optional = true, default-features = false, features = [
-    "wav", "ogg", "rand", "loudness", "reflect",
+bevy_seedling = { git = "https://github.com/CorvusPrudens/bevy_seedling.git", rev = "bfd2f33ddd81be928a796febf4ffff599999495a", optional = true, default-features = false, features = [
+    "wav", "ogg", "rand", "reflect", "diagnostics",
     "hrtf",
-    "web_audio",
+    "cpal",
+#    "web_audio",
 
+    "loudness",
     # "dev",
     # 0.10
     # "stream",
@@ -146,6 +160,8 @@ bevy_seedling = { git = "https://github.com/CorvusPrudens/bevy_seedling.git", re
     # 0.11
     "effects",
 ] }
+
+cpal = "0.17"
 
 rustc-hash = "2.1.1"
 
@@ -187,6 +203,14 @@ crossbeam-channel = { version = "0.5", optional = true }
 fuzzy-matcher = "0.3.7"
 
 console_log = "1"
+
+wasm_thread = "0.3"
+wasm-bindgen = { version = "0.2.120" }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+firewheel = { git = "https://github.com/BillyDM/Firewheel", rev = "f1e8219", default-features = false, features = [
+  "wasm-bindgen",
+] }
 
 # Enable a small amount of optimization in the dev profile.
 [profile.dev]

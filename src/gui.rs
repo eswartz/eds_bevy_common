@@ -69,7 +69,7 @@ impl Plugin for GuiPlugin {
             on_loading_finished)
 
         .add_systems(
-            PostUpdate,
+            Update,
             check_grab_focus_state.run_if(in_state(ProgramState::InGame))
         )
 

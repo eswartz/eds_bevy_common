@@ -23,10 +23,13 @@ impl Plugin for PlayerMovementPlugin {
             .add_systems(
                 FixedPostUpdate,
                 (
-                    clear_player_velocity.run_if(window_changed_focus),
+                    clear_player_velocity.run_if(
+                        window_changed_focus
+                        .or(resource_changed::<PlayerMode>)),
                     check_player_environment_fps,
                     check_player_environment_space,
-                    process_player_input_movement_for_cheats.run_if(is_cheating),
+                    process_player_input_movement_for_cheats
+                        .run_if(is_cheating),
                     process_player_input_movement_for_fps
                         .run_if(not(is_cheating))
                         ,
@@ -230,7 +233,7 @@ pub struct PlayerMovement {
     /// Represents how dense is the medium the player is in.
     /// I.e. 0.0 means empty space, 1.0 means encased on rock.
     pub medium_friction: f32,
-/// When set, player issued a jump in the previous frame.
+    /// When set, player issued a jump in the previous frame.
     pub had_jump_event: bool,
     /// Counts how many player jumps are allowed still.
     /// (Decremented form a start [PlayerInputSettings::jump_count].
@@ -452,7 +455,7 @@ impl PlayerLook {
 }
 
 /// Stop moving player, e.g. when input is going to UI.
-fn clear_player_velocity(mut player_q: Query<&mut LinearVelocity, With<PlayerMovement>>) {
+pub fn clear_player_velocity(mut player_q: Query<&mut LinearVelocity, With<PlayerMovement>>) {
     for mut vel in player_q.iter_mut() {
         vel.0 = Vector::ZERO;
     }

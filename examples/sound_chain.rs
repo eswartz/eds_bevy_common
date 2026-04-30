@@ -1,3 +1,4 @@
+use bevy::asset::AssetMetaCheck;
 use bevy::input::common_conditions::input_pressed;
 use bevy_seedling::prelude::{SpatialBasicNode, SpatialScale, sample_effects};
 use eds_bevy_common::*;
@@ -50,7 +51,17 @@ fn main() -> AppExit {
         .add_plugins(CommonAssetsPlugin)
 
         .add_plugins((
-            DefaultPlugins,
+            DefaultPlugins
+                .set(AssetPlugin {
+                    // Wasm builds will check for meta files (that don't exist) if this isn't set.
+                    // This causes errors and even panics in web builds on itch.
+                    // See https://github.com/bevyengine/bevy_github_ci_template/issues/48.
+                    meta_check: if cfg!(target_arch = "wasm32") { AssetMetaCheck::Never } else { AssetMetaCheck::Always },
+                    // watch_for_changes_override: if cfg!(target_arch = "wasm32") { Some(true) } else { None },
+                    // file_path: if cfg!(target_arch = "wasm32") { "assets".to_string() } else { base_dir.join("assets").display().to_string() },
+                    file_path: "assets".to_string(),
+                    ..default()
+                }),
             PhysicsPlugins::default(),
         ))
         .add_plugins(avian3d::debug_render::PhysicsDebugPlugin::default())
@@ -78,6 +89,7 @@ fn main() -> AppExit {
         .add_plugins(MidiSynthPlugin)
         .add_plugins(SynthPlugin)
         .add_plugins(ClientSynthPlugin)
+        .add_plugins(MenuAudioPlugin)
 
         .add_plugins(PlayerCameraPlugin)
         .add_plugins(PlayerInputPlugin)
@@ -110,7 +122,7 @@ fn main() -> AppExit {
         .add_plugins(MyMenuPlugin)
         .init_resource::<LevelDifficulty>()
 
-        .insert_resource(ProductName("Sound Field".to_string()))
+        .insert_resource(ProductName("Sound Chain".to_string()))
 
         .add_plugins(MyGamePlugin)
 

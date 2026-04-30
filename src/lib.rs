@@ -38,6 +38,7 @@ pub mod stats;
 pub mod split_into_cubes;
 pub mod detail_normal;
 pub mod parallax_depth;
+pub mod menu_audio;
 #[cfg(feature = "highlighting")]
 pub mod highlighting;
 #[cfg(feature = "grabbing")]
@@ -89,6 +90,7 @@ pub use stats::*;
 pub use split_into_cubes::*;
 pub use detail_normal::*;
 pub use parallax_depth::*;
+pub use menu_audio::*;
 pub use app::*;
 
 #[cfg(feature = "midi_synth")]

@@ -58,10 +58,12 @@ fn main() -> AppExit {
         .add_plugins(GuiPlugin)
         .add_plugins(WorldUiPlugin)
         .add_plugins(WorldStatePlugin)
-        .add_plugins(AudioCommonPlugin)
         .add_plugins(EffectsPlugin)
         .add_plugins(LevelsPlugin)
         .add_plugins(DeathboxPlugin::default())
+
+        .add_plugins(AudioCommonPlugin)
+        .add_plugins(MenuAudioPlugin)
 
         .add_plugins(PlayerCameraPlugin)
         .add_plugins(PlayerInputPlugin)
@@ -83,6 +85,8 @@ fn main() -> AppExit {
         .init_resource::<LevelDifficulty>()
 
         .add_plugins(MyGamePlugin)
+
+        .add_systems(Startup, initialize_audio)
 
         .add_systems(Startup, (
             register_dummy_level,
