@@ -67,7 +67,6 @@ dev_native = [
 ]
 web = [
     "bevy/webgpu",
-    "cpal/audioworklet",
     "bevy_seedling/web_audio",
 ]
 
@@ -149,7 +148,7 @@ bevy_seedling = { git = "https://github.com/CorvusPrudens/bevy_seedling.git", re
     "wav", "ogg", "rand", "reflect", "diagnostics",
     "hrtf",
     "cpal",
-#    "web_audio",
+    "web_audio",
 
     "loudness",
     # "dev",
@@ -160,8 +159,6 @@ bevy_seedling = { git = "https://github.com/CorvusPrudens/bevy_seedling.git", re
     # 0.11
     "effects",
 ] }
-
-cpal = "0.17"
 
 rustc-hash = "2.1.1"
 
