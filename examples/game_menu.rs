@@ -986,7 +986,6 @@ impl Plugin for MyGamePlugin {
                 OnTransition{ exited: GameplayState::Playing, entered: GameplayState::Setup },
                 (
                     hide_instructions,
-                    despawn_level,
                 )
             )
             .add_systems(OnEnter(LevelState::LevelLoaded),
@@ -1200,23 +1199,6 @@ pub(crate) fn spawn_level(
     status_q.single_mut().unwrap().clear();
 }
 
-pub(crate) fn despawn_level(
-    mut commands: Commands,
-    sounds_q: Query<Entity, With<bevy_seedling::sample::SamplePlayer>>,
-    spawned_q: Query<Entity, With<Spawned>>,
-    player_q: Query<Entity, With<Player>>,
-) {
-    for ent in sounds_q.iter() {
-        commands.entity(ent).try_despawn();
-    }
-    for ent in spawned_q.iter() {
-        commands.entity(ent).try_despawn();
-    }
-    for ent in player_q.iter() {
-        commands.entity(ent).try_despawn();
-    }
-}
-
 pub(crate) fn spawn_player_on_start(world: &mut World) {
     // Make the player collision model and Player
     let player_ent = spawn_fps_player(
@@ -1266,16 +1248,9 @@ pub(crate) fn setup_level(
 
 fn show_instructions(
     mut commands: Commands,
-    // showed: Option<Res<ShowedTutorial>>,
     ui_font: Res<UiFont>,
     instructions_q: Single<Entity, With<InstructionsArea>>,
 ) {
-    // if showed.is_some() {
-    //     return;
-    // }
-
-    // commands.insert_resource(ShowedTutorial);
-
     let mut text_ent = Entity::PLACEHOLDER;
 
     commands.entity(*instructions_q).insert(Visibility::Inherited)  // show

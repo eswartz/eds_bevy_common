@@ -2,6 +2,9 @@ use bevy::asset::AssetMetaCheck;
 use bevy::input::common_conditions::input_pressed;
 use bevy_seedling::prelude::{SpatialBasicNode, SpatialScale, sample_effects};
 use eds_bevy_common::*;
+use bevy_tweening::*;
+use bevy_tweening::lens::TextColorLens;
+use bevy_tweening::{AnimTarget, EaseMethod, Tween, TweenAnim};
 
 use avian3d::PhysicsPlugins;
 use avian3d::prelude::Physics;
@@ -927,16 +930,11 @@ impl Plugin for MyGamePlugin {
                 ).chain()
             )
 
-            .add_systems(
-                OnTransition{ exited: GameplayState::Playing, entered: GameplayState::Setup },
-                (
-                    despawn_level,
-                )
-            )
             .add_systems(OnEnter(LevelState::LevelLoaded),
                 (
                     add_player,
                     start_configuring,
+                    show_instructions,
                 ).chain()
                 .run_if(in_state(ProgramState::InGame))
             )
@@ -1106,23 +1104,6 @@ pub(crate) fn spawn_level(
     status_q.single_mut().unwrap().clear();
 }
 
-pub(crate) fn despawn_level(
-    mut commands: Commands,
-    sounds_q: Query<Entity, With<bevy_seedling::sample::SamplePlayer>>,
-    spawned_q: Query<Entity, With<Spawned>>,
-    player_q: Query<Entity, With<Player>>,
-) {
-    for ent in sounds_q.iter() {
-        commands.entity(ent).try_despawn();
-    }
-    for ent in spawned_q.iter() {
-        commands.entity(ent).try_despawn();
-    }
-    for ent in player_q.iter() {
-        commands.entity(ent).try_despawn();
-    }
-}
-
 pub(crate) fn spawn_player_on_start(world: &mut World) {
     // Make the player collision model and Player
     let player_ent = spawn_fps_player(
@@ -1181,32 +1162,91 @@ pub(crate) fn advance_level(
     commands.set_state(GameplayState::Setup);
 }
 
+
+/////////
+
+/// Set when we showed the text.
+#[derive(Resource, Reflect)]
+#[reflect(Resource)]
+#[type_path = "game"]
+pub(crate) struct ShowedTutorial;
+
+fn show_instructions(
+    mut commands: Commands,
+    showed: Option<Res<ShowedTutorial>>,
+    fonts: Res<CommonGuiAssets>,
+    instructions_q: Single<Entity, With<InstructionsArea>>,
+) {
+    if showed.is_some() {
+        return;
+    }
+
+    commands.insert_resource(ShowedTutorial);
+
+    let mut text_ent = Entity::PLACEHOLDER;
+
+    commands.entity(*instructions_q).insert(Visibility::Inherited)  // show
+    .with_children(|builder| {
+        text_ent = builder.spawn((
+            DespawnOnExit(GameplayState::Playing),
+            Text::new(
+                r#"Left Click: Spawn noisy sphere
+                "#
+            ),
+            TextLayout::new(Justify::Center, LineBreak::WordBoundary),
+            TextFont {
+                font: fonts.std_ui.clone(),
+                font_size: 32.0,
+                .. default()
+            },
+            TextColor(Color::WHITE.with_alpha(0.5)),
+            TextShadow {
+                offset: Vec2::splat(2.),
+                color: Color::linear_rgba(0., 0., 0., 0.0),
+            },
+        )).id();
+    });
+
+    // Fade in and out.
+
+    let color_tween = Tween::new(
+        EaseMethod::EaseFunction(EaseFunction::CubicOut),
+        Duration::from_secs_f32(3.0),
+        TextColorLens {
+            start: Color::WHITE.with_alpha(0.0),
+            end: Color::WHITE.with_alpha(1.0),
+        }
+    )
+    .with_repeat(2, bevy_tweening::RepeatStrategy::MirroredRepeat);
+
+    let shadow_tween = Tween::new(
+        EaseMethod::EaseFunction(EaseFunction::CubicOut),
+        Duration::from_secs_f32(3.0),
+        TextShadowColorLens {
+            start: Color::linear_rgba(0., 0., 0., 0.0),
+            end: Color::linear_rgba(0., 0., 0., 1.0),
+        }
+    )
+    .with_repeat(2, bevy_tweening::RepeatStrategy::MirroredRepeat);
+
+    commands.entity(text_ent).try_insert((
+        DespawnOnExit(GameplayState::Playing),
+        TweenAnim::new(color_tween).with_destroy_on_completed(true),
+
+        // Add another TweenAnim.
+        children![(
+            TweenAnim::new(shadow_tween).with_destroy_on_completed(true),
+            AnimTarget::component::<TextShadow>(text_ent),
+        )]
+    ));
+}
+
+
 /////////
 
 #[derive(Component, Reflect)]
 #[reflect(Component)]
 struct Lifetime(Duration);
-
-// pub(crate) fn spawn_after_time(
-//     mut commands: Commands,
-//     mut tts_q: Query<(Entity, &mut TimeToStart)>,
-//     time: Res<Time<Physics>>,
-// ) {
-//     for (ent, mut tts) in tts_q.iter_mut() {
-//         let new_dur = tts.0.saturating_sub(time.delta());
-//         if new_dur.is_zero() {
-//             let mut ent_commands = commands.entity(ent);
-//             ent_commands.insert((
-//                 OurMidiSynth,
-//                 Visibility::Inherited,
-//             ));
-//             ent_commands.remove::<TimeToStart>();
-//         } else {
-//             tts.0 = new_dur;
-//         }
-//     }
-// }
-
 
 /////////
 
