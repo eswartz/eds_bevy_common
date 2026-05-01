@@ -208,7 +208,7 @@ pub struct GrabbedItem {
     /// Distance of the entity to the camera, controlling where it lives
     /// as the camera moves (can change over time).
     pub distance: f32,
-    // Original axes of freedom before grabbing.
+    /// Original axes of freedom before grabbing.
     orig_axes: LockedAxes,
     #[cfg(feature = "highlighting")]
     orig_mode: HighlightingMode,
@@ -535,14 +535,17 @@ fn process_grab_changes(
                     //
                     if cfg!(feature = "highlighting") {
                         if *mode == HighlightingMode::Busy {
-                            *mode = grabbed.orig_mode.original_or_enabled();
+                            *mode = grabbed.orig_mode;
                         }
                     }
                 }
             }
             GrabbingCommand::CancelGrabItems => {
                 commands.remove_resource::<GrabbedItem>();
-                *mode = HighlightingMode::Enabled;
+                #[cfg(feature = "highlighting")]
+                {
+                    *mode = HighlightingMode::Disabled;
+                }
             }
         }
     }
