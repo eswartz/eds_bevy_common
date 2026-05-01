@@ -474,7 +474,7 @@ fn on_enter_game_menu(
         enum_q.get_mut(entity).unwrap().current = Some(index);
     }
     fn set_level(In(v): In<usize>, mut commands: Commands) {
-        commands.insert_resource(LevelIndex(v));
+        commands.insert_resource(NextLevelIndex(v));
     }
     let get_level = commands.register_system(IntoSystem::into_system(get_level));
     let set_level = commands.register_system(IntoSystem::into_system(set_level));

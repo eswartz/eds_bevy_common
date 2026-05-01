@@ -2,6 +2,7 @@ use bevy::camera::visibility::RenderLayers;
 use bevy::input::mouse::AccumulatedMouseMotion;
 use bevy::prelude::*;
 
+use crate::DespawnOnExitOrReenter;
 use crate::assets::CommonGuiAssets;
 use crate::RENDER_LAYER_DEFAULT;
 use crate::RENDER_LAYER_VIEW;
@@ -101,7 +102,7 @@ fn init_crosshair(
     // TODO: make this simpler. It looks like hacks.
     commands.spawn((
         Name::new("Crosshair"),
-        DespawnOnExit(ProgramState::InGame),
+        DespawnOnExitOrReenter(ProgramState::InGame),
         Crosshair { current_strength: 0. },
 
         RenderLayers::from_layers(&[RENDER_LAYER_DEFAULT, RENDER_LAYER_VIEW]),

@@ -269,6 +269,9 @@ fn on_start_grab(
     mut commands: Commands,
     grabbable_q: Query<Entity, With<Grabbable>>,
     grabbed_opt: Option<Res<GrabbedItem>>,
+    #[cfg(feature = "highlighting")]
+    mut highlighting_mode: ResMut<HighlightingMode>,
+    release_q: Query<&ActionEvents, Or<(With<Action<actions::ToggleSelect>>, With<Action<actions::StartGrab>>)>>,
 ) {
     if grabbed_opt.is_some()
     // be careful with these keys triggering false re-starts e.g. on tabbing into a window
@@ -278,6 +281,14 @@ fn on_start_grab(
         commands.write_message(GrabbingCommand::ReleaseItems);
     } else {
         // Try to grab.
+
+        let release = release_q.iter().any(|e| e.contains(ActionEvents::START));
+        if release {
+            if highlighting_mode.is_disabled() {
+                *highlighting_mode = HighlightingMode::Enabled;
+            }
+        }
+
         if let Some(grabbed) = grabbable_q.iter().next() {
             commands.write_message(GrabbingCommand::GrabItem(grabbed));
             commands.entity(grabbed).try_remove::<Grabbable>();

@@ -1,3 +1,7 @@
+//! Provides a data model [LevelList], composed of an ordered [LevelInfo] list.
+//! [LevelIndex] represents the current level.
+//! [NextLevelIndex] is the to-be-spanwed next level once [crate::LevelState::Advance]
+//! is set.
 use bevy::prelude::*;
 
 pub struct LevelsPlugin;
@@ -7,6 +11,7 @@ impl Plugin for LevelsPlugin {
         app
             .insert_resource(LevelList(default()))
             .insert_resource(LevelIndex(0))
+            .insert_resource(NextLevelIndex(0))
             ;
     }
 }
@@ -50,3 +55,10 @@ pub struct CurrentLevel(pub LevelInfo);
 #[reflect(Resource, Default)]
 #[type_path = "game"]
 pub struct LevelIndex(pub usize);
+
+/// The next level index into [LevelList],
+/// invoked upon handling [crate::LevelState::Advance].
+#[derive(Resource, Default, Reflect)]
+#[reflect(Resource, Default)]
+#[type_path = "game"]
+pub struct NextLevelIndex(pub usize);

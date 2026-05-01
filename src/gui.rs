@@ -16,6 +16,7 @@ use bevy::window::WindowFocused;
 use bevy_asset_loader::prelude::*;
 use bevy_seedling::prelude::MainBus;
 
+use crate::DespawnOnExitOrReenter;
 use crate::StatsOverlayVisible;
 use crate::assets::CommonGuiAssets;
 use crate::RENDER_LAYER_UI;
@@ -49,6 +50,12 @@ impl Plugin for GuiPlugin {
                 update_gui_state,    // initialize
                 ensure_font_assets,
                 grab_cursor_for_game,
+                setup_gui_nodes,
+            )
+            .chain()
+        )
+        .add_systems(OnTransition { exited: ProgramState::InGame, entered: ProgramState::InGame },
+            (
                 setup_gui_nodes,
             )
             .chain()
@@ -508,7 +515,7 @@ fn setup_gui_nodes(
 
     // Info
     commands.spawn((
-        DespawnOnExit(ProgramState::InGame),
+        DespawnOnExitOrReenter(ProgramState::InGame),
         InfoArea,
         Text::new(""),
         TextFont {
@@ -526,7 +533,7 @@ fn setup_gui_nodes(
 
     // Instructions
     commands.spawn((
-        DespawnOnExit(ProgramState::InGame),
+        DespawnOnExitOrReenter(ProgramState::InGame),
         InstructionsArea,
         Visibility::Hidden,
         Text::new(
@@ -549,7 +556,7 @@ fn setup_gui_nodes(
 
     // Score
     commands.spawn((
-        DespawnOnExit(ProgramState::InGame),
+        DespawnOnExitOrReenter(ProgramState::InGame),
         ScoreArea,
         Text::default(),
         TextFont {
@@ -572,7 +579,7 @@ fn setup_gui_nodes(
 
     // Game Status (win/lose)
     commands.spawn((
-        DespawnOnExit(ProgramState::InGame),
+        DespawnOnExitOrReenter(ProgramState::InGame),
         Node {
             width: Val::Percent(100.),
             height: Val::Percent(100.),
@@ -607,7 +614,7 @@ fn setup_gui_nodes(
 
     // In-hand status
     commands.spawn((
-        DespawnOnExit(ProgramState::InGame),
+        DespawnOnExitOrReenter(ProgramState::InGame),
         HandStatusArea,
         UiNodeAlpha(0.0),
         Name::new("InHandStatus"),
@@ -626,7 +633,7 @@ fn setup_gui_nodes(
 
     // Pause icon in upper right
     commands.spawn((
-        DespawnOnExit(ProgramState::InGame),
+        DespawnOnExitOrReenter(ProgramState::InGame),
         PauseArea,
         Visibility::Visible,
         TextFont {
@@ -646,7 +653,7 @@ fn setup_gui_nodes(
 
     // Mute icon in upper right
     commands.spawn((
-        DespawnOnExit(ProgramState::InGame),
+        DespawnOnExitOrReenter(ProgramState::InGame),
         MuteArea,
         Visibility::Visible,
         TextFont {

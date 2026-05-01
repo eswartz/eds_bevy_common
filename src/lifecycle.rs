@@ -1,11 +1,11 @@
 use avian3d::prelude::Physics;
 use avian3d::prelude::PhysicsTime as _;
+use bevy::ecs::entity_disabling::Disabled;
 use bevy::prelude::*;
+use bevy::state::state::StateTransitionSystems;
 use bevy_tweening::TweenAnim;
 
-use crate::ConfigureBeforePlaying;
-use crate::LevelState;
-use crate::is_paused;
+use crate::*;
 
 use super::markers::DespawnAfter;
 
@@ -21,6 +21,15 @@ impl Plugin for LifecyclePlugin {
                 check_despawners.run_if(not(is_paused)),
                 check_configure_before_loading,
             ))
+            .add_systems(
+                StateTransition,
+                (
+                    despawn_entities_on_state_change::<ProgramState>.in_set(StateTransitionSystems::EnterSchedules),
+                    despawn_entities_on_state_change::<LevelState>.in_set(StateTransitionSystems::EnterSchedules),
+                    despawn_entities_on_state_change::<GameplayState>.in_set(StateTransitionSystems::EnterSchedules),
+                    despawn_entities_on_state_change::<OverlayState>.in_set(StateTransitionSystems::EnterSchedules),
+                )
+            )
         ;
     }
 }
@@ -44,6 +53,26 @@ fn check_despawners(
     }
 }
 
+/// Despawns entities marked with [`DespawnOnExitOrReenter<S>`] when their state no
+/// longer matches the world state.
+///
+/// If the entity has already been despawned no warning will be emitted.
+fn despawn_entities_on_state_change<S: States>(
+    mut commands: Commands,
+    mut transitions: MessageReader<StateTransitionEvent<S>>,
+    query: Query<(Entity, &DespawnOnExitOrReenter<S>), Allow<Disabled>>,
+) {
+    for transition in transitions.read() {
+        let Some(entered) = &transition.entered else {
+            continue;
+        };
+        for (entity, binding) in &query {
+            if binding.0 == *entered {
+                commands.entity(entity).try_despawn();
+            }
+        }
+    }
+}
 
 /// This resource reflects and drives the state of Pause across the process.
 #[derive(Resource, Debug, Clone, Reflect, Default)]
