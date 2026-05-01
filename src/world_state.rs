@@ -47,7 +47,7 @@ impl Default for WorldMarker {
     }
 }
 
-/// The AABB reflects the full extent of the "valid content" of the world.
+/// The singleton entity for [WorldMarker], while defined.
 #[derive(Resource, Reflect)]
 #[reflect(Resource)]
 #[type_path = "game"]
@@ -63,7 +63,16 @@ fn transition_from_loading(
 pub fn setup_world_marker(
     mut commands: Commands,
     world_q: Query<&WorldMarker>,
+    world_marker: Option<Res<WorldMarkerEntity>>,
+    child_q: Query<&Children>,
 ) {
+    if let Some(ent) = &world_marker {
+        if let Ok(children) = child_q.get(ent.0) {
+            for kid in children {
+                commands.entity(*kid).despawn();
+            }
+        }
+    }
     if world_q.is_empty() {
         let ent = commands.spawn((
             Name::new("World"),
@@ -71,8 +80,6 @@ pub fn setup_world_marker(
             WorldMarker::default(),
             Transform::IDENTITY,
             Visibility::Inherited,
-            RigidBody::Static,
-            Collider::cuboid(0.1, 0.1, 0.1),
         )).id();
         commands.insert_resource(WorldMarkerEntity(ent));
     }

@@ -73,6 +73,8 @@ pub enum ProgramState {
     LaunchMenu,
     /// This state means some aspect of the game is active,
     /// possibly paused, scripted, or behind a transient menu.
+    /// Leaving this state (to LoadingSave, LaunchMenu, New)
+    /// **destroys** the game world (under [crate::WorldMarkerEntity]).
     InGame,
     /// Completed the program. This is not used internally,
     /// but may be useful for tracking when the program is exiting.
@@ -133,6 +135,6 @@ pub enum LevelState {
     Won,
     /// In Lost state.
     Lost,
-    /// Switching levels.
+    /// Switching to some level (perhaps [crate::NextLevelIndex]).
     Advance,
 }
