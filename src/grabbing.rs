@@ -3,6 +3,7 @@
 //! Items with the [crate::Selected] component can be grabbed.
 
 use avian3d::math::AdjustPrecision;
+use avian3d::math::Scalar;
 #[cfg(feature = "input_bei")]
 use bevy::color::palettes::tailwind;
 use bevy_mod_outline::InheritOutline;
@@ -53,22 +54,24 @@ impl Plugin for GrabbingPlugin {
             .init_resource::<GrabbedItemStyle>()
             .add_message::<GrabbingCommand>()
             .add_systems(
-            FixedUpdate,
-            (
-                sync_grabbable_with_highlighted
-                    .run_if(highlighted_is_grabbable)
-                    .run_if(not(is_grabbing_item))
-                    ,
-                process_grab_changes,
-                move_grabbed_item.run_if(is_grabbing_item),
+                FixedUpdate,
+                (
+                    sync_grabbable_with_highlighted
+                        .run_if(highlighted_is_grabbable)
+                        .run_if(not(is_grabbing_item))
+                        ,
+                    process_grab_changes,
+                    move_grabbed_item.run_if(is_grabbing_item),
+                )
+                .chain()
+                .after(PhysicsSystems::Writeback)
+                .run_if(not(is_in_menu))
+                .run_if(is_level_active)
+                .run_if(not(is_paused))
+                .run_if(not(debug_gui_wants_direct_input))
+                .run_if(in_state(ProgramState::InGame)),
             )
-            .chain()
-            .run_if(not(is_in_menu))
-            .run_if(is_level_active)
-            .run_if(not(is_paused))
-            .run_if(not(debug_gui_wants_direct_input))
-            .run_if(in_state(ProgramState::InGame))
-        );
+        ;
 
         if cfg!(feature = "input_bei") {
         // app.add_systems(
@@ -211,6 +214,10 @@ pub struct GrabbedItem {
     orig_mode: HighlightingMode,
     /// original layers when grab started
     orig_layers: Option<CollisionLayers>,
+    /// original RigidBody before grabbing.
+    orig_rigid: RigidBody,
+    /// original GravityScale before grabbing.
+    orig_gravity: Option<GravityScale>,
     /// Movement from original location to un-stick item.
     movement: f32,
     /// Movement from original location to un-stick item.
@@ -245,7 +252,7 @@ pub struct GrabbingBehavior {
 impl Default for GrabbingBehavior {
     fn default() -> Self {
         Self {
-            force: 50.0,
+            force: 10.0,
             ignore_mass: false,
             move_accel: 1.1,
             min_speed: 0.05,
@@ -321,7 +328,6 @@ fn on_change_grab_distance(
         let new_dist = (grabbed.distance + event.value).clamp(0.1, 100.0);
         grabbed.distance = new_dist;
     }
-
 }
 
 fn move_grabbed_item(
@@ -333,6 +339,7 @@ fn move_grabbed_item(
 
     mut gizmos: Gizmos,
     mut phys_info_q: Query<(Forces, &GlobalTransform, &Transform, &Mass)>,
+    // time: Res<Time<Physics>>,
 ) {
     let Ok((mut forces, item_global_xfrm, xfrm, mass)) = phys_info_q.get_mut(grabbed.entity) else {
         commands.write_message(GrabbingCommand::CancelGrabItems);
@@ -350,21 +357,31 @@ fn move_grabbed_item(
     // then apply an impulse to move to that location.
     let cur_pos = item_global_xfrm.translation() + grabbed.orig_offset;
 
-    let cam_pos = cam_global_xfrm.translation();
-    let new_pos = cam_pos + cam_global_xfrm.rotation() * Vec3::NEG_Z * grabbed.distance;
+    let new_pos = cam_global_xfrm.translation() + cam_global_xfrm.rotation() * Vec3::NEG_Z * grabbed.distance;
+
+    const MIN_MOVE: Scalar = 0.01;
 
     let offset = new_pos - cur_pos;
 
     let movement = offset.length();
-    if movement > 0.01 {
-        grabbed.speed = (grabbed.speed.max(0.05) * grabbing_force.move_accel).min(grabbing_force.max_speed);
-        let vel = offset * grabbed.speed * grabbing_force.force;
+    if movement > MIN_MOVE {
+        let vel = offset * grabbing_force.force;
         let vel = if grabbing_force.ignore_mass {
             vel
         } else {
             vel / mass.0
         };
-        *forces.linear_velocity_mut() = vel.clamp_length_max(grabbing_force.max_speed).adjust_precision();
+        let mut new_vel = vel.clamp_length_max(grabbing_force.max_speed);
+        if new_vel.x.abs() < MIN_MOVE {
+            new_vel.x = 0.;
+        }
+        if new_vel.y.abs() < MIN_MOVE {
+            new_vel.y = 0.;
+        }
+        if new_vel.z.abs() < MIN_MOVE {
+            new_vel.z = 0.;
+        }
+        *forces.linear_velocity_mut() = new_vel.adjust_precision();
         *forces.angular_velocity_mut() = default();
         grabbed.movement += movement;
     } else {
@@ -402,7 +419,8 @@ fn process_grab_changes(
 
     mut raycast: MeshRayCast,
     // mut gizmos: Gizmos,
-    phys_info_q: Query<(Forces, &GlobalTransform, &Transform, Option<&CollisionLayers>, Option<&LockedAxes>)>,
+    phys_info_q: Query<(Forces, &GlobalTransform, &Transform,
+        &RigidBody, Option<&CollisionLayers>, Option<&LockedAxes>, Option<&GravityScale>)>,
 ) {
     for command in reader.read() {
         match command {
@@ -414,7 +432,7 @@ fn process_grab_changes(
                     continue
                 };
 
-                let Ok((_, item_global_xfrm, _, layers, axes)) = phys_info_q.get(entity) else {
+                let Ok((_, item_global_xfrm, _, rigid, layers, axes, gravity)) = phys_info_q.get(entity) else {
                     log::warn!("no physical item {entity}");
                     continue
                 };
@@ -445,9 +463,11 @@ fn process_grab_changes(
                     orig_mode: mode.original_or_enabled(),
                     distance,
                     orig_axes: axes.map_or(default(), |a| *a),
+                    orig_layers: layers.cloned(),
+                    orig_rigid: rigid.clone(),
+                    orig_gravity: gravity.cloned(),
                     movement: 0.,
                     speed: 0.,
-                    orig_layers: layers.cloned(),
                 });
 
                 if cfg!(feature = "highlighting") {
@@ -458,7 +478,10 @@ fn process_grab_changes(
                 commands.entity(entity).try_insert((
                     Grabbed,
                     LockedAxes::ROTATION_LOCKED,
+                    // RigidBody:: Kinematic, // avoid going through world
+                    GravityScale(0.),
                     if let Some(layers) = layers {
+                        // Do not collide with (and fly out from) the player.
                         CollisionLayers::from_bits(
                             *layers.memberships,
                             *((layers.filters | GameLayer::Player) ^ GameLayer::Player)
@@ -467,7 +490,7 @@ fn process_grab_changes(
                         CollisionLayers::default()
                     }
                 ));
-                commands.queue(SleepBody(entity));
+                // commands.queue(SleepBody(entity));
 
                 // Insert the outline bundle, whatever it is.
                 styler.apply_to(commands.entity(entity));
@@ -494,6 +517,14 @@ fn process_grab_changes(
                         ent_commands.try_insert(grabbed.orig_axes);
                     } else {
                         ent_commands.try_remove::<LockedAxes>();
+                    }
+
+                    ent_commands.try_insert(grabbed.orig_rigid);
+
+                    if let Some(grav) = grabbed.orig_gravity {
+                        ent_commands.try_insert(grav);
+                    } else {
+                        ent_commands.try_remove::<GravityScale>();
                     }
 
                     styler.remove_from(ent_commands);
