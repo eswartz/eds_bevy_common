@@ -172,22 +172,27 @@ pub fn apply_effect_settings(
         match video_settings.shadow_quality {
             ShadowQuality::Off => {
                 light.soft_shadows_enabled = false;
+                light.shadows_enabled = true;
             }
             ShadowQuality::Low => {
                 light.soft_shadows_enabled = false;
+                light.shadows_enabled = true;
                 commands.entity(ent).insert(ShadowFilteringMethod::Hardware2x2);
             }
             ShadowQuality::Medium => {
                 // default
                 light.soft_shadows_enabled = true;
+                light.shadows_enabled = true;
                 commands.entity(ent).insert(ShadowFilteringMethod::Hardware2x2);
             }
             ShadowQuality::High => {
                 light.soft_shadows_enabled = true;
+                light.shadows_enabled = true;
                 commands.entity(ent).insert(ShadowFilteringMethod::Gaussian);
             }
             ShadowQuality::Ultra => {
                 light.soft_shadows_enabled = true;
+                light.shadows_enabled = true;
                 commands.entity(ent).insert(ShadowFilteringMethod::Temporal);
             }
 
