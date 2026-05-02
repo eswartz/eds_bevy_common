@@ -62,6 +62,7 @@ fn handle_split_into_cubes(
         let cube_half_size = Vec3::new(xs, ys, zs);
 
         let root = ent;
+        let mut count = 0;
 
         let aabb_min = aabb.min().to_vec3();
         for zi in 0..zn {
@@ -102,10 +103,14 @@ fn handle_split_into_cubes(
                         if let Some(detail) = detail_opt {
                             commands.entity(id).insert(detail.clone());
                         }
+
+                        count += 1;
                     }
                 }
             }
         }
+
+        info!("Split {ent} into {count} cubes");
 
         // Remove the original large object.
         let mut ent_commands = commands.entity(ent);
