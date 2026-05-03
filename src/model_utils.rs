@@ -580,8 +580,8 @@ pub fn update_uv_maps(mesh: &mut Mesh, (orig_uv0, orig_uv1): (SideSpans, SideSpa
     mesh.insert_attribute(Mesh::ATTRIBUTE_UV_1, uvs1);
 }
 
-pub fn create_uvmapped_mesh(shape: impl Meshable) -> Mesh {
-    let mut mesh: Mesh = shape.mesh().into();
+pub fn create_uvmapped_mesh(shape: impl Into<Mesh>) -> Mesh {
+    let mut mesh: Mesh = shape.into();
 
     let aabb = get_mesh_aabb(&mesh, &Transform::IDENTITY);
 

@@ -221,4 +221,6 @@ pub struct CommonSkyboxAssets {
     pub dresden_station_night: Handle<Image>,
     #[asset(path = "common://skyboxes/farm_field_puresky_4k.exr")]
     pub farm_field_puresky: Handle<Image>,
+    #[asset(path = "common://skyboxes/starmap_2020_2k.exr")]
+    pub starmap_2020: Handle<Image>,
 }
