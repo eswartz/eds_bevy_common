@@ -1,7 +1,4 @@
 use bevy::prelude::*;
-use bevy_asset_loader::loading_state::LoadingStateAppExt as _;
-use bevy_asset_loader::loading_state::config::ConfigureLoadingState as _;
-use bevy_asset_loader::loading_state::config::LoadingStateConfig;
 use bevy_seedling::prelude::SamplePlayer;
 
 use crate::*;
@@ -11,15 +8,6 @@ pub struct MenuAudioPlugin;
 impl Plugin for MenuAudioPlugin {
     fn build(&self, app: &mut App) {
         app
-            // In case not added.
-            .configure_loading_state(
-                LoadingStateConfig::new(ProgramState::Initializing)
-                    .load_collection::<CommonFxAssets>()
-            )
-            .configure_loading_state(
-                LoadingStateConfig::new(ProgramState::LoadingSave)
-                    .load_collection::<CommonFxAssets>()
-            )
             .add_systems(Update,
                 (
                     spawn_menu_fx,
@@ -29,7 +17,6 @@ impl Plugin for MenuAudioPlugin {
         ;
     }
 }
-
 
 fn spawn_menu_fx(mut commands: Commands,
     fx: Option<Res<CommonFxAssets>>,

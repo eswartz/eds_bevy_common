@@ -35,7 +35,10 @@ where
 #[type_path = "game"]
 pub struct DespawnAfter(pub Duration);
 
-/// Mark the entity as being out of play (e.g. when something is pending deletion).
+/// Mark the entity as being out of play
+/// (esp. when something is pending deletion).
+/// Use this when you want to avoid
+/// scheduling unnecessary extra work.
 #[derive(Component, Reflect, Debug)]
 #[reflect(Component)]
 #[type_path = "game"]

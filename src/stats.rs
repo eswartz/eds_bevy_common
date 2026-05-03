@@ -60,6 +60,8 @@ pub trait StatsProvider: Send + Sync + 'static {
     /// Tell if the stat is important (needs highlighting).
     /// This is only checked once and is used to construct the UI.
     fn is_important(&self) -> bool { false }
+    /// Override sort order.
+    fn priority(&self) -> i32 { 0 }
 }
 
 /// This organizes all the stats providers.
@@ -71,6 +73,8 @@ pub struct StatsRegistry {
 impl StatsRegistry {
     pub fn add_provider(&mut self, provider: Box<dyn StatsProvider>) {
         self.items.push(provider);
+
+        self.items.sort_by(|a, b| a.priority().cmp(&b.priority()));
     }
     pub fn reset_providers(&mut self) {
         self.items.clear();
@@ -101,6 +105,7 @@ impl StatsProvider for FpsProvider {
     fn get_label(&self) -> String {
         "FPS".to_string()
     }
+    fn priority(&self) -> i32 { -10 }
 
     fn format_value(&self, world: &mut World) -> String {
         if let Some(time_buffer) = world.get_resource::<DeltaBuffer>() {
@@ -130,6 +135,7 @@ impl StatsProvider for FpsMaxProvider {
     fn get_label(&self) -> String {
         "Max Frame".to_string()
     }
+    fn priority(&self) -> i32 { -9 }
 
     fn format_value(&self, world: &mut World) -> String {
         if let Some(time_buffer) = world.get_resource::<DeltaBuffer>() {
@@ -150,6 +156,8 @@ impl StatsProvider for EntCountProvider {
         "Entities".to_string()
     }
 
+    fn priority(&self) -> i32 { -8 }
+
     fn format_value(&self, world: &mut World) -> String {
         let count = world.entities().count_spawned() as usize;
         format!("{count}")
@@ -162,6 +170,8 @@ impl StatsProvider for ContactCountProvider {
     fn get_label(&self) -> String {
         "Contacts".to_string()
     }
+
+    fn priority(&self) -> i32 { -7 }
 
     fn format_value(&self, world: &mut World) -> String {
         if let Some(solver_diags) = world.get_resource::<SolverDiagnostics>() {
@@ -205,6 +215,8 @@ impl StatsProvider for CpuUsageProvider {
         "CPU Usage".to_string()
     }
 
+    fn priority(&self) -> i32 { -6 }
+
     fn format_value(&self, world: &mut World) -> String {
          if let Some(info) = world.get_resource::<SysInfoBuffer>() {
             format!("{}%", info.0.global_cpu_usage() as i32)
@@ -225,6 +237,8 @@ impl StatsProvider for MemoryUsageProvider {
     fn get_label(&self) -> String {
         "Memory Usage".to_string()
     }
+
+    fn priority(&self) -> i32 { -5 }
 
     fn format_value(&self, world: &mut World) -> String {
         if let Some(sys_info) = world.get_resource::<SysInfoBuffer>() {
@@ -248,6 +262,8 @@ impl StatsProvider for PlayerInfoProvider {
         "Player Pos & Ang".to_string()
     }
 
+    fn priority(&self) -> i32 { -4 }
+
     fn format_value(&self, world: &mut World) -> String {
         let mut xfrm_q = world.query_filtered::<&Transform, With<Player>>();
         for xfrm in xfrm_q.iter(world) {
@@ -255,7 +271,7 @@ impl StatsProvider for PlayerInfoProvider {
                 xfrm.translation.x,
                 xfrm.translation.y,
                 xfrm.translation.z,
-                xfrm.rotation.to_euler(EulerRot::default()).0
+                xfrm.rotation.to_euler(EulerRot::default()).0.to_degrees()
             );
         }
         String::new()
