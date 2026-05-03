@@ -63,9 +63,9 @@ pub struct VideoEffectSettingsChanged;
 #[reflect(Default, Clone, Component)]
 #[type_path = "game"]
 pub enum Antialiasing {
-    #[cfg_attr(target_arch = "wasm32", default)]
+    #[cfg_attr(any(target_arch = "wasm32", feature = "solari"), default)]
     Off,
-    #[cfg_attr(not(target_arch = "wasm32"), default)]
+    #[cfg_attr(all(not(target_arch = "wasm32"), not(feature = "solari")), default)]
     TSAA,
     // MSAA,    // can't use with OrderIndependentTransparency, so don't even offer it
 }
@@ -184,9 +184,10 @@ pub enum GlassQuality {
 #[reflect(Default, Clone, Component)]
 #[type_path = "game"]
 pub enum ShadowQuality {
+    #[cfg_attr(feature = "solari", default)]
     Off,
     Low,
-    #[default]
+    #[cfg_attr(not(feature = "solari"), default)]
     Medium,
     High,
     Ultra,

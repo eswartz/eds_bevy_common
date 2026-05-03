@@ -41,6 +41,9 @@ firewheel = ["dep:bevy_seedling", "dep:firewheel"]
 
 webgpu = ["bevy/webgpu"]
 
+solari = ["bevy/bevy_solari"]
+
+
 dev = [
     # Improve compile times for dev builds by linking Bevy as a dynamic library.
     "bevy/dynamic_linking",
