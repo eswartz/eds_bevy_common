@@ -180,6 +180,8 @@ bevy_trenchbroom_avian = { optional = true, version = "0.12", default-features =
 bevy_skein = { optional = true, version = "0.5.0" }
 
 bevy_mod_outline = { version = "0.12", optional = true }
+bevy_tweening = "0.15.0"
+obj = "0.10"
 
 serde = { version = "1.0", features = ["alloc", "derive", "serde_derive"] }
 rand = { version = "0.10.0" }
@@ -189,7 +191,6 @@ image = { version = "0.25", default-features = false }
 wgpu = "27.0.1"
 bytemuck = "1.25.0"
 anyhow = "1.0.101"
-bevy_tweening = "0.15.0"
 
 sysinfo = { version = "0.37" }
 thiserror = { version = "2.0.12" }

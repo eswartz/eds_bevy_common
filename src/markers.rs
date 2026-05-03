@@ -112,6 +112,7 @@ pub struct PlayerCameraMode(pub PlayerMode);
 #[reflect(Component, Default)]
 #[type_path = "game"]
 #[require(avian3d::prelude::Sensor)]
+#[require(avian3d::prelude::CollidingEntities)]
 pub struct DeathboxCollider;
 
 /////
