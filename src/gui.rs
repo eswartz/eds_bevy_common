@@ -410,7 +410,13 @@ fn update_gui_state(
     }
     status_visible.0 = state.show_status;
 
-    gizmo_config.config_mut::<PhysicsGizmos>().0.enabled = state.show_physics_gizmos;
+    let was_enabled = gizmo_config.config::<PhysicsGizmos>().0.enabled;
+    if was_enabled != state.show_physics_gizmos {
+        // Only trigger on actual change,
+        // to avoid avian3d::debug_render::change_mesh_visibility
+        // showing everything without recourse.
+        gizmo_config.config_mut::<PhysicsGizmos>().0.enabled = state.show_physics_gizmos;
+    }
 }
 
 fn grab_cursor_for_game(

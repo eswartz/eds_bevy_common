@@ -173,7 +173,8 @@ fn handle_out_of_bounds(
 fn enforce_visibility(
     mut deathbox_q: Query<&mut Visibility, With<DeathboxCollider>>,
 ) {
-    // SOMETHING in toggling dev tools makes the deathbox visible
+    // In avian3d 0.7.0-dev and earlier, toggling physics gizmo rendering makes this visible...
+    // see https://github.com/avianphysics/avian/pull/981
     for mut vis in deathbox_q.iter_mut() {
         vis.set_if_neq(Visibility::Hidden);
     }
