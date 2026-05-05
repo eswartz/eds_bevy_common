@@ -44,6 +44,7 @@ pub mod highlighting;
 #[cfg(feature = "grabbing")]
 pub mod grabbing;
 pub mod model_utils;
+pub mod lights;
 pub mod app;
 
 #[cfg(feature = "midi_synth")]
@@ -93,6 +94,7 @@ pub use detail_normal::*;
 pub use parallax_depth::*;
 pub use menu_audio::*;
 pub use model_utils::*;
+pub use lights::*;
 pub use app::*;
 
 #[cfg(feature = "midi_synth")]

@@ -105,8 +105,6 @@ pub struct LevelRoot;
 #[type_path = "game"]
 pub struct PlayerCameraMode(pub PlayerMode);
 
-/////
-
 /// Marker for deathbox (to catch falling player / items)
 #[derive(Component, Reflect, Default, Debug)]
 #[reflect(Component, Default)]
@@ -114,6 +112,13 @@ pub struct PlayerCameraMode(pub PlayerMode);
 #[require(avian3d::prelude::Sensor)]
 #[require(avian3d::prelude::CollidingEntities)]
 pub struct DeathboxCollider;
+
+/// Mark the light as casting shadows (skein/Blender glTF ignore the actual settings).
+#[derive(Default, Component, Reflect, Debug)]
+#[require(ConfigureBeforePlaying)]
+#[reflect(Component)]
+#[type_path = "game"]
+pub struct ShadowCaster;
 
 /////
 

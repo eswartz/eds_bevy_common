@@ -58,6 +58,7 @@ fn main() -> AppExit {
         .add_plugins(GuiPlugin)
         .add_plugins(WorldUiPlugin)
         .add_plugins(WorldStatePlugin)
+        .add_plugins(LightsPlugin)
         .add_plugins(EffectsPlugin)
         .add_plugins(LevelsPlugin)
         .add_plugins(DeathboxPlugin::default())
