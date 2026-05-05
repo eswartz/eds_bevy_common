@@ -18,6 +18,7 @@ impl Plugin for LifecyclePlugin {
             .init_resource::<PauseState>()
             .add_systems(Update, (
                 check_pause_request,
+                reset_pause_on_enter_launch_menu,
                 check_despawners.run_if(not(is_paused)),
                 check_configure_before_loading,
             ))
@@ -102,9 +103,12 @@ impl PauseState {
     }
 }
 
-/// This handles play/pause toggling for our resources.
-pub fn check_pause_request(
-    paused: ResMut<PauseState>,
+/// This processes PauseState changes as the source of truth for
+/// pausing-related components that come from types we can't extend
+/// to apply their own logic based on `resource_changed::<PauseState>`.
+///
+fn check_pause_request(
+    paused: Res<PauseState>,
     mut time: ResMut<Time<Physics>>,
     mut animator_transform_q: Query<&mut TweenAnim>,
 ) {
@@ -132,6 +136,24 @@ pub fn check_pause_request(
         //     runner.set_paused(false);
         // }
     }
+}
+
+/// If we see a big state change, clear the pause state.
+fn reset_pause_on_enter_launch_menu(
+    program_state: Res<State<ProgramState>>,
+    mut pause_state: ResMut<PauseState>,
+) {
+    if !program_state.is_changed() {
+        // Nope
+        return
+    }
+    if !matches!(program_state.get(), ProgramState::LaunchMenu) {
+        // Nope
+        return
+    }
+
+    pause_state.set_menu_paused(false);
+    pause_state.set_user_paused(false);
 }
 
 fn check_configure_before_loading(

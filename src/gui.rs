@@ -299,6 +299,8 @@ pub fn setup_loading_screen(
     mut ent_commands: EntityCommands,
     ui_font: Option<Res<UiFont>>,
 ) -> Entity {
+    let icon_size = 32.0f32;
+
     ent_commands.insert((
         Node {
             width: Val::Percent(100.),
@@ -318,7 +320,7 @@ pub fn setup_loading_screen(
             ),
             TextFont {
                 font: ui_font.map_or(default(), |f| f.0.clone()),
-                font_size: 32.0,
+                font_size: icon_size,
                 .. default()
             },
             TextColor(Color::WHITE.with_alpha(0.5)),
@@ -498,13 +500,30 @@ pub struct GameStatusArea;
 #[derive(Component)]
 pub struct ScoreArea;
 
-/// Mark the Pause state icon.
-#[derive(Component)]
-struct PauseArea;
-
 /// Mark the Mute state icon.
 #[derive(Component)]
-struct MuteArea;
+pub struct MuteArea;
+
+/// Mark the User Pause state icon.
+#[derive(Component)]
+pub struct UserPausedArea;
+
+/// Mark the Pause Scripts state icon.
+///
+/// NOTE: this is not wired up to anything by default. It's entirely hidden.
+#[derive(Component)]
+pub struct ScriptsRunningArea;
+#[derive(Component)]
+pub struct ScriptsRunningCrossArea;
+
+/// Mark the Freeze state icon.
+///
+/// NOTE: this is not wired up to anything by default. It's entirely hidden.
+#[derive(Component)]
+pub struct PhysicsRunningArea;
+#[derive(Component)]
+pub struct PhysicsRunningCrossArea;
+
 
 fn setup_gui_nodes(
     mut commands: Commands,
@@ -512,6 +531,7 @@ fn setup_gui_nodes(
     ui_font: Option<Res<UiFont>>,
 ) {
     let font = ui_font.map_or(default(), |f| f.0.clone());
+    let icon_size = 32.0;
 
     // Info
     commands.spawn((
@@ -561,7 +581,7 @@ fn setup_gui_nodes(
         Text::default(),
         TextFont {
             font: font.clone(),
-            font_size: 32.0,
+            font_size: icon_size,
             ..default()
         },
         TextColor(Color::Srgba(tailwind::YELLOW_300)),
@@ -595,7 +615,7 @@ fn setup_gui_nodes(
         builder.spawn((
             GameStatusArea,
             Text::new(
-                "",
+                "", // e.g. "You win!"
             ),
             TextFont {
                 font: font.clone(),
@@ -631,70 +651,156 @@ fn setup_gui_nodes(
     ))
     ;
 
-    // Pause icon in upper right
-    commands.spawn((
-        DespawnOnExitOrReenter(ProgramState::InGame),
-        PauseArea,
-        Visibility::Visible,
-        TextFont {
-            font: assets.emoji_icon_font.clone(),
-            font_size: 32.0,
-            .. default()
-        },
-        TextColor(Color::Srgba(tailwind::YELLOW_300)),
-        Node {
-            position_type: PositionType::Absolute,
-            top: Val::Px(4.0),
-            right: Val::Px(4.0),
-            .. default()
-        },
-        Text::new(""),
-    ));
+    // We place these in from right to left,
+    // but in some cases stack them.
 
-    // Mute icon in upper right
+    let pos_y = Val::Px(4.0);
+    let mut right_x = 4.0 - icon_size;    // can't do add/sub on Val, keep  as f32
+
+    // Mute icon
+    right_x += icon_size;
     commands.spawn((
         DespawnOnExitOrReenter(ProgramState::InGame),
         MuteArea,
-        Visibility::Visible,
         TextFont {
             font: assets.emoji_icon_font.clone(),
-            font_size: 32.0,
+            font_size: icon_size,
             .. default()
         },
         TextColor(Color::Srgba(tailwind::YELLOW_300)),
         Node {
             position_type: PositionType::Absolute,
             top: Val::Px(4.0),
-            right: Val::Px(36.0),
+            right: Val::Px(right_x),
             .. default()
         },
-        Text::new(""),
+        Text::new("\u{1F508}"),
+        Visibility::Hidden,
+    ));
+
+    // User Pause icon, to the left
+    right_x += icon_size;
+    commands.spawn((
+        DespawnOnExitOrReenter(ProgramState::InGame),
+        UserPausedArea,
+        TextFont {
+            font: assets.emoji_icon_font.clone(),
+            font_size: icon_size,
+            .. default()
+        },
+        TextColor(Color::Srgba(tailwind::YELLOW_300)),
+        Node {
+            position_type: PositionType::Absolute,
+            top: pos_y,
+            right: Val::Px(right_x),
+            .. default()
+        },
+        Text::new("\u{1F6AB}"),
+        Visibility::Inherited,
+    ));
+
+    // Script Pause icon, to the left
+    right_x += icon_size;
+    commands.spawn((
+        Name::new("RunningArea"),
+        DespawnOnExitOrReenter(ProgramState::InGame),
+        ScriptsRunningArea,
+        TextFont {
+            font: assets.hack_font.clone(),
+            font_size: icon_size,
+            .. default()
+        },
+        TextColor(Color::Srgba(tailwind::GRAY_100)),
+        Node {
+            position_type: PositionType::Absolute,
+            top: pos_y,
+            right: Val::Px(right_x),
+            .. default()
+        },
+        Text::new("\u{1F3C3}"), // truck
+        Visibility::Inherited,
+        ZIndex(-1), // under
+    ));
+    commands.spawn((
+        Name::new("RunningCrossArea"),
+        DespawnOnExitOrReenter(ProgramState::InGame),
+        ScriptsRunningCrossArea,
+        TextFont {
+            font: assets.emoji_icon_font.clone(),
+            font_size: icon_size,
+            .. default()
+        },
+        TextColor(Color::Srgba(tailwind::RED_700)),
+        Node {
+            position_type: PositionType::Absolute,
+            top: pos_y,
+            right: Val::Px(right_x), // on top
+            .. default()
+        },
+        Text::new("\u{1F5D9}"),
+        // Visibility::Hidden,
+        Visibility::Visible,
+        ZIndex(1),
+    ));
+
+    // "Movement Pause" or "Freeze" icon, to the left
+    right_x += icon_size;
+    commands.spawn((
+        DespawnOnExitOrReenter(ProgramState::InGame),
+        PhysicsRunningArea,
+        TextFont {
+            font: assets.emoji_icon_font.clone(),
+            font_size: icon_size,
+            .. default()
+        },
+        TextColor(Color::Srgba(tailwind::GRAY_300)),
+        Node {
+            position_type: PositionType::Absolute,
+            top: pos_y,
+            right: Val::Px(right_x),
+            .. default()
+        },
+        Text::new("\u{23f1}\u{fe0f}"),
+        Visibility::Inherited,
+        ZIndex(-1), // under
+    ));
+    commands.spawn((
+        DespawnOnExitOrReenter(ProgramState::InGame),
+        PhysicsRunningCrossArea,
+        TextFont {
+            font: assets.emoji_icon_font.clone(),
+            font_size: icon_size,
+            .. default()
+        },
+        TextColor(Color::Srgba(tailwind::RED_700)),
+        Node {
+            position_type: PositionType::Absolute,
+            top: pos_y,
+            right: Val::Px(right_x),
+            .. default()
+        },
+        Text::new("\u{1F5D9}"),
+        Visibility::Hidden,
+        ZIndex(0),
     ));
 
 }
 
 fn update_pause_ui(
     paused: Res<PauseState>,
-    mut text_q: Query<&mut Text, With<PauseArea>>,
+    mut vis_q: Query<&mut Visibility, With<UserPausedArea>>,
 ) {
-    if let Ok(mut text) = text_q.single_mut() {
-        // One icon for any pause reason.
-        let new_text = if paused.is_paused() { "\u{1F6AB}" } else { " " };
-        if new_text != text.0 {
-            text.0 = new_text.to_string();
-        }
+    if let Ok(mut vis) = vis_q.single_mut() {
+        *vis = if paused.is_paused() { Visibility::Inherited } else { Visibility::Hidden };
     }
 }
 
 fn update_mute_ui(
     vol_q: Single<&UserVolume, With<MainBus>>,
-    mut text_q: Query<&mut Text, With<MuteArea>>,
+    mut vis_q: Query<&mut Visibility, With<MuteArea>>,
 ) {
-    if let Ok(mut text) = text_q.single_mut() {
-        let new_text = if vol_q.muted { "\u{1F508}" } else { " " };
-        if new_text != text.0 {
-            text.0 = new_text.to_string();
-        }
+    if let Ok(mut vis) = vis_q.single_mut() {
+        *vis = if vol_q.muted { Visibility::Inherited } else { Visibility::Hidden };
     }
 }
 

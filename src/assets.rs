@@ -108,6 +108,8 @@ pub struct CommonGuiAssets {
     /// This font provides common icons (pause/mute).
     #[asset(path = "common://fonts/emoji-icon-font.ttf")]
     pub emoji_icon_font: Handle<Font>,
+    #[asset(path = "common://fonts/Hack-Regular.ttf")]
+    pub hack_font: Handle<Font>,
 
     #[asset(path = "common://fonts/Recursive-Bold.ttf")]
     pub std_ui: Handle<Font>,
