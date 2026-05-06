@@ -113,17 +113,6 @@ pub struct PlayerCameraMode(pub PlayerMode);
 #[require(avian3d::prelude::CollidingEntities)]
 pub struct DeathboxCollider;
 
-/// Mark the light as casting shadows.
-///
-/// This is used to drive [crate::lights::fixup_light_shadows] from `LightsPlugin`.
-/// It's needed apparently since Blender glTF doesn't seem to export this
-/// interesting property of lights.
-#[derive(Default, Component, Reflect, Debug)]
-#[require(ConfigureBeforePlaying)]
-#[reflect(Component)]
-#[type_path = "game"]
-pub struct ShadowCaster;
-
 /////
 
 /// Marker for an item that needs to be processed

@@ -166,40 +166,42 @@ pub fn update_egui_inspector_ui(
         // .hscroll(true)
         // .vscroll(true)
         .show(egui_context.clone().get_mut(), |ui| {
+
+            ui.checkbox(&mut show_tree, "Show As Tree");
+            ui.checkbox(&mut show_observers, "Show Observers");
+
             egui::ScrollArea::both().show(ui, |ui| {
-                ui.checkbox(&mut show_tree, "Show As Tree");
-                ui.checkbox(&mut show_observers, "Show Observers");
 
-                let mut entities_with_filter = |ui: &mut egui::Ui| {
-                    match (*show_tree, *show_observers) {
-                        (false, false) => {
-                            let filter: Filter<Without<Observer>> =
-                                Filter::from_ui_fuzzy(ui, egui::Id::new(FILTER_ID));
-                            ui_for_entities_filtered(world, ui, true, &filter);
-                        }
-                        (false, true) => {
-                            let filter: Filter<()> =
-                                Filter::from_ui_fuzzy(ui, egui::Id::new(FILTER_ID));
-                            ui_for_entities_filtered(world, ui, true, &filter);
-                        }
-                        (true, false) => {
-                            let filter: Filter<(Without<ChildOf>, Without<Observer>)> =
-                                Filter::from_ui_fuzzy(ui, egui::Id::new(FILTER_ID));
-                            ui_for_entities_filtered(world, ui, true, &filter);
-                        }
-                        (true, true) => {
-                            let filter: Filter<Without<ChildOf>> =
-                                Filter::from_ui_fuzzy(ui, egui::Id::new(FILTER_ID));
-                            ui_for_entities_filtered(world, ui, true, &filter);
-                        }
+            let mut entities_with_filter = |ui: &mut egui::Ui| {
+                match (*show_tree, *show_observers) {
+                    (false, false) => {
+                        let filter: Filter<Without<Observer>> =
+                            Filter::from_ui_fuzzy(ui, egui::Id::new(FILTER_ID));
+                        ui_for_entities_filtered(world, ui, true, &filter);
                     }
-                };
+                    (false, true) => {
+                        let filter: Filter<()> =
+                            Filter::from_ui_fuzzy(ui, egui::Id::new(FILTER_ID));
+                        ui_for_entities_filtered(world, ui, true, &filter);
+                    }
+                    (true, false) => {
+                        let filter: Filter<(Without<ChildOf>, Without<Observer>)> =
+                            Filter::from_ui_fuzzy(ui, egui::Id::new(FILTER_ID));
+                        ui_for_entities_filtered(world, ui, true, &filter);
+                    }
+                    (true, true) => {
+                        let filter: Filter<Without<ChildOf>> =
+                            Filter::from_ui_fuzzy(ui, egui::Id::new(FILTER_ID));
+                        ui_for_entities_filtered(world, ui, true, &filter);
+                    }
+                }
+            };
 
-                egui::CollapsingHeader::new("Entities")
-                    .default_open(false)
-                    .show(ui, |ui| {
-                        entities_with_filter(ui);
-                    });
+            egui::CollapsingHeader::new("Entities")
+                .default_open(false)
+                .show(ui, |ui| {
+                    entities_with_filter(ui);
+                });
 
                 egui::CollapsingHeader::new("Resources").show(ui, |ui| {
                     const FILTER_ID: &str = "my_inspector_resource_filter";

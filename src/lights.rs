@@ -1,9 +1,7 @@
-use bevy::light::NotShadowCaster;
 use bevy::prelude::*;
 
 use crate::ConfigureBeforePlaying;
 use crate::LevelState;
-use crate::ShadowCaster;
 
 pub struct LightsPlugin;
 
@@ -18,6 +16,16 @@ impl Plugin for LightsPlugin {
     }
 }
 
+/// Mark the light as casting shadows.
+///
+/// (It's needed apparently since Blender glTF doesn't seem to export this
+/// interesting property of lights.)
+#[derive(Default, Component, Reflect, Debug)]
+#[require(ConfigureBeforePlaying)]
+#[reflect(Component)]
+#[type_path = "game"]
+pub struct ShadowCaster;
+
 /// Make sure lights cast shadows if marked to do so.
 pub(crate) fn fixup_light_shadows(
     mut commands: Commands,
@@ -27,32 +35,27 @@ pub(crate) fn fixup_light_shadows(
         Query<(Entity, &mut DirectionalLight, Has<ShadowCaster>)>,
     )>,
 ) {
-    for (ent, mut light, enabled) in light_q.p0().iter_mut() {
-        light.shadows_enabled = enabled;
-
+    let common_handling = |mut commands: Commands, ent, enabled: bool| {
         let mut ent_commands = commands.entity(ent);
         // ent_commands.try_remove::<(ShadowCaster, ConfigureBeforePlaying)>();
         if !enabled {
-            ent_commands.insert(NotShadowCaster);
+            ent_commands.insert(bevy::light::NotShadowCaster);
         }
         ent_commands.try_remove::<ConfigureBeforePlaying>();
+    };
+    for (ent, mut light, enabled) in light_q.p0().iter_mut() {
+        light.shadows_enabled = enabled;
+
+        common_handling(commands.reborrow(), ent, enabled);
     }
     for (ent, mut light, enabled) in light_q.p1().iter_mut() {
         light.shadows_enabled = enabled;
 
-        let mut ent_commands = commands.entity(ent);
-        if !enabled {
-            ent_commands.insert(NotShadowCaster);
-        }
-        ent_commands.try_remove::<ConfigureBeforePlaying>();
+        common_handling(commands.reborrow(), ent, enabled);
     }
     for (ent, mut light, enabled) in light_q.p2().iter_mut() {
         light.shadows_enabled = enabled;
 
-        let mut ent_commands = commands.entity(ent);
-        if !enabled {
-            ent_commands.insert(NotShadowCaster);
-        }
-        ent_commands.try_remove::<ConfigureBeforePlaying>();
+        common_handling(commands.reborrow(), ent, enabled);
     }
 }

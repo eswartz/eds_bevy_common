@@ -171,14 +171,15 @@ fn check_configure_before_playing(
 
         // Wait for a given number of frames.
         if *frames >= 60 {
-            error!("ConfigureBeforePlaying state was stuck on: {ents:?}");
+            error!("Removing stuck ConfigureBeforePlaying on: {ents:?}");
             // Remove them all.
             for ent in ents {
                 commands.entity(ent).remove::<ConfigureBeforePlaying>();
             }
-            // Let the next frame handle it, in case
-            // (for example) something is also adding this component
+            // Let the next frame handle their removal and re-querying,
+            // or not, in case something is e.g. adding this component
             // every frame.
+            *frames = 0;
         } else {
             *frames += 1;
         }

@@ -1,3 +1,4 @@
+use avian3d::math::Scalar;
 use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 use avian3d::prelude::*;
@@ -11,6 +12,7 @@ pub struct GeometryCollisionHooks<'w, 's> {
     projectile_q: Query<'w, 's, (), With<Projectile>>,
     parent_q: Query<'w, 's, &'static ChildOf>,
     cb_opt: Option<Res<'w, GeometryCollisionHooksCallbacks>>,
+    unit_q: Res<'w, PhysicsLengthUnit>,
 }
 
 /// Register this to tell if a given entity (collider) is a liquid or not.
@@ -86,7 +88,9 @@ impl CollisionHooks for GeometryCollisionHooks<'_, '_> {
         };
 
         // Enter areas when we're for sure _in_ them, not grazing.
-        if deepest.penetration < 0.125
+        let units = |v: Scalar| v * **self.unit_q;
+
+        if deepest.penetration < units(0.125)
             && let Some(cb) = &self.cb_opt
             && (cb.is_liquid)(world) {
                 debug!("ignoring grazing with liquid {world} @ {deepest:?}");
@@ -94,7 +98,7 @@ impl CollisionHooks for GeometryCollisionHooks<'_, '_> {
             }
 
         // Ignore cases where we hit an embedded and invisible collider face in the ground.
-        if deepest.penetration < 0.1 /* && deepest.local_point2.y < -0.05 */ && deepest.normal_impulse.abs() < 0.01 {
+        if deepest.penetration < units(0.1) /* && deepest.local_point2.y < -units(0.05) */ && deepest.normal_impulse.abs() < 0.01 {
             // let mut any_edges = false;
             for man in &mut contacts.manifolds {
                 for pt in &man.points {
