@@ -40,6 +40,15 @@ impl Plugin for HighlightingPlugin {
             .init_resource::<CountAccumulator<HighlightedItemCycle>>()
 
             .add_systems(
+                OnEnter(LevelState::Configuring),
+                clear_highlighted
+                    .run_if(not(is_paused))
+                    .run_if(not(is_in_menu))
+                    .run_if(is_level_active)
+                    .run_if(not(debug_gui_wants_direct_input))
+                    .run_if(in_state(ProgramState::InGame))
+            )
+            .add_systems(
                 FixedUpdate,
                 (
                     check_actions,
@@ -174,6 +183,18 @@ fn check_actions(
         cycle_ctr.reset();
     }
 
+}
+
+fn clear_highlighted(
+    mut commands: Commands,
+    style: Res<HighlightedItemStyle>,
+    hilit_q: Query<Entity, With<Highlighted>>,
+) {
+    for ent in hilit_q.iter() {
+        let mut ent_commands = commands.entity(ent);
+        ent_commands.remove::<Highlighted>();
+        style.remove_from(ent_commands);
+    }
 }
 
 #[cfg(feature = "input_bei")]
