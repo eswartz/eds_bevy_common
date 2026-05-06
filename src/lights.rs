@@ -1,3 +1,4 @@
+use bevy::light::NotShadowCaster;
 use bevy::prelude::*;
 
 use crate::ConfigureBeforePlaying;
@@ -17,7 +18,7 @@ impl Plugin for LightsPlugin {
     }
 }
 
-/// Make sure lights cast shadows.
+/// Make sure lights cast shadows if marked to do so.
 pub(crate) fn fixup_light_shadows(
     mut commands: Commands,
     mut light_q: ParamSet<(
@@ -28,14 +29,30 @@ pub(crate) fn fixup_light_shadows(
 ) {
     for (ent, mut light, enabled) in light_q.p0().iter_mut() {
         light.shadows_enabled = enabled;
-        commands.entity(ent).try_remove::<(ShadowCaster, ConfigureBeforePlaying)>();
+
+        let mut ent_commands = commands.entity(ent);
+        // ent_commands.try_remove::<(ShadowCaster, ConfigureBeforePlaying)>();
+        if !enabled {
+            ent_commands.insert(NotShadowCaster);
+        }
+        ent_commands.try_remove::<ConfigureBeforePlaying>();
     }
     for (ent, mut light, enabled) in light_q.p1().iter_mut() {
         light.shadows_enabled = enabled;
-        commands.entity(ent).try_remove::<(ShadowCaster, ConfigureBeforePlaying)>();
+
+        let mut ent_commands = commands.entity(ent);
+        if !enabled {
+            ent_commands.insert(NotShadowCaster);
+        }
+        ent_commands.try_remove::<ConfigureBeforePlaying>();
     }
     for (ent, mut light, enabled) in light_q.p2().iter_mut() {
         light.shadows_enabled = enabled;
-        commands.entity(ent).try_remove::<(ShadowCaster, ConfigureBeforePlaying)>();
+
+        let mut ent_commands = commands.entity(ent);
+        if !enabled {
+            ent_commands.insert(NotShadowCaster);
+        }
+        ent_commands.try_remove::<ConfigureBeforePlaying>();
     }
 }

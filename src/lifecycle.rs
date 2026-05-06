@@ -159,6 +159,7 @@ fn check_configure_before_playing(
     configure_q: Query<Entity, With<ConfigureBeforePlaying>>,
     mut frames: Local<u8>,
 ) {
+    // Monitor things during this state.
     if *state.get() == LevelState::Configuring {
         // We expect this to go to zero after a few frames.
         let ents: Vec<_> = configure_q.iter().collect();
@@ -170,15 +171,19 @@ fn check_configure_before_playing(
 
         // Wait for a given number of frames.
         if *frames >= 60 {
-            error!("ConfigureBeforePlaying state is stuck on: {ents:?}");
+            error!("ConfigureBeforePlaying state was stuck on: {ents:?}");
             // Remove them all.
             for ent in ents {
                 commands.entity(ent).remove::<ConfigureBeforePlaying>();
             }
-            *frames = 0;
+            // Let the next frame handle it, in case
+            // (for example) something is also adding this component
+            // every frame.
+        } else {
+            *frames += 1;
         }
-
-        *frames += 1;
-    } else {
+    } else if state.is_changed() {
+        // Reset whenever we are (now) in some other LevelState.
+        *frames = 0;
     }
 }
