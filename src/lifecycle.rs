@@ -18,9 +18,10 @@ impl Plugin for LifecyclePlugin {
             .init_resource::<PauseState>()
             .add_systems(Update, (
                 check_pause_request,
-                reset_pause_on_enter_launch_menu,
+                reset_pause_on_enter_launch_menu
+                    .run_if(resource_changed::<State<ProgramState>>),
                 check_despawners.run_if(not(is_paused)),
-                check_configure_before_loading,
+                check_configure_before_playing,
             ))
             .add_systems(
                 StateTransition,
@@ -143,11 +144,7 @@ fn reset_pause_on_enter_launch_menu(
     program_state: Res<State<ProgramState>>,
     mut pause_state: ResMut<PauseState>,
 ) {
-    if !program_state.is_changed() {
-        // Nope
-        return
-    }
-    if !matches!(program_state.get(), ProgramState::LaunchMenu) {
+    if **program_state != ProgramState::LaunchMenu {
         // Nope
         return
     }
@@ -156,14 +153,32 @@ fn reset_pause_on_enter_launch_menu(
     pause_state.set_user_paused(false);
 }
 
-fn check_configure_before_loading(
+fn check_configure_before_playing(
     mut commands: Commands,
     state: Res<State<LevelState>>,
-    configure_q: Query<&ConfigureBeforePlaying>,
+    configure_q: Query<Entity, With<ConfigureBeforePlaying>>,
+    mut frames: Local<u8>,
 ) {
     if *state.get() == LevelState::Configuring {
-        if configure_q.count() == 0 {
+        // We expect this to go to zero after a few frames.
+        let ents: Vec<_> = configure_q.iter().collect();
+        if ents.is_empty() {
+            *frames = 0;
             commands.set_state(LevelState::Playing);
+            return;
         }
+
+        // Wait for a given number of frames.
+        if *frames >= 60 {
+            error!("ConfigureBeforePlaying state is stuck on: {ents:?}");
+            // Remove them all.
+            for ent in ents {
+                commands.entity(ent).remove::<ConfigureBeforePlaying>();
+            }
+            *frames = 0;
+        }
+
+        *frames += 1;
+    } else {
     }
 }
