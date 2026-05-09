@@ -145,6 +145,10 @@ pub fn setup_egui_style(
     });
 }
 
+/// egui filter
+pub(crate) const ENTITY_FILTER_ID: &str = "my_inspector_entity_filter";
+pub(crate) const SELECTED_ENTITY_FILTER_ID: &str = "selected_inspector_entity_filter";
+
 pub fn update_egui_inspector_ui(
     world: &mut World,
     mut show_tree: Local<bool>,
@@ -152,6 +156,10 @@ pub fn update_egui_inspector_ui(
 ) {
     use bevy_inspector_egui::bevy_inspector::*;
     use egui::*;
+
+    let now_selected_opt = world.query_filtered::<
+        Entity, (With<CrosshairTargetable>, Added<Highlighted>)
+    >().iter(world).next();
 
     // Find the current context using the world's querying.
     // We'll need to clone this to avoid double-borrow of `world` below.
@@ -161,15 +169,36 @@ pub fn update_egui_inspector_ui(
         .query_filtered::<&mut EguiContext, (With<Camera3d>, With<ViewerCamera>)>()
         .single_mut(world) else { return };
 
-    // can't const-initialize an Id
-    const FILTER_ID: &str = "my_inspector_entity_filter";
-
     Window::new("Inspector")
         .default_pos(Pos2::new(5.0, 150.0))
         .default_size(Vec2::new(250.0, 300.0))
-        // .hscroll(true)
-        // .vscroll(true)
         .show(egui_context.clone().get_mut(), |ui| {
+
+            if let Some(selected) = now_selected_opt {
+                // Set up selection filter if new.
+
+                // Copied from BIE.
+                let id = egui::Id::new(ENTITY_FILTER_ID).with("word");
+
+                let (filter, last_filter) = ui.memory_mut(|mem| {
+                    let filter = mem.data.get_persisted_mut_or_default::<String>(
+                        id).clone();
+                    let last_filter = mem.data.get_persisted_mut_or_default::<String>(
+                        egui::Id::new(SELECTED_ENTITY_FILTER_ID)).clone();
+                    (filter, last_filter)
+                });
+
+                let new_filter = format!("{selected}");
+                if filter.is_empty() || last_filter != new_filter {
+                    ui.memory_mut(|mem| {
+                        let filter: &mut String = mem.data.get_persisted_mut_or_default(id);
+                        *filter = new_filter.clone();
+
+                        *mem.data.get_persisted_mut_or_default::<String>(
+                            egui::Id::new(SELECTED_ENTITY_FILTER_ID)) = new_filter;
+                    });
+                }
+            }
 
             ui.scope(|ui| {
                 ui.style_mut().override_text_style = Some(TextStyle::Small);
@@ -194,7 +223,7 @@ pub fn update_egui_inspector_ui(
                 // We share the FILTER_ID for each combination of button states,
                 // so the text entry is retained when switching modes.
                 // (Do not try to reimplement ui_for_entities_filtered again.)
-                let id = Id::new(FILTER_ID);
+                let id = Id::new(ENTITY_FILTER_ID);
 
                 let show_noisy = ! *show_all;
                 let show_tree = *show_tree;
