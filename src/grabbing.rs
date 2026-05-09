@@ -349,10 +349,10 @@ fn move_grabbed_item(
     camera_q: Query<&GlobalTransform, (With<Camera3d>, With<WorldCamera>)>,
 
     mut gizmos: Gizmos,
-    mut phys_info_q: Query<(Forces, &GlobalTransform, &Transform, &Mass)>,
+    mut phys_info_q: Query<(Forces, &GlobalTransform, &Mass)>,
     // time: Res<Time<Physics>>,
 ) {
-    let Ok((mut forces, item_global_xfrm, xfrm, mass)) = phys_info_q.get_mut(grabbed.entity) else {
+    let Ok((mut forces, item_global_xfrm, mass)) = phys_info_q.get_mut(grabbed.entity) else {
         commands.write_message(GrabbingCommand::CancelGrabItems);
         return
     };
@@ -400,8 +400,9 @@ fn move_grabbed_item(
     }
 
     // Draw axes from all edges.
+    let xfrm = item_global_xfrm.compute_transform();
     let size = grabbing_force.force;
-    gizmos.axes(*xfrm, size);
+    gizmos.axes(xfrm, size);
 
     let mut inv_xfrm = xfrm.clone();
     inv_xfrm.rotate_local_x(std::f32::consts::PI);
