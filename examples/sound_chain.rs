@@ -1277,11 +1277,6 @@ pub(crate) fn ensure_midi_synths(
         commands.entity(ent).insert((
             synth,
             Sfx,
-
-            sample_effects![
-                SpatialBasicNode::default(),
-                SpatialScale::default(),
-            ],
         ));
 
         synth_map.register_synth(ent);

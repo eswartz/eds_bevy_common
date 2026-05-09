@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use bevy::{ecs::system::SystemParam, prelude::*};
+use bevy::{ecs::{query::QueryFilter, system::SystemParam}, prelude::*};
 use bevy_egui::{EguiContext, EguiContexts, EguiGlobalSettings, EguiPlugin, EguiPrimaryContextPass, PrimaryEguiContext, input::{EguiWantsInput, egui_wants_any_keyboard_input, egui_wants_any_pointer_input}};
 use bevy_inspector_egui::{DefaultInspectorConfigPlugin};
 use fuzzy_matcher::skim::SkimMatcherV2;
@@ -9,7 +9,9 @@ use crate::*;
 
 use super::gui::GuiState;
 
-/// You need to manually add EguiPlugin and DefaultInspectorConfigPlugin.
+/// This uses bevy-inspector-egui. If you don't add
+/// `EguiPlugin` and/or `DefaultInspectorConfigPlugin` yourself,
+/// this plugin will do so with default settings.
 pub struct DebugPlugin;
 
 impl Plugin for DebugPlugin {
@@ -146,9 +148,10 @@ pub fn setup_egui_style(
 pub fn update_egui_inspector_ui(
     world: &mut World,
     mut show_tree: Local<bool>,
-    mut show_observers: Local<bool>,
+    mut show_all: Local<bool>,
 ) {
     use bevy_inspector_egui::bevy_inspector::*;
+    use egui::*;
 
     // Find the current context using the world's querying.
     // We'll need to clone this to avoid double-borrow of `world` below.
@@ -158,73 +161,93 @@ pub fn update_egui_inspector_ui(
         .query_filtered::<&mut EguiContext, (With<Camera3d>, With<ViewerCamera>)>()
         .single_mut(world) else { return };
 
+    // can't const-initialize an Id
     const FILTER_ID: &str = "my_inspector_entity_filter";
 
-    egui::Window::new("Inspector")
-        .default_pos(egui::Pos2::new(5.0, 150.0))
-        .default_size(egui::Vec2::new(250.0, 300.0))
+    Window::new("Inspector")
+        .default_pos(Pos2::new(5.0, 150.0))
+        .default_size(Vec2::new(250.0, 300.0))
         // .hscroll(true)
         // .vscroll(true)
         .show(egui_context.clone().get_mut(), |ui| {
 
-            ui.checkbox(&mut show_tree, "Show As Tree");
-            ui.checkbox(&mut show_observers, "Show Observers");
+            ui.scope(|ui| {
+                ui.style_mut().override_text_style = Some(TextStyle::Small);
+                ui.horizontal_wrapped(|ui| {
+                    ui.label(RichText::new("Entities:").strong());
+                    ui.checkbox(&mut show_tree, RichText::new("As Tree"));
+                    ui.checkbox(&mut show_all, RichText::new("All"))
+                        .on_hover_text("When unset, hides entities without Names, which are usually behind-the-scenes entities.");
+                });
+            });
 
-            egui::ScrollArea::both().show(ui, |ui| {
+            ScrollArea::both().show(ui, |ui| {
 
-            let mut entities_with_filter = |ui: &mut egui::Ui| {
-                match (*show_tree, *show_observers) {
+            let mut entities_with_filter = |ui: &mut Ui| {
+                #[derive(QueryFilter)]
+                struct NotAllFilter {
+                    is_named: With<Name>,
+                }
+
+                type Roots = Without<ChildOf>;
+
+                // We share the FILTER_ID for each combination of button states,
+                // so the text entry is retained when switching modes.
+                // (Do not try to reimplement ui_for_entities_filtered again.)
+                let id = Id::new(FILTER_ID);
+
+                let show_noisy = ! *show_all;
+                let show_tree = *show_tree;
+                match (show_tree, show_noisy) {
                     (false, false) => {
-                        let filter: Filter<Without<Observer>> =
-                            Filter::from_ui_fuzzy(ui, egui::Id::new(FILTER_ID));
+                        let filter: Filter<()> = Filter::from_ui_fuzzy(ui, id);
                         ui_for_entities_filtered(world, ui, true, &filter);
                     }
                     (false, true) => {
-                        let filter: Filter<()> =
-                            Filter::from_ui_fuzzy(ui, egui::Id::new(FILTER_ID));
+                        let filter: Filter<NotAllFilter> = Filter::from_ui_fuzzy(ui, id);
                         ui_for_entities_filtered(world, ui, true, &filter);
                     }
                     (true, false) => {
-                        let filter: Filter<(Without<ChildOf>, Without<Observer>)> =
-                            Filter::from_ui_fuzzy(ui, egui::Id::new(FILTER_ID));
+                        // As parent-child tree and all entities, each a root.
+                        let filter: Filter<Roots> = Filter::from_ui_fuzzy(ui, id);
                         ui_for_entities_filtered(world, ui, true, &filter);
                     }
                     (true, true) => {
-                        let filter: Filter<Without<ChildOf>> =
-                            Filter::from_ui_fuzzy(ui, egui::Id::new(FILTER_ID));
+                        // As parent-child tree and , each a root.
+                        let filter: Filter<(Roots, NotAllFilter)> = Filter::from_ui_fuzzy(ui, id);
                         ui_for_entities_filtered(world, ui, true, &filter);
                     }
                 }
             };
 
-            egui::CollapsingHeader::new("Entities")
+            CollapsingHeader::new("Entities")
                 .default_open(false)
                 .show(ui, |ui| {
                     entities_with_filter(ui);
                 });
 
-                egui::CollapsingHeader::new("Resources").show(ui, |ui| {
-                    const FILTER_ID: &str = "my_inspector_resource_filter";
-                    let filter: Filter<()> = Filter::from_ui_fuzzy(ui, egui::Id::new(FILTER_ID));
-                    ui_for_filtered_resources(world, ui, filter);
-                });
-
-                egui::CollapsingHeader::new("Assets").show(ui, |ui| {
-                    ui_for_all_assets(world, ui);
-                });
-
-                // egui::CollapsingHeader::new("Audio Listeners").show(ui, |ui| {
-                //     ui_for_entities_filtered::<Filter<With<AudioCameraListener>>>(world, ui, false, &Filter::all());
-                // });
-                // egui::CollapsingHeader::new("Audio Cues").show(ui, |ui| {
-                //     ui_for_entities_filtered::<Filter<With<AudioCue>>>(world, ui, false, &Filter::all());
-                // });
-                // egui::CollapsingHeader::new("Audio Players").show(ui, |ui| {
-                //     ui_for_entities_filtered::<Filter<With<AudioPlayState>>>(world, ui, false, &Filter::all());
-                // });
-
+            CollapsingHeader::new("Resources").show(ui, |ui| {
+                const FILTER_ID: &str = "my_inspector_resource_filter";
+                let filter: Filter<()> = Filter::from_ui_fuzzy(ui, Id::new(FILTER_ID));
+                ui_for_filtered_resources(world, ui, filter);
             });
+
+            CollapsingHeader::new("Assets").show(ui, |ui| {
+                ui_for_all_assets(world, ui);
+            });
+
+            // CollapsingHeader::new("Audio Listeners").show(ui, |ui| {
+            //     ui_for_entities_filtered::<Filter<With<AudioCameraListener>>>(world, ui, false, &Filter::all());
+            // });
+            // CollapsingHeader::new("Audio Cues").show(ui, |ui| {
+            //     ui_for_entities_filtered::<Filter<With<AudioCue>>>(world, ui, false, &Filter::all());
+            // });
+            // CollapsingHeader::new("Audio Players").show(ui, |ui| {
+            //     ui_for_entities_filtered::<Filter<With<AudioPlayState>>>(world, ui, false, &Filter::all());
+            // });
+
         });
+    });
 }
 
 fn name_satisfies_filter(

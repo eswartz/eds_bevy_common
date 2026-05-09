@@ -103,9 +103,12 @@ pub fn initialize_audio(master: Single<Entity, With<MainBus>>, mut commands: Com
         muted: false,
     });
 
-    const DEFAULT_POOL_VOLUME: Volume = Volume::Linear(1.0);
+    const DEFAULT_POOL_VOLUME: Volume = Volume::Linear(0.5);
 
     // For each new pool, we can provide non-default initial values for the volume.
+
+    // Also: The lower bound of 0 on the pools works around seedling bug #87.
+
     commands.spawn((
         Name::new("Music"),
         SamplerPool(Music),
@@ -118,7 +121,7 @@ pub fn initialize_audio(master: Single<Entity, With<MainBus>>, mut commands: Com
 
         // This accounts, in theory, for two crossfading songs.
         // Otherwise use the dynamic pool...?
-        PoolSize(2 ..= 2),
+        PoolSize(0 ..= 2),
 
         MusicBus,
 
@@ -139,14 +142,13 @@ pub fn initialize_audio(master: Single<Entity, With<MainBus>>, mut commands: Com
         },
 
         // This pool is for spatial samples.
-        PoolSize(8 ..= 256),
+        PoolSize(0 ..= 256),
 
         sample_effects![(
             SpatialBasicNode {
                 panning_threshold: 0.9,
                 ..default()
             },
-            SpatialScale(Vec3::splat(10.0)),
         )],
     ));
 
@@ -157,7 +159,7 @@ pub fn initialize_audio(master: Single<Entity, With<MainBus>>, mut commands: Com
             volume: DEFAULT_POOL_VOLUME,
             muted: false,
         },
-        PoolSize(2 ..= 8),
+        PoolSize(0 ..= 8),
     ));
 }
 

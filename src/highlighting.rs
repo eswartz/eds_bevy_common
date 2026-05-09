@@ -232,7 +232,7 @@ fn cycle_targetables(
 
     mut reader: MessageReader<ChangeHighlightedItem>,
 
-    hilit_q: Query<Entity, (With<Spawned>, With<Highlighted>)>,
+    hilit_q: Query<Entity, (With<CrosshairTargetable>, With<Highlighted>)>,
     // highlighted_opt: Option<Res<HighlightedItem>>,
     mut crosshair_targets: ResMut<CrosshairTargets>,
 ) {
@@ -293,7 +293,7 @@ fn update_highlighting_mode(
     fx: Res<CommonFxAssets>,
     mode: Res<HighlightingMode>,
     mut crosshair_q: Single<&mut Crosshair>,
-    hilit_q: Query<Entity, (With<Spawned>, With<Highlighted>)>,
+    hilit_q: Query<Entity, (With<CrosshairTargetable>, With<Highlighted>)>,
     style: Res<HighlightedItemStyle>,
     mut targets: ResMut<CrosshairTargets>,
 ) {
@@ -335,7 +335,7 @@ fn update_highlighting_mode(
                     speed: rng.random_range(0.9..1.1),
                     ..default()
                 },
-                VolumeNode::from_linear(rng.random_range(0.85..1.0)),
+                VolumeNode::from_linear(rng.random_range(0.25..0.5)),
             ));
         }
     }
@@ -347,8 +347,8 @@ fn update_highlightable(
     fx: Res<CommonFxAssets>,
     targets: Res<CrosshairTargets>,
     style: Res<HighlightedItemStyle>,
-    now_hovered_q: Query<Entity, (With<Spawned>, Added<Highlighted>)>,
-    was_hovered_q: Query<Entity, (With<OutlineVolume>, With<Spawned>, Without<Highlighted>)>,
+    now_hovered_q: Query<Entity, (With<CrosshairTargetable>, Added<Highlighted>)>,
+    was_hovered_q: Query<Entity, (With<OutlineVolume>, With<CrosshairTargetable>, Without<Highlighted>)>,
 ) {
     if !targets.is_changed() {
         return
@@ -380,7 +380,7 @@ fn update_highlightable(
                 speed: rng.random_range(0.9..1.1),
                 ..default()
             },
-            VolumeNode::from_linear(rng.random_range(0.85..1.0)),
+            VolumeNode::from_linear(rng.random_range(0.25..0.5)),
         ));
     }
 }
