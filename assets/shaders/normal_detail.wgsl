@@ -54,10 +54,9 @@ fn fragment(
     );
 
     let n1 = pbr_input.N;
-    let n2 = normalize((vec3(normal_color.xy, 0.0) * 2.0 - 1.0));
-    let r = normalize(n1 + n2 * detail_material.blend);
+    let n2 = (vec3(normal_color.xy, 0.0) * 2.0 - 1.0) * detail_material.blend;
+    let r = normalize(n1 + n2);
     pbr_input.N = r;
-
 
     // apply lighting
     out.color = apply_pbr_lighting(pbr_input);
