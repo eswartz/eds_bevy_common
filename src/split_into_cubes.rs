@@ -9,7 +9,6 @@ use avian3d::prelude::*;
 use bevy::prelude::*;
 
 use crate::AssignDetailNormal;
-use crate::GameLayer;
 use crate::ConfigureBeforePlaying;
 use crate::LevelState;
 
@@ -38,16 +37,27 @@ pub struct SplitIntoCubes {
 }
 
 fn handle_split_into_cubes(
-    meshes_q: Query<&Mesh3d>,
-    split_q: Query<(Entity, &SplitIntoCubes, &Transform, &Aabb, Option<&Name>, Option<&AssignDetailNormal>), Added<Aabb>>,
-    mats_q: Query<&MeshMaterial3d<StandardMaterial>>,
+    split_q: Query<(
+        Entity,
+        &SplitIntoCubes,
+        &Mesh3d,
+        &MeshMaterial3d<StandardMaterial>,
+        &Transform,
+        &Aabb,
+        Option<&Name>,
+        Option<&Friction>,
+        Option<&RigidBody>,
+        Option<&CollisionLayers>,
+        Option<&AssignDetailNormal>,
+    ), Added<Aabb>>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut commands: Commands,
 ) {
-    for (ent, split, xfrm, aabb, name_opt, detail_opt) in split_q.iter() {
-        let Ok(mesh) = meshes_q.get(ent) else { continue };
-        let mesh = meshes.get(mesh).unwrap().clone();
-        let mat = mats_q.get(ent).unwrap();
+    for (
+        ent, split, mesh, mat, xfrm, aabb,
+        name_opt, friction_opt, rigid_opt, layers_opt, adn_opt
+    ) in split_q.iter() {
+        let mesh = meshes.get(&mesh.0).unwrap().clone();
 
         let split = split.size.max(64.);
         let full_extents = aabb.half_extents.mul(2.0).to_vec3() * xfrm.scale;
@@ -75,33 +85,34 @@ fn handle_split_into_cubes(
                     let cube_center = Vec3::new(x0, y0, z0) + cube_half_size;
 
                     if let Some((partial_mesh, indices, vertices)) = extract_mesh_cube(&mesh, cube_center, cube_half_size) {
-                        let id = commands.spawn((
+                        let mut ent_commands = commands.spawn((
                             ChildOf(root),
                             Mesh3d(meshes.add(partial_mesh)),
-                            mat.clone(),
 
-                            Name::new(if let Some(name) = name_opt { format!("{name} split {xi}.{yi}.{zi}") } else { "split".to_string() }),
+                            Name::new(if let Some(name) = name_opt {
+                                format!("{name} split {xi}.{yi}.{zi}")
+                            } else {
+                                "split".to_string()
+                            }),
                             ColliderConstructor::TrimeshWithConfig {
                                 indices, vertices,
-                                flags: TrimeshFlags::FIX_INTERNAL_EDGES | TrimeshFlags::MERGE_DUPLICATE_VERTICES
+                                flags: TrimeshFlags::FIX_INTERNAL_EDGES
                             },
-                            RigidBody::Static,
+                        ));
 
-                            CollisionLayers::new(
-                                GameLayer::World,
-                                [
-                                    GameLayer::Default,
-                                    GameLayer::World,
-                                    GameLayer::Player,
-                                    GameLayer::Projectiles,
-                                ],
-                            ),
+                        ent_commands.insert(mat.clone());
 
-                            Visibility::Inherited,
-                        )).id();
-
-                        if let Some(detail) = detail_opt {
-                            commands.entity(id).insert(detail.clone());
+                        if let Some(c) = friction_opt {
+                            ent_commands.insert(c.clone());
+                        }
+                        if let Some(c) = rigid_opt {
+                            ent_commands.insert(c.clone());
+                        }
+                        if let Some(c) = layers_opt {
+                            ent_commands.insert(c.clone());
+                        }
+                        if let Some(c) = adn_opt {
+                            ent_commands.insert(c.clone());
                         }
 
                         count += 1;
@@ -118,6 +129,7 @@ fn handle_split_into_cubes(
         ent_commands.remove::<MeshMaterial3d<StandardMaterial>>();
         ent_commands.remove::<RigidBody>();
         ent_commands.remove::<ColliderConstructor>();
+        ent_commands.remove::<SplitIntoCubes>();
 
         ent_commands.remove::<ConfigureBeforePlaying>();
     }
