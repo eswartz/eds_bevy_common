@@ -1,6 +1,7 @@
 use std::any::Any;
 use std::any::TypeId;
 use std::path::PathBuf;
+use std::time::Duration;
 
 use avian3d::prelude::PhysicsGizmos;
 use bevy::asset::AssetPath;
@@ -16,8 +17,12 @@ use bevy::window::WindowFocused;
 use bevy_asset_loader::prelude::*;
 use bevy_seedling::prelude::MainBus;
 
+use crate::CurrentLevel;
 use crate::DespawnOnExitOrReenter;
+use crate::GameplayState;
+use crate::LevelState;
 use crate::StatsOverlayVisible;
+use crate::TextShadowColorLens;
 use crate::assets::CommonGuiAssets;
 use crate::RENDER_LAYER_UI;
 
@@ -75,6 +80,27 @@ impl Plugin for GuiPlugin {
         .add_systems(OnExit(OverlayState::Loading),
             on_loading_finished)
 
+
+        .add_systems(
+            OnTransition{ exited: GameplayState::Playing, entered: GameplayState::Setup },
+            (
+                hide_instructions,
+            )
+        )
+        .add_systems(OnTransition{ exited: ProgramState::InGame, entered: ProgramState::LaunchMenu },
+            (
+                reset_instructions,
+            )
+            .
+            chain()
+        )
+        .add_systems(OnEnter(LevelState::LevelLoaded),
+            show_instructions,
+        )
+
+        .add_systems(OnExit(LevelState::Playing),
+            hide_instructions,
+        )
         .add_systems(
             Update,
             check_grab_focus_state.run_if(in_state(ProgramState::InGame))
@@ -724,7 +750,7 @@ fn setup_gui_nodes(
             .. default()
         },
         Text::new("\u{1F3C3}"), // truck
-        Visibility::Inherited,
+        Visibility::Hidden, // by default
         ZIndex(-1), // under
     ));
     commands.spawn((
@@ -744,8 +770,7 @@ fn setup_gui_nodes(
             .. default()
         },
         Text::new("\u{1F5D9}"),
-        // Visibility::Hidden,
-        Visibility::Visible,
+        Visibility::Hidden, // by default
         ZIndex(1),
     ));
 
@@ -810,10 +835,123 @@ fn update_mute_ui(
     }
 }
 
+
+/// Set the instruction text for level.
+#[derive(Resource, Reflect)]
+#[reflect(Resource)]
+#[type_path = "game"]
+pub struct InstructionText(pub String);
+
+/// Set when we showed the instruction text for what level.
+#[derive(Resource, Reflect)]
+#[reflect(Resource)]
+#[type_path = "game"]
+pub struct ShowedInstructions{ level_id: String }
+
+fn show_instructions(
+    mut commands: Commands,
+    level: Option<Res<CurrentLevel>>,
+    showed: Option<Res<ShowedInstructions>>,
+    text: Option<Res<InstructionText>>,
+    fonts: Res<CommonGuiAssets>,
+    instructions_q: Single<Entity, With<InstructionsArea>>,
+) {
+    use bevy_tweening::AnimTarget;
+    use bevy_tweening::EaseMethod;
+    use bevy_tweening::Tween;
+    use bevy_tweening::TweenAnim;
+    use bevy_tweening::lens::TextColorLens;
+
+    if showed.is_some() || text.is_none() {
+        return;
+    }
+
+    commands.insert_resource(ShowedInstructions{
+        level_id: if let Some(level) = level {
+            level.id.clone()
+        } else {
+            String::new()
+        },
+    });
+
+    let mut text_ent = Entity::PLACEHOLDER;
+
+    commands.entity(*instructions_q)
+        .insert(Visibility::Inherited)  // show
+        .with_children(|builder| {
+            text_ent = builder.spawn((
+                DespawnOnExit(GameplayState::Playing),
+                Text::new(if let Some(text) = text {
+                    text.0.clone()
+                } else {
+                    String::new()
+                }),
+                TextLayout::new(Justify::Center, LineBreak::WordBoundary),
+                TextFont {
+                    font: fonts.std_ui.clone(),
+                    font_size: 32.0,
+                    .. default()
+                },
+                TextColor(Color::WHITE.with_alpha(0.5)),
+                TextShadow {
+                    offset: Vec2::splat(2.),
+                    color: Color::linear_rgba(0., 0., 0., 0.0),
+                },
+            )).id();
+        });
+
+    // Fade in and out.
+
+    const TIME_SECS: f32 = 2.0;
+
+    let color_tween = Tween::new(
+        EaseMethod::EaseFunction(EaseFunction::CubicOut),
+        Duration::from_secs_f32(TIME_SECS),
+        TextColorLens {
+            start: Color::WHITE.with_alpha(0.0),
+            end: Color::WHITE.with_alpha(1.0),
+        }
+    )
+    .with_repeat(2, bevy_tweening::RepeatStrategy::MirroredRepeat);
+
+    let shadow_tween = Tween::new(
+        EaseMethod::EaseFunction(EaseFunction::CubicOut),
+        Duration::from_secs_f32(TIME_SECS),
+        TextShadowColorLens {
+            start: Color::linear_rgba(0., 0., 0., 0.0),
+            end: Color::linear_rgba(0., 0., 0., 1.0),
+        }
+    )
+    .with_repeat(2, bevy_tweening::RepeatStrategy::MirroredRepeat);
+
+    commands.entity(text_ent).try_insert((
+        DespawnOnExit(GameplayState::Playing),
+        TweenAnim::new(color_tween).with_destroy_on_completed(true),
+
+        // Add another TweenAnim.
+        children![(
+            TweenAnim::new(shadow_tween).with_destroy_on_completed(true),
+            AnimTarget::component::<TextShadow>(text_ent),
+        )]
+    ));
+}
+
+pub fn fade_instructions(
+    mut inst_q: Query<&mut Visibility, With<InstructionsArea>>,
+) {
+    for mut vis in inst_q.iter_mut() {
+        *vis = Visibility::Hidden;
+    }
+}
+
 pub fn hide_instructions(
     mut inst_q: Query<&mut Visibility, With<InstructionsArea>>,
 ) {
     for mut vis in inst_q.iter_mut() {
         *vis = Visibility::Hidden;
     }
+}
+
+pub fn reset_instructions(mut commands: Commands) {
+    commands.remove_resource::<ShowedInstructions>();
 }

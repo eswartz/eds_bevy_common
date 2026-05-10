@@ -1,14 +1,9 @@
 use bevy::asset::AssetMetaCheck;
 use bevy::input::common_conditions::input_pressed;
-use bevy_seedling::prelude::{SpatialBasicNode, SpatialScale, sample_effects};
 use eds_bevy_common::*;
-use bevy_tweening::*;
-use bevy_tweening::lens::TextColorLens;
-use bevy_tweening::{AnimTarget, EaseMethod, Tween, TweenAnim};
-
 use avian3d::PhysicsPlugins;
 use avian3d::prelude::Physics;
-use bevy::{input::common_conditions::input_just_pressed, prelude::*};
+use bevy::prelude::*;
 use bevy::asset::uuid::Uuid;
 use bevy::color::palettes::tailwind;
 use bevy::camera::visibility::RenderLayers;
@@ -89,6 +84,12 @@ fn main() -> AppExit {
         .add_plugins(LevelsPlugin)
         .add_plugins(DeathboxPlugin::default())
 
+        .add_plugins(CrosshairPlugin)
+        .insert_resource(CrosshairMode::AimFromCenter)
+        .add_plugins(HighlightingPlugin)
+        .add_plugins(GrabbingPlugin)
+        .insert_resource(HighlightingMode::Disabled)
+
         .add_plugins(AudioCommonPlugin)
         .add_plugins(MidiSynthPlugin)
         .add_plugins(SynthPlugin)
@@ -114,9 +115,9 @@ fn main() -> AppExit {
         // .insert_resource(PlayerInputSettings::for_fps())
         .insert_resource(PlayerMode::Space)
         .insert_resource(PlayerInputSettings {
-            base_xz_speed: 8,
+            base_xz_speed: 32,
             max_xz_speed: 255,
-            accelerate_scale: 2.0,
+            accelerate_scale: 5.0,
             .. PlayerInputSettings::for_space()
         })
         .insert_resource(PlayerCameraSettings {
@@ -935,7 +936,6 @@ impl Plugin for MyGamePlugin {
                 (
                     add_player,
                     start_configuring,
-                    show_instructions,
                 ).chain()
                 .run_if(in_state(ProgramState::InGame))
             )
@@ -1055,9 +1055,9 @@ struct OrigPosition(Vec3);
 pub(crate) fn level_spawn_finished(
     mut commands: Commands,
     mut pause: ResMut<PauseState>,
-    world: Res<WorldMarkerEntity>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-    mut meshes: ResMut<Assets<Mesh>>,
+    // world: Res<WorldMarkerEntity>,
+    // mut materials: ResMut<Assets<StandardMaterial>>,
+    // mut meshes: ResMut<Assets<Mesh>>,
 ) {
     // spawn_midi_spheres(commands.reborrow(), &world, &mut materials, &mut meshes);
 
@@ -1082,8 +1082,6 @@ pub(crate) fn spawn_level(
     level_list: Res<LevelList>,
     level_index: Res<LevelIndex>,
     world: Res<WorldMarkerEntity>,
-    mut score_q: Query<&mut Text, (With<ScoreArea>, Without<GameStatusArea>)>,
-    mut status_q: Query<&mut Text, (With<GameStatusArea>, Without<ScoreArea>)>,
 ) {
     setup_level(commands.reborrow(), &level_list, &level_index);
 
@@ -1100,9 +1098,6 @@ pub(crate) fn spawn_level(
             commands.set_state(GameplayState::Playing);
         })
     ;
-
-    score_q.single_mut().unwrap().clear();
-    status_q.single_mut().unwrap().clear();
 }
 
 pub(crate) fn spawn_player_on_start(world: &mut World) {
@@ -1150,6 +1145,11 @@ pub(crate) fn setup_level(
 
     let level = &level_list.0[level_index.0];
     commands.insert_resource(CurrentLevel(level.clone()));
+
+    commands.insert_resource(InstructionText(
+        r#"
+        Left Click: Spawn noisy sphere
+        "#.to_string()))
 }
 
 pub(crate) fn advance_level(
@@ -1162,86 +1162,6 @@ pub(crate) fn advance_level(
     commands.set_state(OverlayState::Loading);
     commands.set_state(GameplayState::Setup);
 }
-
-
-/////////
-
-/// Set when we showed the text.
-#[derive(Resource, Reflect)]
-#[reflect(Resource)]
-#[type_path = "game"]
-pub(crate) struct ShowedTutorial;
-
-fn show_instructions(
-    mut commands: Commands,
-    showed: Option<Res<ShowedTutorial>>,
-    fonts: Res<CommonGuiAssets>,
-    instructions_q: Single<Entity, With<InstructionsArea>>,
-) {
-    if showed.is_some() {
-        return;
-    }
-
-    commands.insert_resource(ShowedTutorial);
-
-    let mut text_ent = Entity::PLACEHOLDER;
-
-    commands.entity(*instructions_q).insert(Visibility::Inherited)  // show
-    .with_children(|builder| {
-        text_ent = builder.spawn((
-            DespawnOnExit(GameplayState::Playing),
-            Text::new(
-                r#"Left Click: Spawn noisy sphere
-                "#
-            ),
-            TextLayout::new(Justify::Center, LineBreak::WordBoundary),
-            TextFont {
-                font: fonts.std_ui.clone(),
-                font_size: 32.0,
-                .. default()
-            },
-            TextColor(Color::WHITE.with_alpha(0.5)),
-            TextShadow {
-                offset: Vec2::splat(2.),
-                color: Color::linear_rgba(0., 0., 0., 0.0),
-            },
-        )).id();
-    });
-
-    // Fade in and out.
-
-    let color_tween = Tween::new(
-        EaseMethod::EaseFunction(EaseFunction::CubicOut),
-        Duration::from_secs_f32(3.0),
-        TextColorLens {
-            start: Color::WHITE.with_alpha(0.0),
-            end: Color::WHITE.with_alpha(1.0),
-        }
-    )
-    .with_repeat(2, bevy_tweening::RepeatStrategy::MirroredRepeat);
-
-    let shadow_tween = Tween::new(
-        EaseMethod::EaseFunction(EaseFunction::CubicOut),
-        Duration::from_secs_f32(3.0),
-        TextShadowColorLens {
-            start: Color::linear_rgba(0., 0., 0., 0.0),
-            end: Color::linear_rgba(0., 0., 0., 1.0),
-        }
-    )
-    .with_repeat(2, bevy_tweening::RepeatStrategy::MirroredRepeat);
-
-    commands.entity(text_ent).try_insert((
-        DespawnOnExit(GameplayState::Playing),
-        TweenAnim::new(color_tween).with_destroy_on_completed(true),
-
-        // Add another TweenAnim.
-        children![(
-            TweenAnim::new(shadow_tween).with_destroy_on_completed(true),
-            AnimTarget::component::<TextShadow>(text_ent),
-        )]
-    ));
-}
-
 
 /////////
 
@@ -1294,7 +1214,6 @@ pub(crate) fn spawn_midi_sphere(
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut meshes: ResMut<Assets<Mesh>>,
 
-    buttons: Res<ButtonInput<MouseButton>>,
     time: Res<Time<Physics>>,
     mut last_time: Local<Duration>,
     mut mesh_holder: Local<Option<Handle<Mesh>>>,
@@ -1322,6 +1241,7 @@ pub(crate) fn spawn_midi_sphere(
 
         OurMidiSynth,
         Lifetime(Duration::ZERO),
+        CrosshairTargetable,
 
         Mesh3d(the_mesh),
         MeshMaterial3d(materials.add(Color::oklab(
@@ -1337,7 +1257,7 @@ pub(crate) fn move_midi_spheres(
     mut xfrm_q: Query<(Entity, &mut Transform, &OrigPosition, &mut Lifetime), (With<OurMidiSynth>, With<MidiSynth>)>,
     time: Res<Time<Physics>>,
 ) {
-    for (ent, mut xfrm, orig, mut lifetime) in xfrm_q.iter_mut() {
+    for (_ent, mut xfrm, orig, mut lifetime) in xfrm_q.iter_mut() {
         let ang = (lifetime.0.as_secs_f32() * 10.0).to_radians();
         let (s, c) = f32::sin_cos(ang);
 
@@ -1368,10 +1288,10 @@ pub(crate) fn trigger_midi_notes(
 
         let channel = if ent_int % 3 == 0 { SynthChannel::Voice(1) } else { SynthChannel::Drums(1) };
         let program = (ent_int % 127) as u8;
-        let note = SynthNote::midi(((ent_int.wrapping_add(*counter)) % 90 + 20) as u8);
+        let note = SynthNote::midi(((ent_int.wrapping_add(*counter)) % 91 + 20) as u8);
 
         let time_tick = (timer.elapsed_secs() * 71.0) as u64;
-        let ent_clock = ent_int.wrapping_mul(time_tick).wrapping_add(*counter) % 51;
+        let ent_clock = ent_int.wrapping_mul(time_tick).wrapping_add(*counter) % 31;
         let should_fire = ent_clock == 0;
 
         if !should_fire {
@@ -1383,7 +1303,7 @@ pub(crate) fn trigger_midi_notes(
             Duration::ZERO
         ));
         commands.write_message(SynthMessage(
-            ent, SynthCommand::NoteOn(channel, note, 0.5),
+            ent, SynthCommand::NoteOn(channel, note, 0.75),
             Duration::ZERO
         ));
         commands.write_message(SynthMessage(

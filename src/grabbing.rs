@@ -54,13 +54,24 @@ impl Plugin for GrabbingPlugin {
             .init_resource::<GrabbedItemStyle>()
             .add_message::<GrabbingCommand>()
             .add_systems(
+                FixedFirst,
+                    move_grabbed_item
+                    .run_if(is_grabbing_item)
+                    .before(PhysicsSystems::Prepare)
+                    .run_if(not(is_in_menu))
+                    .run_if(is_level_active)
+                    .run_if(not(is_paused))
+                    .run_if(not(debug_gui_wants_direct_input))
+                    .run_if(in_state(ProgramState::InGame)),
+            )
+            .add_systems(
                 FixedUpdate,
                 (
                     sync_grabbable_with_highlighted
                         .run_if(highlighted_is_grabbable)
                         .run_if(not(is_grabbing_item))
                         ,
-                    process_grab_changes,
+                    process_grab_commands,
                     move_grabbed_item.run_if(is_grabbing_item),
                 )
                 .chain()
@@ -142,8 +153,13 @@ impl GrabbedItemStyle {
     }
 }
 
+/// The system internally sends these around by interpreting
+/// recent Actions.
+///
+/// (Movement is handled directly in [move_grabbed_item] to minimize latency.)
 #[derive(Message, Clone, Reflect, Debug)]
 #[reflect(Clone)]
+#[type_path = "game"]
 pub enum GrabbingCommand {
     GrabItem(Entity),
     ReleaseItems,
@@ -208,20 +224,23 @@ pub struct GrabbedItem {
     /// Distance of the entity to the camera, controlling where it lives
     /// as the camera moves (can change over time).
     pub distance: f32,
-    /// Original axes of freedom before grabbing.
-    orig_axes: LockedAxes,
+
     #[cfg(feature = "highlighting")]
     orig_mode: HighlightingMode,
-    /// original layers when grab started
-    orig_layers: Option<CollisionLayers>,
-    /// original RigidBody before grabbing.
-    orig_rigid: RigidBody,
-    /// original GravityScale before grabbing.
-    orig_gravity: Option<GravityScale>,
     /// Movement from original location to un-stick item.
     movement: f32,
     /// Movement from original location to un-stick item.
     speed: f32,
+
+    /// Original RigidBody before grabbing.
+    /// If None, the others will typically be None as well.
+    orig_rigid_opt: Option<RigidBody>,
+    /// Original axes of freedom before grabbing.
+    orig_axes: LockedAxes,
+    /// original layers when grab started
+    orig_layers_opt: Option<CollisionLayers>,
+    /// original GravityScale before grabbing.
+    orig_gravity_opt: Option<GravityScale>,
 
 }
 
@@ -349,23 +368,25 @@ fn move_grabbed_item(
     camera_q: Query<&GlobalTransform, (With<Camera3d>, With<WorldCamera>)>,
 
     mut gizmos: Gizmos,
-    mut phys_info_q: Query<(Forces, &GlobalTransform, &Mass)>,
-    // time: Res<Time<Physics>>,
+    mut world_info_q: Query<(Option<Forces>, &mut Transform, &GlobalTransform, Option<&Mass>)>,
+    time: Res<Time>,
 ) {
-    let Ok((mut forces, item_global_xfrm, mass)) = phys_info_q.get_mut(grabbed.entity) else {
+    let Ok((forces_opt, mut item_xfrm, item_global_xfrm, mass_opt)) = world_info_q.get_mut(grabbed.entity) else {
+        // Despawned?
+        warn!("missing grabbable {}", grabbed.entity);
         commands.write_message(GrabbingCommand::CancelGrabItems);
         return
     };
 
     let Ok(cam_global_xfrm) = camera_q.single() else {
-        log::warn!("no camera for grabbing {}", grabbed.entity);
+        // This might mean we've left gameplay... stop already.
+        warn!("no camera for grabbing {}", grabbed.entity);
         commands.write_message(GrabbingCommand::CancelGrabItems);
         return
     };
 
     // Compute the desired new location, i.e. the current
-    // position plus the camera's position + original distance,
-    // then apply an impulse to move to that location.
+    // position plus the camera's position + original distance.
     let cur_pos = item_global_xfrm.translation() + grabbed.orig_offset;
 
     let new_pos = cam_global_xfrm.translation() + cam_global_xfrm.rotation() * Vec3::NEG_Z * grabbed.distance;
@@ -376,24 +397,40 @@ fn move_grabbed_item(
 
     let movement = offset.length();
     if movement > MIN_MOVE {
-        let vel = offset * grabbing_force.force;
-        let vel = if grabbing_force.ignore_mass {
-            vel
+        let vel = offset;
+        let is_rigid;
+        let vel = if let Some(mass) = mass_opt && !grabbing_force.ignore_mass {
+            is_rigid = true;
+            vel / **mass
         } else {
-            vel / mass.0
+            is_rigid = false;
+            vel
         };
-        let mut new_vel = vel.clamp_length_max(grabbing_force.max_speed);
-        if new_vel.x.abs() < MIN_MOVE {
-            new_vel.x = 0.;
+        let vel = vel * grabbing_force.force;
+
+        if is_rigid && let Some(mut forces) = forces_opt {
+            // Convert movement in world space to an effective impulse.
+            // We directly set the linear velocity so it will move
+            // in sync with the camera movement.
+            let mut new_vel = vel.clamp_length_max(grabbing_force.max_speed);
+            if new_vel.x.abs() < MIN_MOVE {
+                new_vel.x = 0.;
+            }
+            if new_vel.y.abs() < MIN_MOVE {
+                new_vel.y = 0.;
+            }
+            if new_vel.z.abs() < MIN_MOVE {
+                new_vel.z = 0.;
+            }
+            *forces.linear_velocity_mut() = new_vel.adjust_precision();
+            *forces.angular_velocity_mut() = default();
+        } else {
+            // Non-physical, just move.
+            let xfrmed = item_global_xfrm.affine().inverse().transform_point(
+                new_pos /* + item_xfrm.rotation.inverse() * grabbed.orig_offset */);
+            item_xfrm.translation = item_xfrm.translation.lerp(xfrmed, time.delta_secs());
         }
-        if new_vel.y.abs() < MIN_MOVE {
-            new_vel.y = 0.;
-        }
-        if new_vel.z.abs() < MIN_MOVE {
-            new_vel.z = 0.;
-        }
-        *forces.linear_velocity_mut() = new_vel.adjust_precision();
-        *forces.angular_velocity_mut() = default();
+
         grabbed.movement += movement;
     } else {
         grabbed.speed *= 0.95;
@@ -417,7 +454,7 @@ fn move_grabbed_item(
     gizmos.axes(inv_xfrm, size);
 }
 
-fn process_grab_changes(
+fn process_grab_commands(
     mut reader: MessageReader<GrabbingCommand>,
 
     mut commands: Commands,
@@ -430,9 +467,8 @@ fn process_grab_changes(
     mut mode: ResMut<HighlightingMode>,
 
     mut raycast: MeshRayCast,
-    // mut gizmos: Gizmos,
-    phys_info_q: Query<(Forces, &GlobalTransform, &Transform,
-        &RigidBody, Option<&CollisionLayers>, Option<&LockedAxes>, Option<&GravityScale>)>,
+    phys_info_q: Query<(&GlobalTransform, &Transform,
+        Option<&RigidBody>, Option<&CollisionLayers>, Option<&LockedAxes>, Option<&GravityScale>)>,
 ) {
     for command in reader.read() {
         match command {
@@ -444,8 +480,10 @@ fn process_grab_changes(
                     continue
                 };
 
-                let Ok((_, item_global_xfrm, _, rigid, layers, axes, gravity)) = phys_info_q.get(entity) else {
-                    log::warn!("no physical item {entity}");
+                let Ok((item_global_xfrm, _, rigid_opt, layers_opt, axes_opt, gravity_opt)) = phys_info_q.get(entity) else {
+                    log::warn!("no world-located item {entity}");
+                    // Whatever we have is not valid, so clear it out.
+                    commands.write_message(GrabbingCommand::ReleaseItems);
                     continue
                 };
 
@@ -474,10 +512,10 @@ fn process_grab_changes(
                     #[cfg(feature = "highlighting")]
                     orig_mode: mode.original_or_enabled(),
                     distance,
-                    orig_axes: axes.map_or(default(), |a| *a),
-                    orig_layers: layers.cloned(),
-                    orig_rigid: rigid.clone(),
-                    orig_gravity: gravity.cloned(),
+                    orig_rigid_opt: rigid_opt.cloned(),
+                    orig_axes: axes_opt.map_or(default(), |a| *a),
+                    orig_layers_opt: layers_opt.cloned(),
+                    orig_gravity_opt: gravity_opt.cloned(),
                     movement: 0.,
                     speed: 0.,
                 });
@@ -486,23 +524,27 @@ fn process_grab_changes(
                     *mode = HighlightingMode::Busy;
                 }
 
-                // Mark as grabbed and make physics user-controllable.
-                commands.entity(entity).try_insert((
-                    Grabbed,
-                    LockedAxes::ROTATION_LOCKED,
-                    // RigidBody:: Kinematic, // avoid going through world
-                    GravityScale(0.),
-                    if let Some(layers) = layers {
-                        // Do not collide with (and fly out from) the player.
-                        CollisionLayers::from_bits(
-                            *layers.memberships,
-                            *((layers.filters | GameLayer::Player) ^ GameLayer::Player)
-                        )
-                    } else {
-                        CollisionLayers::default()
-                    }
-                ));
-                // commands.queue(SleepBody(entity));
+                // Mark as grabbed
+                commands.entity(entity).try_insert(Grabbed);
+
+                // ... and make physics user-controllable.
+                if rigid_opt.is_some() {
+                    commands.entity(entity).try_insert((
+                        Grabbed,
+                        LockedAxes::ROTATION_LOCKED,
+                        // RigidBody:: Kinematic, // avoid going through world
+                        GravityScale(0.),
+                        if let Some(layers) = layers_opt {
+                            // Do not collide with (and fly out from) the player.
+                            CollisionLayers::from_bits(
+                                *layers.memberships,
+                                *((layers.filters | GameLayer::Player) ^ GameLayer::Player)
+                            )
+                        } else {
+                            CollisionLayers::default()
+                        }
+                    ));
+                }
 
                 // Insert the outline bundle, whatever it is.
                 styler.apply_to(commands.entity(entity));
@@ -519,7 +561,16 @@ fn process_grab_changes(
                     ent_commands.try_remove::<Grabbed>();
 
                     // Restore original values.
-                    if let Some(layers) = grabbed.orig_layers {
+                    let is_rigid;
+
+                    if let Some(rigid) = grabbed.orig_rigid_opt {
+                        is_rigid = true;
+                        ent_commands.try_insert(rigid);
+                    } else {
+                        is_rigid = false;
+                    }
+
+                    if let Some(layers) = grabbed.orig_layers_opt {
                         ent_commands.try_insert(layers);
                     } else {
                         ent_commands.try_remove::<CollisionLayers>();
@@ -531,18 +582,17 @@ fn process_grab_changes(
                         ent_commands.try_remove::<LockedAxes>();
                     }
 
-                    ent_commands.try_insert(grabbed.orig_rigid);
-
-                    if let Some(grav) = grabbed.orig_gravity {
+                    if let Some(grav) = grabbed.orig_gravity_opt {
                         ent_commands.try_insert(grav);
                     } else {
                         ent_commands.try_remove::<GravityScale>();
                     }
 
-                    styler.remove_from(ent_commands);
+                    if is_rigid {
+                        ent_commands.try_remove::<Sleeping>();
+                    }
 
-                    // Make sure Avian knows it's awake but without affecting it.
-                    commands.queue(WakeBody(grabbed.entity));
+                    styler.remove_from(ent_commands);
 
                     //
                     if cfg!(feature = "highlighting") {

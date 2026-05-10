@@ -28,14 +28,9 @@ impl Plugin for PlayerMovementPlugin {
                         .or(resource_changed::<PlayerMode>)),
                     check_player_environment_fps,
                     check_player_environment_space,
-                    process_player_input_movement_for_cheats
-                        .run_if(is_cheating),
-                    process_player_input_movement_for_fps
-                        .run_if(not(is_cheating))
-                        ,
-                    process_player_input_movement_for_space
-                        .run_if(not(is_cheating))
-                        ,
+                    process_player_input_movement_for_cheats.run_if(is_cheating),
+                    process_player_input_movement_for_fps.run_if(not(is_cheating)),
+                    process_player_input_movement_for_space.run_if(not(is_cheating)),
                     process_player_input_non_movement,
                 ).chain()
                 .before(TransformSystems::Propagate)
@@ -147,7 +142,7 @@ impl PlayerInputSettings {
             grounded_y_speed: 0,
             air_scale: 0.99,
 
-            movement_decay_time_secs: 1.0 / 10.0,
+            movement_decay_time_secs: 1.0,
             fly_decay_time_secs: 1.0 / 8.0,
             angular_decay_time_secs: 1.0 / 60.0,
             small_turn_time_secs: 0.5,

@@ -12,8 +12,6 @@ use bevy::sprite::Text2dShadow;
 use bevy_seedling::spatial::SpatialListener3D;
 #[cfg(feature = "bevy_skein")]
 use bevy_skein::SkeinPlugin;
-use bevy_tweening::lens::TextColorLens;
-use bevy_tweening::{AnimTarget, EaseMethod, Tween, TweenAnim};
 use bevy::winit::WinitSettings;
 
 #[cfg(feature = "input_lim")]
@@ -63,6 +61,12 @@ fn main() -> AppExit {
         .add_plugins(LevelsPlugin)
         .add_plugins(DeathboxPlugin::default())
 
+        .add_plugins(CrosshairPlugin)
+        .insert_resource(CrosshairMode::AimFromCenter)
+        .add_plugins(HighlightingPlugin)
+        .add_plugins(GrabbingPlugin)
+        .insert_resource(HighlightingMode::Disabled)
+
         .add_plugins(AudioCommonPlugin)
         .add_plugins(MenuAudioPlugin)
 
@@ -81,6 +85,11 @@ fn main() -> AppExit {
         .insert_resource(PlayerInputSettings::for_fps())
         // .insert_resource(PlayerMode::Space)
         // .insert_resource(PlayerInputSettings::for_space())
+        .insert_resource(PlayerInputSettings {
+            max_xz_speed: 64,
+            accelerate_scale: 2.0,
+            .. PlayerInputSettings::for_fps()
+        })
 
         .add_plugins(MyMenuPlugin)
         .init_resource::<LevelDifficulty>()
@@ -96,19 +105,6 @@ fn main() -> AppExit {
             OnEnter(GameplayState::Playing),
             ensure_3d_camera,
         )
-
-        // .add_systems(
-        //     FixedUpdate,
-        //     (
-        //         check_actions,
-        //     )
-        //         .run_if(not(is_in_menu))
-        //         .run_if(is_level_active)
-        //         .run_if(not(is_paused))
-        //         .run_if(not(debug_gui_wants_direct_input))
-        //         .run_if(in_state(ProgramState::InGame))
-        //     ,
-        // )
     ;
 
     #[cfg(feature = "input_lim")]
@@ -177,14 +173,13 @@ fn create_input_map(mut commands: Commands) {
     assign_stock_player_actions(commands.reborrow(), include.clone());
 }
 
-
 fn register_dummy_level(
     assets: Res<AssetServer>,
     mut list: ResMut<LevelList>) {
     list.0.push(LevelInfo {
         id: "test0".to_string(),
         label: "Level 0 (Intro)".to_string(),
-        scene: assets.load("maps/empty.glb#Scene0"),
+        scene: assets.load("maps/sample_level.glb#Scene0"),
     });
     list.0.push(LevelInfo {
         id: "test1".to_string(),
@@ -983,23 +978,12 @@ impl Plugin for MyGamePlugin {
                 ).chain()
             )
 
-            .add_systems(
-                OnTransition{ exited: GameplayState::Playing, entered: GameplayState::Setup },
-                (
-                    hide_instructions,
-                )
-            )
             .add_systems(OnEnter(LevelState::LevelLoaded),
                 (
                     add_player,
                     start_skybox_setup,
-                    show_instructions,
                 ).chain()
                 .run_if(in_state(ProgramState::InGame))
-            )
-
-            .add_systems(OnExit(LevelState::Playing),
-                hide_instructions,
             )
 
             .add_systems(
@@ -1177,8 +1161,6 @@ pub(crate) fn spawn_level(
     level_list: Res<LevelList>,
     level_index: Res<LevelIndex>,
     world: Res<WorldMarkerEntity>,
-    mut score_q: Query<&mut Text, (With<ScoreArea>, Without<GameStatusArea>)>,
-    mut status_q: Query<&mut Text, (With<GameStatusArea>, Without<ScoreArea>)>,
 ) {
     setup_level(commands.reborrow(), &level_list, &level_index);
 
@@ -1196,8 +1178,11 @@ pub(crate) fn spawn_level(
         })
     ;
 
-    score_q.single_mut().unwrap().clear();
-    status_q.single_mut().unwrap().clear();
+    commands.insert_resource(InstructionText(
+        r#"
+        Move around with WASD.
+        "#.to_string()
+    ));
 }
 
 pub(crate) fn spawn_player_on_start(world: &mut World) {
@@ -1245,67 +1230,6 @@ pub(crate) fn setup_level(
 
     let level = &level_list.0[level_index.0];
     commands.insert_resource(CurrentLevel(level.clone()));
-}
-
-fn show_instructions(
-    mut commands: Commands,
-    ui_font: Res<UiFont>,
-    instructions_q: Single<Entity, With<InstructionsArea>>,
-) {
-    let mut text_ent = Entity::PLACEHOLDER;
-
-    commands.entity(*instructions_q).insert(Visibility::Inherited)  // show
-    .with_children(|builder| {
-        text_ent = builder.spawn((
-            DespawnOnExit(GameplayState::Playing),
-            Text::new("Move around with WASD.",
-            ),
-            TextLayout::new(Justify::Center, LineBreak::WordBoundary),
-            TextFont {
-                font: ui_font.0.clone(),
-                font_size: 32.0,
-                .. default()
-            },
-            TextColor(Color::WHITE.with_alpha(0.5)),
-            TextShadow {
-                offset: Vec2::splat(2.),
-                color: Color::linear_rgba(0., 0., 0., 0.0),
-            },
-        )).id();
-    });
-
-    // Fade in and out.
-
-    let color_tween = Tween::new(
-        EaseMethod::EaseFunction(EaseFunction::CubicOut),
-        Duration::from_secs_f32(3.0),
-        TextColorLens {
-            start: Color::WHITE.with_alpha(0.0),
-            end: Color::WHITE.with_alpha(1.0),
-        }
-    )
-    .with_repeat(2, bevy_tweening::RepeatStrategy::MirroredRepeat);
-
-    let shadow_tween = Tween::new(
-        EaseMethod::EaseFunction(EaseFunction::CubicOut),
-        Duration::from_secs_f32(3.0),
-        TextShadowColorLens {
-            start: Color::linear_rgba(0., 0., 0., 0.0),
-            end: Color::linear_rgba(0., 0., 0., 1.0),
-        }
-    )
-    .with_repeat(2, bevy_tweening::RepeatStrategy::MirroredRepeat);
-
-    commands.entity(text_ent).try_insert((
-        DespawnOnExit(GameplayState::Playing),
-        TweenAnim::new(color_tween).with_destroy_on_completed(true),
-
-        // Add another TweenAnim.
-        children![(
-            TweenAnim::new(shadow_tween).with_destroy_on_completed(true),
-            AnimTarget::component::<TextShadow>(text_ent),
-        )]
-    ));
 }
 
 pub(crate) fn advance_level(
