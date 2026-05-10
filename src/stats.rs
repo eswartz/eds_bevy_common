@@ -13,6 +13,7 @@ use std::time::Duration;
 use avian3d::dynamics::solver::SolverDiagnostics;
 
 use crate::Player;
+use crate::PlayerLook;
 use crate::ProgramState;
 
 pub struct StatsOverlayPlugin;
@@ -251,15 +252,15 @@ impl StatsProvider for MemoryUsageProvider {
 }
 
 #[derive(Default)]
-pub struct PlayerInfoProvider {
+pub struct PlayerPosProvider {
 }
 
-impl PlayerInfoProvider {
+impl PlayerPosProvider {
 }
 
-impl StatsProvider for PlayerInfoProvider {
+impl StatsProvider for PlayerPosProvider {
     fn get_label(&self) -> String {
-        "Player Pos & Ang".to_string()
+        "Player Pos".to_string()
     }
 
     fn priority(&self) -> i32 { -4 }
@@ -267,12 +268,36 @@ impl StatsProvider for PlayerInfoProvider {
     fn format_value(&self, world: &mut World) -> String {
         let mut xfrm_q = world.query_filtered::<&Transform, With<Player>>();
         for xfrm in xfrm_q.iter(world) {
-            return format!("[{:.1?},{:.1?},{:.1?}] @{:.1?}",
+            return format!("[{:.1?},{:.1?},{:.1?}]",
                 xfrm.translation.x,
                 xfrm.translation.y,
                 xfrm.translation.z,
-                xfrm.rotation.to_euler(EulerRot::default()).0.to_degrees()
             );
+        }
+        String::new()
+    }
+}
+
+
+#[derive(Default)]
+pub struct PlayerAngProvider {
+}
+
+impl PlayerAngProvider {
+}
+
+impl StatsProvider for PlayerAngProvider {
+    fn get_label(&self) -> String {
+        "Player Look".to_string()
+    }
+
+    fn priority(&self) -> i32 { -4 }
+
+    fn format_value(&self, world: &mut World) -> String {
+        let mut look_q = world.query_filtered::<&PlayerLook, With<Player>>();
+        for look in look_q.iter(world) {
+            let (y, x, _) = look.rotation.to_euler(EulerRot::default());
+            return format!("{:.1?} / {:.1?}", y.to_degrees(), x.to_degrees());
         }
         String::new()
     }
@@ -285,7 +310,8 @@ fn add_default_providers(mut regy: ResMut<StatsRegistry>) {
     regy.add_provider(Box::new(ContactCountProvider));
     regy.add_provider(Box::new(CpuUsageProvider::default()));
     regy.add_provider(Box::new(MemoryUsageProvider::default()));
-    regy.add_provider(Box::new(PlayerInfoProvider::default()));
+    regy.add_provider(Box::new(PlayerPosProvider::default()));
+    regy.add_provider(Box::new(PlayerAngProvider::default()));
 }
 
 #[derive(Resource, Debug, Reflect)]
