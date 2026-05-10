@@ -54,7 +54,7 @@ fn fragment(
     );
 
     let n1 = pbr_input.N;
-    let n2 = (vec3(normal_color.xy, 0.0) * 2.0 - 1.0) * detail_material.blend;
+    let n2 = normalize(normal_color.xyz * detail_material.blend);
     let r = normalize(n1 + n2);
     pbr_input.N = r;
 
