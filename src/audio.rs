@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use bevy_seedling::context::AudioContextConfig;
 use bevy_seedling::prelude::*;
 use bevy_asset_loader::prelude::*;
 use bevy_tweening::Lens;
@@ -18,13 +19,10 @@ impl Plugin for AudioCommonPlugin {
     fn build(&self, app: &mut App) {
         app
             .add_plugins(SeedlingPlugins)
-            // .add_plugins(SeedlingPlugins {
-            //     config: FirewheelConfig {
-            //         scheduled_event_capacity: 16384,
-            //         ..default()
-            //     },
-            //     ..default()
-            // })
+            .insert_resource(AudioContextConfig(FirewheelConfig {
+                initial_node_capacity: 1024,
+                ..default()
+            }))
 
             .configure_loading_state(
                 LoadingStateConfig::new(ProgramState::Initializing)
