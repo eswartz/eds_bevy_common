@@ -399,9 +399,13 @@ fn move_grabbed_item(
     if movement > MIN_MOVE {
         let vel = offset;
         let is_rigid;
-        let vel = if let Some(mass) = mass_opt && !grabbing_force.ignore_mass {
+        let vel = if let Some(mass) = mass_opt {
             is_rigid = true;
-            vel / **mass
+            if !grabbing_force.ignore_mass {
+                vel / **mass
+            } else {
+                vel
+            }
         } else {
             is_rigid = false;
             vel
