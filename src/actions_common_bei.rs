@@ -83,6 +83,7 @@ pub mod actions {
     #[action_output(bool)]
     pub struct DebugUi;
 
+    /// Toggle fullscreen.
     #[derive(InputAction)]
     #[action_output(bool)]
     pub struct FullScreen;
@@ -92,10 +93,12 @@ pub mod actions {
     #[action_output(bool)]
     pub struct Back;
 
+    /// Basic firing.
     #[derive(InputAction)]
     #[action_output(bool)]
     pub struct Firing;
 
+    /// Basic world object interaction.
     #[derive(InputAction)]
     #[action_output(bool)]
     pub struct Interact;
@@ -204,7 +207,7 @@ pub(crate) fn handle_pause(_event: On<Start<actions::PauseGameplay>>, keys: Res<
     pause_state.set_user_paused(paused);
 }
 
-// scripting plugin needs to handle PauseScripting
+// note, ^^^ scripting plugin needs to handle PauseScripting
 
 pub(crate) fn handle_debug_ui(
     _event: On<Start<actions::DebugUi>>,
@@ -212,7 +215,7 @@ pub(crate) fn handle_debug_ui(
     mut gui_state: ResMut<GuiState>,
 ) {
     gui_state.enabled = dev_tools_enabled() && !gui_state.enabled;
-    commands.write_message(GrabCursor(!gui_state.enabled));
+    commands.write_message(GrabCursor(!gui_state.show_cursor()));
 }
 
 pub(crate) fn handle_full_screen(

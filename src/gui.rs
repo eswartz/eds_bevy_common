@@ -80,7 +80,6 @@ impl Plugin for GuiPlugin {
         .add_systems(OnExit(OverlayState::Loading),
             on_loading_finished)
 
-
         .add_systems(
             OnTransition{ exited: GameplayState::Playing, entered: GameplayState::Setup },
             (
@@ -384,23 +383,33 @@ pub(crate) struct StatusVisible(pub bool);
 #[type_path = "game"]
 pub struct GuiState {
     pub enabled: bool,
-    pub show_status: bool,
-    pub show_fps: bool,
+    pub show_stats: bool,
     pub show_inspector: bool,
+    /// Show inspector even if !enabled.
     pub show_inspector_always: bool,
     pub show_physics_gizmos: bool,
+    pub show_player_status: bool,
 }
 
 impl Default for GuiState {
     fn default() -> Self {
         Self {
             enabled: false,
-            show_status: false,
-            show_fps: false,
+            show_stats: false,
             show_inspector: true,
             show_inspector_always: false,
             show_physics_gizmos: false,
+            show_player_status: false,
         }
+    }
+}
+
+impl GuiState {
+    pub fn show_cursor(&self) -> bool {
+        self.enabled || self.show_inspector_always
+    }
+    pub fn center_cursor(&self) -> bool {
+        !self.enabled
     }
 }
 
@@ -409,17 +418,16 @@ pub fn is_debug_ui_enabled(gui_state: Option<Res<GuiState>>) -> bool {
 }
 
 pub fn is_debug_ui_inspector_active(
-    gui_state: Option<Res<GuiState>>,
-    ovl_state: Option<Res<State<OverlayState>>>,
+    gui_state: If<Res<GuiState>>,
+    ovl_state: If<Res<State<OverlayState>>>,
 ) -> bool {
-    gui_state.is_some_and(|gui_state| {
-        gui_state.enabled && (
-            gui_state.show_inspector_always ||
-            (gui_state.show_inspector && ovl_state.is_none_or(|ovl_state|
-                !ovl_state.is_menu() || *ovl_state == OverlayState::ControlsMenu // allow testing
-            ))
+    gui_state.show_inspector_always ||
+    (
+        gui_state.enabled &&
+        (gui_state.show_inspector &&
+            !ovl_state.is_menu() || **ovl_state == OverlayState::ControlsMenu // allow testing
         )
-    })
+    )
 }
 
 #[derive(Resource)]
@@ -432,9 +440,9 @@ fn update_gui_state(
     mut gizmo_config: ResMut<GizmoConfigStore>,
 ) {
     if let Some(mut fps_visible) = fps_visible {
-        fps_visible.0 = state.show_fps || state.enabled;
+        fps_visible.0 = state.show_stats || state.enabled;
     }
-    status_visible.0 = state.show_status;
+    status_visible.0 = state.show_player_status;
 
     let was_enabled = gizmo_config.config::<PhysicsGizmos>().0.enabled;
     if was_enabled != state.show_physics_gizmos {
@@ -449,14 +457,14 @@ fn grab_cursor_for_game(
     mut commands: Commands,
     gui_state: Res<GuiState>,
 ) {
-    commands.write_message(GrabCursor(!gui_state.enabled));
+    commands.write_message(GrabCursor(!gui_state.show_cursor()));
 }
 
 fn ungrab_cursor_for_overlay(
     mut commands: Commands,
     gui_state: Res<GuiState>,
 ) {
-    commands.write_message(GrabCursor(gui_state.enabled));
+    commands.write_message(GrabCursor(gui_state.show_cursor()));
 }
 
 fn check_grab_focus_state(
@@ -465,10 +473,12 @@ fn check_grab_focus_state(
     overlay_state: Res<State<OverlayState>>,
     gui_state: ResMut<GuiState>,
     mut grab_state: ResMut<GrabState>,
-    mut cursor_options: Single<&mut CursorOptions, With<PrimaryWindow>>,
+    window_cursor_options: Single<(&mut Window, &mut CursorOptions), With<PrimaryWindow>>,
 
     mut awaiting: Local<Option<bool>>,
 ) {
+    let (mut window, mut cursor_options) = window_cursor_options.into_inner();
+
     let mut desired_grab: Option<bool> = None;
 
     if let Some(event) = focused.read().last() {
@@ -496,6 +506,9 @@ fn check_grab_focus_state(
             *awaiting = Some(true);
             cursor_options.grab_mode = GRABBED_MODE;
             cursor_options.visible = false;
+
+            let center = Vec2::new(window.width() / 2.0, window.height() / 2.0);
+            window.set_cursor_position(Some(center));
 
             grab_state.was_grabbed = true;
         } else {

@@ -146,7 +146,7 @@ fn check_crosshair_visibility(
     let visible = !is_in_menu(overlay) && *mode == CrosshairMode::AimFromCenter;
     for crosshair in crosshair_q.iter() {
         if let Ok(mut vis) = vis_q.get_mut(crosshair) {
-            *vis = if visible { Visibility::Inherited } else { Visibility::Hidden };
+            vis.set_if_neq(if visible { Visibility::Inherited } else { Visibility::Hidden });
         }
     }
 }

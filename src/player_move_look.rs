@@ -324,11 +324,11 @@ impl PlayerMovement {
                     let mut look_angles = Vec3::new(ex, ey, ez) + rot_delta;
                     look_angles.x = look_angles
                         .x
-                        .clamp(-std::f32::consts::FRAC_PI_2, std::f32::consts::FRAC_PI_2);
+                        .clamp(-std::f32::consts::FRAC_PI_2 * 0.999, std::f32::consts::FRAC_PI_2 * 0.999);
                     look_angles.y %= std::f32::consts::TAU;
                     look_angles.z = look_angles
                         .z
-                        .clamp(-std::f32::consts::FRAC_PI_2, std::f32::consts::FRAC_PI_2);
+                        .clamp(-std::f32::consts::FRAC_PI_2 * 0.999, std::f32::consts::FRAC_PI_2 * 0.999);
                     Quat::from_euler(EulerRot::YXZ, look_angles.y, look_angles.x, look_angles.z)
                 };
                 transform.rotation = new_quat;
@@ -433,12 +433,11 @@ impl PlayerLook {
                     let mut look_angles = Vec3::new(ex, ey, ez) + rot_delta;
                     look_angles.x = look_angles
                         .x
-                        .clamp(-std::f32::consts::FRAC_PI_2, std::f32::consts::FRAC_PI_2);
+                        .clamp(-std::f32::consts::FRAC_PI_2 * 0.999, std::f32::consts::FRAC_PI_2 * 0.999);
                     look_angles.y %= std::f32::consts::TAU;
                     look_angles.z = look_angles
                         .z
-                        .clamp(-std::f32::consts::FRAC_PI_2, std::f32::consts::FRAC_PI_2);
-                    // look_angles.z %= std::f32::consts::TAU;
+                        .clamp(-std::f32::consts::FRAC_PI_2 * 0.999, std::f32::consts::FRAC_PI_2 * 0.999);
                     Quat::from_euler(EulerRot::YXZ, look_angles.y, look_angles.x, look_angles.z)
                 };
 

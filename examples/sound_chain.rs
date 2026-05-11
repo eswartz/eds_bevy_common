@@ -1,5 +1,4 @@
 use bevy::asset::AssetMetaCheck;
-use bevy::input::common_conditions::input_pressed;
 use eds_bevy_common::*;
 use avian3d::PhysicsPlugins;
 use avian3d::prelude::Physics;
@@ -106,7 +105,7 @@ fn main() -> AppExit {
         .insert_resource(UiFontPath(std::path::Path::new("fonts/Hack-Regular.ttf").to_path_buf()))
 
         .insert_resource(GuiState {
-            show_fps: true,
+            show_stats: true,
             ..default()
         })
         // req'd by player plugins
@@ -115,9 +114,8 @@ fn main() -> AppExit {
         // .insert_resource(PlayerInputSettings::for_fps())
         .insert_resource(PlayerMode::Space)
         .insert_resource(PlayerInputSettings {
-            base_xz_speed: 32,
-            max_xz_speed: 255,
-            accelerate_scale: 5.0,
+            max_xz_speed: 128,
+            accelerate_scale: 3.0,
             .. PlayerInputSettings::for_space()
         })
         .insert_resource(PlayerCameraSettings {
@@ -148,8 +146,8 @@ fn main() -> AppExit {
         )
         .add_systems(Update,
             spawn_midi_sphere
-                .run_if(input_pressed(MouseButton::Left))
                 .run_if(not(is_in_menu))
+                .run_if(is_trigger_pressed)
                 .run_if(in_state(ProgramState::InGame)),
         )
 
@@ -194,6 +192,20 @@ fn main() -> AppExit {
     }
 
     app.run()
+}
+
+fn is_trigger_pressed(
+    mouse_buttons: Res<ButtonInput<MouseButton>>,
+    gamepads: Query<&Gamepad>,
+) -> bool {
+    if mouse_buttons.pressed(MouseButton::Left) {
+        return true
+    }
+    if let Ok(gamepad) = gamepads.single()
+    && gamepad.pressed(GamepadButton::LeftTrigger2) {
+        return true
+    }
+    false
 }
 
 #[cfg(feature = "input_lim")]
@@ -1148,7 +1160,7 @@ pub(crate) fn setup_level(
 
     commands.insert_resource(InstructionText(
         r#"
-        Left Click: Spawn noisy sphere
+        Left Click / Trigger: Spawn noisy sphere
         "#.to_string()))
 }
 

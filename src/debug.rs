@@ -381,9 +381,9 @@ pub fn update_egui_settings_ui(
             egui::CollapsingHeader::new("UI")
                 .default_open(true)
                 .show(ui, |ui| {
-                ui.checkbox(&mut state.show_status, "Always Show Player Status")
+                ui.checkbox(&mut state.show_player_status, "Always Show Player Status")
                     .on_hover_text("Show player status (position/movement) during gameplay");
-                ui.checkbox(&mut state.show_fps, "Show FPS Always")
+                ui.checkbox(&mut state.show_stats, "Show FPS Always")
                     .on_hover_text("Show FPS overlay, even outside the control UI.");
                 // ui.checkbox(&mut state.show_skybox, "Show Skybox")
                 //     .on_hover_text("Show skybox.");

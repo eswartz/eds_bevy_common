@@ -16,18 +16,13 @@ use crate::actions_common_bei::actions::*;
 
 use crate::*;
 
-/// Configures the default centering mode.
-pub const DEFAULT_CENTER_MOUSE: bool = !cfg!(target_os = "macos");
-
 /// This plugin monitors user input and sends PlayerInput events.
 pub struct PlayerControllerPlugin;
 
 impl Plugin for PlayerControllerPlugin {
     fn build(&self, app: &mut App) {
         app.register_type::<PlayerControllerSettings>()
-            .insert_resource(
-                PlayerControllerSettings::default().with_center_mouse(DEFAULT_CENTER_MOUSE),
-            );
+            .init_resource::<PlayerControllerSettings>();
 
         #[cfg(any(feature = "input_lim", feature = "input_bei"))]
         app.add_systems(
@@ -70,7 +65,7 @@ pub struct PlayerControllerSettings {
 impl Default for PlayerControllerSettings {
     fn default() -> Self {
         Self {
-            center_mouse: DEFAULT_CENTER_MOUSE,
+            center_mouse: true,
             invert_turn_x: false,
             invert_turn_y: false,
             invert_zoom_y: false,
@@ -244,7 +239,7 @@ fn collect_player_look(
     instant_head_turn.x = (if settings.invert_turn_y { 1.0 } else { -1.0 })
         * (settings.turn_scale.y * look_axis.y).to_radians();
 
-    if settings.center_mouse && !(gui_state.show_inspector || overlay_state.is_menu()) {
+    if settings.center_mouse && !gui_state.show_cursor() && !overlay_state.is_menu() {
         let center = Vec2::new(window.width() / 2.0, window.height() / 2.0);
         window.set_cursor_position(Some(center));
     }
@@ -313,7 +308,7 @@ fn collect_player_look(
     instant_head_turn.x = (if settings.invert_turn_y { 1.0 } else { -1.0 })
         * (settings.turn_scale.y * look_axis.y).to_radians();
 
-    if settings.center_mouse && !(gui_state.show_inspector || overlay_state.is_menu()) {
+    if settings.center_mouse && !gui_state.show_cursor() && !overlay_state.is_menu() {
         let center = Vec2::new(window.width() / 2.0, window.height() / 2.0);
         window.set_cursor_position(Some(center));
     }

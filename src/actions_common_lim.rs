@@ -158,7 +158,7 @@ pub(crate) fn process_global_actions(
     if action_state.just_pressed(&UserAction::ToggleDebugUi) {
         if dev_tools_enabled() {
             gui_state.enabled = dev_tools_enabled() && !gui_state.enabled;
-            commands.write_message(GrabCursor(!gui_state.enabled));
+            commands.write_message(GrabCursor(!gui_state.show_cursor()));
         }
     }
     if action_state.just_pressed(&UserAction::ToggleFullScreen)
