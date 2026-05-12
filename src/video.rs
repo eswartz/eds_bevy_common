@@ -244,7 +244,7 @@ fn apply_effect_settings(
     mut camera_q: Query<(Entity, &mut Camera3d)>, // all cameras
     video_settings: Res<VideoSettings>,
 ) {
-    info!("Setting up effects");
+    debug!("Setting up effects");
     for (camera_ent, mut cam3d) in camera_q.iter_mut() {
         let mut ent_commands = commands.entity(camera_ent);
 
@@ -254,7 +254,10 @@ fn apply_effect_settings(
 
         match video_settings.antialiasing {
             Antialiasing::Off => {
-                ent_commands.remove::<(ScreenSpaceAmbientOcclusion, TemporalAntiAliasing)>();
+                ent_commands.remove::<(
+                    ScreenSpaceAmbientOcclusion,
+                    TemporalAntiAliasing,
+                )>();
 
                 ent_commands.insert((
                     Msaa::Off,
@@ -264,7 +267,13 @@ fn apply_effect_settings(
                 ent_commands.insert((
                     Msaa::Off,
                     ScreenSpaceAmbientOcclusion {
-                        quality_level: ScreenSpaceAmbientOcclusionQualityLevel::Medium,
+                        quality_level:
+                            match video_settings.texture_quality {
+                                TextureQuality::Low => ScreenSpaceAmbientOcclusionQualityLevel::Low,
+                                TextureQuality::Medium => ScreenSpaceAmbientOcclusionQualityLevel::Medium,
+                                TextureQuality::High => ScreenSpaceAmbientOcclusionQualityLevel::High,
+                                TextureQuality::Ultra => ScreenSpaceAmbientOcclusionQualityLevel::Ultra,
+                            },
                         ..default()
                     },
                     TemporalAntiAliasing::default(),
