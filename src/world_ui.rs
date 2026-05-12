@@ -8,6 +8,7 @@ use bevy::anti_alias::taa::TemporalAntiAliasing;
 use bevy::pbr::ScreenSpaceAmbientOcclusion;
 use bevy::pbr::ScreenSpaceAmbientOcclusionQualityLevel;
 
+use crate::FovDelta;
 use crate::WorldCamera;
 
 use super::video::Antialiasing;
@@ -38,8 +39,9 @@ pub fn apply_camera_settings(
     mut commands: Commands,
     mut camera_q: Query<&mut Projection, (With<Camera3d>, With<WorldCamera>)>,
     video_settings: Res<VideoSettings>,
+    fov_delta: Res<FovDelta>,
 ) {
-    if trigger.is_none() {
+    if trigger.is_none() && !fov_delta.is_changed() {
         return;
     }
 
@@ -48,7 +50,8 @@ pub fn apply_camera_settings(
     };
 
     if let Projection::Perspective(proj) = &mut *proj {
-        proj.fov = video_settings.fov_degrees.to_radians();
+        let fov_degrees = video_settings.fov_degrees + **fov_delta;
+        proj.fov = fov_degrees.clamp(0.001, 179.9).to_radians();
     }
 
     commands.remove_resource::<VideoCameraSettingsChanged>();

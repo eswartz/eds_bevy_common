@@ -32,6 +32,11 @@ impl Default for VideoSettings {
     }
 }
 
+#[derive(Resource, Default, Clone, Copy, PartialEq, Reflect, Deref, DerefMut)]
+#[reflect(Default, Clone, Resource)]
+#[type_path = "game"]
+pub struct FovDelta(pub f32);
+
 /// When present, apply camera settings.
 #[derive(Resource, Default)]
 pub struct VideoCameraSettingsChanged;

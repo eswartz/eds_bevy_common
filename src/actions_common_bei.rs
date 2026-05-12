@@ -451,6 +451,22 @@ pub fn assign_stock_player_actions(
     ));
     commands.spawn((
         include.clone(),
+        Action::<actions::Zoom>::new(),
+        DeadZone::default(),
+        Bindings::spawn((
+            Spawn((Binding::mouse_wheel(),
+                Negate::y(),
+                Scale::new(Vec3::splat(10.0))
+            )),
+            Axial::right_stick()
+                .with((
+                    Scale::new(Vec3::splat(100.0)),
+                    SmoothNudge::default(),
+                )),
+        )),
+    ));
+    commands.spawn((
+        include.clone(),
         Action::<actions::Accelerate>::new(),
         bindings![KeyCode::ShiftLeft, KeyCode::ShiftRight],
     ));

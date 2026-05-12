@@ -85,6 +85,7 @@ impl Plugin for AppPlugin {
             on_error_screen_finished)
 
         .insert_resource(VideoSettings::default())
+        .insert_resource(FovDelta::default())
 
         .insert_resource(ProductName("My Game".to_string()))
         .insert_resource(PauseState::new(false))

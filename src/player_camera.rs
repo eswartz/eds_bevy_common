@@ -292,6 +292,9 @@ pub fn handle_player_camera_actions(
     #[cfg(feature = "input_bei")]
     change_camera: Query<&ActionEvents, (With<Action<ChangeCamera>>, With<PlayerAction>)>,
     mut camera_q: Single<&mut PlayerCamera, (With<WorldCamera>, With<OurCamera>)>,
+    #[cfg(feature = "input_bei")]
+    zoom_camera: Query<&Action<Zoom>, (With<PlayerAction>,)>,
+    mut fov_delta: ResMut<FovDelta>,
 ) {
     #[cfg(feature = "input_lim")]
     {
@@ -301,9 +304,15 @@ pub fn handle_player_camera_actions(
     }
     #[cfg(feature = "input_bei")]
     {
-        let Some(change_camera) = change_camera.iter().next() else { return };
-        if change_camera.contains(ActionEvents::START) {
-            camera_q.0 = camera_q.0.next();
+        if let Some(change_camera) = change_camera.iter().next() {
+            if change_camera.contains(ActionEvents::START) {
+                camera_q.0 = camera_q.0.next();
+            }
+        }
+        if let Some(zoom_camera) = zoom_camera.iter().next() {
+            if zoom_camera.length() > 0. {
+                **fov_delta = (**fov_delta + zoom_camera.y).clamp(-90.0, 90.0);
+            }
         }
     }
 }
