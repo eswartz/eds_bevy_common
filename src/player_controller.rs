@@ -386,7 +386,7 @@ fn collect_player_input(
     if !focused.is_empty() {
         let focused = focused.read().any(|e| e.focused);
         *ignore_mouse = true;
-        info!("focus change: {focused}");
+        debug!("focus change: {focused}");
         return;
     }
 

@@ -54,7 +54,7 @@ fn main() -> AppExit {
 
         .add_plugins(LifecyclePlugin)
         .add_plugins(GuiPlugin)
-        .add_plugins(WorldUiPlugin)
+        .add_plugins(VideoPlugin)
         .add_plugins(WorldStatePlugin)
         .add_plugins(LightsPlugin)
         .add_plugins(EffectsPlugin)
@@ -209,9 +209,6 @@ pub(crate) fn ensure_3d_camera(
     };
 
     configure_world_camera(commands.get_entity(ent).unwrap());
-
-    // Force init.
-    commands.insert_resource(VideoEffectSettingsChanged);
 }
 
 fn configure_world_camera(mut ent_commands: EntityCommands) {
@@ -833,7 +830,7 @@ fn on_enter_video_menu(
         },
     ));
     let set_fov = commands.register_system(IntoSystem::into_system(
-        |In(v): In<f32>, mut commands: Commands, mut s: ResMut<VideoSettings>| {
+        |In(v): In<f32>, mut s: ResMut<VideoSettings>| {
             s.fov_degrees = v;
         },
     ));
@@ -851,9 +848,8 @@ fn on_enter_video_menu(
                 },
             ));
             let $setter = commands.register_system(IntoSystem::into_system(
-                |In(v): In<usize>, mut res: ResMut<$res>, mut commands: Commands| {
+                |In(v): In<usize>, mut res: ResMut<$res>| {
                     res.$field = $enum::VARIANTS[v];
-                    commands.init_resource::<VideoEffectSettingsChanged>();
                 },
             ));
         };

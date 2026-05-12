@@ -76,7 +76,7 @@ fn main() -> AppExit {
 
         .add_plugins(LifecyclePlugin)
         .add_plugins(GuiPlugin)
-        .add_plugins(WorldUiPlugin)
+        .add_plugins(VideoPlugin)
         .add_plugins(WorldStatePlugin)
         .add_plugins(LightsPlugin)
         .add_plugins(EffectsPlugin)
@@ -283,9 +283,6 @@ pub(crate) fn ensure_3d_camera(
     };
 
     configure_world_camera(commands.get_entity(ent).unwrap());
-
-    // Force init.
-    commands.insert_resource(VideoEffectSettingsChanged);
 }
 
 fn configure_world_camera(mut ent_commands: EntityCommands) {
