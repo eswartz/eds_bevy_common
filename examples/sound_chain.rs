@@ -285,7 +285,6 @@ pub(crate) fn ensure_3d_camera(
     configure_world_camera(commands.get_entity(ent).unwrap());
 
     // Force init.
-    commands.insert_resource(VideoCameraSettingsChanged);
     commands.insert_resource(VideoEffectSettingsChanged);
 }
 

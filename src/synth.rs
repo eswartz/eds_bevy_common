@@ -11,10 +11,7 @@ pub struct SynthPlugin;
 
 impl Plugin for SynthPlugin {
     fn build(&self, app: &mut App) {
-        app.register_type::<SynthNote>()
-            .register_type::<SynthCommand>()
-            .register_type::<SynthChannel>()
-            .register_type::<SynthClock>()
+        app
             .insert_resource(SynthClock::new(Duration::from_secs_f32(0.0)))
             .add_message::<SynthMessage>()
             ;

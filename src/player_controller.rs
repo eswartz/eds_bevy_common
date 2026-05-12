@@ -21,8 +21,7 @@ pub struct PlayerControllerPlugin;
 
 impl Plugin for PlayerControllerPlugin {
     fn build(&self, app: &mut App) {
-        app.register_type::<PlayerControllerSettings>()
-            .init_resource::<PlayerControllerSettings>();
+        app.init_resource::<PlayerControllerSettings>();
 
         #[cfg(any(feature = "input_lim", feature = "input_bei"))]
         app.add_systems(

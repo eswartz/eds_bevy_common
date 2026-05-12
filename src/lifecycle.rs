@@ -14,7 +14,6 @@ pub struct LifecyclePlugin;
 impl Plugin for LifecyclePlugin {
     fn build(&self, app: &mut App) {
         app
-            .register_type::<PauseState>()
             .init_resource::<PauseState>()
             .add_systems(Update, (
                 check_pause_request,

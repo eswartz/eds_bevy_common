@@ -7,6 +7,36 @@ use strum_macros::EnumString;
 use strum_macros::FromRepr;
 use strum_macros::VariantArray;
 
+use bevy::camera::ScreenSpaceTransmissionQuality;
+
+use bevy::anti_alias::taa::TemporalAntiAliasing;
+use bevy::pbr::ScreenSpaceAmbientOcclusion;
+use bevy::pbr::ScreenSpaceAmbientOcclusionQualityLevel;
+
+use crate::GameplayState;
+use crate::WorldCamera;
+
+pub struct VideoPlugin;
+
+impl Plugin for VideoPlugin {
+    fn build(&self, app: &mut App) {
+        app
+            .add_systems(OnEnter(GameplayState::Playing),
+                (
+                    apply_effect_settings,
+                    apply_camera_settings,
+                )
+            )
+            .add_systems(PreUpdate,
+                (
+                    apply_effect_settings.run_if(resource_changed::<VideoSettings>),
+                    apply_camera_settings,
+                )
+            )
+        ;
+    }
+}
+
 #[derive(Resource, Clone, Copy, PartialEq, Reflect)]
 #[reflect(Default, Clone, Resource)]
 #[type_path = "game"]
@@ -36,14 +66,6 @@ impl Default for VideoSettings {
 #[reflect(Default, Clone, Resource)]
 #[type_path = "game"]
 pub struct FovDelta(pub f32);
-
-/// When present, apply camera settings.
-#[derive(Resource, Default)]
-pub struct VideoCameraSettingsChanged;
-
-/// When present, apply effects settings.
-#[derive(Resource, Default)]
-pub struct VideoEffectSettingsChanged;
 
 #[derive(
     Component,
@@ -196,4 +218,87 @@ pub enum ShadowQuality {
     Medium,
     High,
     Ultra,
+}
+
+fn apply_camera_settings(
+    mut camera_q: Query<&mut Projection, (With<Camera3d>, With<WorldCamera>)>,
+    video_settings: Res<VideoSettings>,
+    fov_delta: Res<FovDelta>,
+) {
+    if !video_settings.is_changed() && !fov_delta.is_changed() {
+        return;
+    }
+
+    let Ok(mut proj) = camera_q.single_mut() else {
+        return
+    };
+
+    if let Projection::Perspective(proj) = &mut *proj {
+        let fov_degrees = video_settings.fov_degrees + **fov_delta;
+        proj.fov = fov_degrees.clamp(2.0, 150.0).to_radians();
+    }
+}
+
+fn apply_effect_settings(
+    mut commands: Commands,
+    mut camera_q: Query<(Entity, &mut Camera3d)>, // all cameras
+    video_settings: Res<VideoSettings>,
+) {
+    info!("Setting up effects");
+    for (camera_ent, mut cam3d) in camera_q.iter_mut() {
+        let mut ent_commands = commands.entity(camera_ent);
+
+        ent_commands.remove::<Msaa>();
+        ent_commands.remove::<ScreenSpaceAmbientOcclusion>();
+        ent_commands.remove::<TemporalAntiAliasing>();
+
+        match video_settings.antialiasing {
+            Antialiasing::Off => {
+                ent_commands.remove::<(ScreenSpaceAmbientOcclusion, TemporalAntiAliasing)>();
+
+                ent_commands.insert((
+                    Msaa::Off,
+                ));
+            },
+            Antialiasing::TSAA => {
+                ent_commands.insert((
+                    Msaa::Off,
+                    ScreenSpaceAmbientOcclusion {
+                        quality_level: ScreenSpaceAmbientOcclusionQualityLevel::Medium,
+                        ..default()
+                    },
+                    TemporalAntiAliasing::default(),
+                ));
+            }
+            // Antialiasing::MSAA => {
+            //     ent_commands.remove::<(Msaa, ScreenSpaceAmbientOcclusion, TemporalAntiAliasing)>();
+            //     // ent_commands.insert(Msaa::Sample4);
+            // }
+        }
+
+        match video_settings.glass_quality {
+            GlassQuality::Off => {
+                cam3d.screen_space_specular_transmission_steps = 0;
+                cam3d.screen_space_specular_transmission_quality = ScreenSpaceTransmissionQuality::Low;
+            }
+            GlassQuality::Low => {
+                cam3d.screen_space_specular_transmission_steps = 1;
+                cam3d.screen_space_specular_transmission_quality = ScreenSpaceTransmissionQuality::Low;
+            }
+            GlassQuality::Medium => {
+                cam3d.screen_space_specular_transmission_steps = 1;
+                cam3d.screen_space_specular_transmission_quality = ScreenSpaceTransmissionQuality::Medium;
+            }
+            GlassQuality::High => {
+                cam3d.screen_space_specular_transmission_steps = 2;
+                cam3d.screen_space_specular_transmission_quality = ScreenSpaceTransmissionQuality::High;
+            }
+            GlassQuality::Ultra => {
+                cam3d.screen_space_specular_transmission_steps = 3;
+                cam3d.screen_space_specular_transmission_quality = ScreenSpaceTransmissionQuality::Ultra;
+            }
+        }
+    }
+
+    // Lights and shadows handled in [lights::apply_light_effect_settings].
 }

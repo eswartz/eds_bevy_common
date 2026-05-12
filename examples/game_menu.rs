@@ -211,7 +211,6 @@ pub(crate) fn ensure_3d_camera(
     configure_world_camera(commands.get_entity(ent).unwrap());
 
     // Force init.
-    commands.insert_resource(VideoCameraSettingsChanged);
     commands.insert_resource(VideoEffectSettingsChanged);
 }
 
@@ -836,7 +835,6 @@ fn on_enter_video_menu(
     let set_fov = commands.register_system(IntoSystem::into_system(
         |In(v): In<f32>, mut commands: Commands, mut s: ResMut<VideoSettings>| {
             s.fov_degrees = v;
-            commands.init_resource::<VideoCameraSettingsChanged>();
         },
     ));
 

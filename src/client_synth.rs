@@ -26,9 +26,6 @@ pub struct ClientSynthPlugin;
 impl Plugin for ClientSynthPlugin {
     fn build(&self, app: &mut App) {
         app
-            .register_type::<PendingSynthEvents>()
-            .register_type::<SynthController>()
-            .register_type::<SynthProxyMap>()
             .init_resource::<PendingSynthEvents>()
             .init_resource::<SynthController>()
             .init_resource::<SynthProxyMap>()

@@ -1,6 +1,7 @@
 // Client-side camera behavior.
 
 use std::any::TypeId;
+use std::time::Duration;
 
 use avian3d::prelude::*;
 use bevy::prelude::*;
@@ -22,14 +23,13 @@ pub struct PlayerCameraPlugin;
 
 impl Plugin for PlayerCameraPlugin {
     fn build(&self, app: &mut App) {
-        app.register_type::<CameraMode>()
-            .register_type::<OurCamera>()
-            .register_type::<PlayerCameraSettings>()
+        app
             .init_resource::<PlayerCameraSettings>()
-            .insert_resource(ViewerCameraAlignRate(0.125))
+            .init_resource::<FovZoomState>()
             .add_systems(FixedPreUpdate,
                 (
-                    handle_player_camera_actions,
+                    // HACK: we "know" zoom and move-while-grabbed use the same actions
+                    handle_player_camera_actions.run_if(not(is_grabbing_item)),
                     sync_world_camera_to_player,
                     sync_view_camera_to_player,
                 )
@@ -37,6 +37,15 @@ impl Plugin for PlayerCameraPlugin {
                 .after(PhysicsSystems::Writeback)
                 .before(TransformSystems::Propagate)
                 .run_if(not(is_menu_paused))
+                .run_if(not(debug_gui_wants_input))
+                .run_if(is_game_active)
+                ,
+            )
+            .add_systems(FixedUpdate,
+                decay_camera_zoom
+                .run_if(not(is_grabbing_item))
+                .run_if(not(is_menu_paused))
+                .run_if(not(debug_gui_wants_input))
                 .run_if(is_game_active)
                 ,
             )
@@ -69,17 +78,22 @@ pub struct PlayerCameraSettings {
     /// Max roll (side-to-side, strafing) angle in degrees.
     pub roll_degrees: f32,
     /// Time to reach or decay roll target.
-    pub roll_angle_time: f32,
+    pub roll_angle_time: Duration,
     /// Max pitch (forward-back, running) angle in degrees.
     pub pitch_degrees: f32,
     /// Time to reach or decay pitch target.
-    pub pitch_angle_time: f32,
+    pub pitch_angle_time: Duration,
     /// Max bob (up-down, moving) in meters.
     pub bob_distance: f32,
     /// Time to reach or decay bob target when walking, divided by speed.
-    pub bob_time: f32,
-   /// How long it takes for FOV to decay after the user starts zooming.
-    pub fov_decay_time_secs: f32,
+    pub bob_time: Duration,
+    /// How quickly we align the ViewerCamera to the WorldCamera.
+    /// This is used when there is an alternate camera view (3rd person)
+    pub viewer_camera_align_time: Duration,
+    /// How long the FOV delta sticks after the user stops zooming.
+    pub fov_delta_hold_time: Duration,
+    /// How long it takes for FOV delta to decay after the user stops zooming.
+    pub fov_delta_decay_time: Duration,
 }
 
 impl Default for PlayerCameraSettings {
@@ -88,26 +102,44 @@ impl Default for PlayerCameraSettings {
             freecam: false,
             move_up_down_abs: true,
             roll_degrees: 1.0,
-            roll_angle_time: 0.25,
+            roll_angle_time: Duration::from_secs_f32(0.25),
             pitch_degrees: 2.0,
-            pitch_angle_time: 0.5,
+            pitch_angle_time: Duration::from_secs_f32(0.5),
             bob_distance: 0.05,
-            bob_time: 0.75,
-            fov_decay_time_secs: 0.5,
+            bob_time: Duration::from_secs_f32(0.75),
+            viewer_camera_align_time: Duration::from_secs_f32(0.125),
+            fov_delta_hold_time: Duration::from_secs_f32(5.0),
+            fov_delta_decay_time: Duration::from_secs_f32(0.5),
         }
     }
 }
 
-/// How quickly we align the ViewerCamera to the WorldCamera.
-#[derive(Resource, Default, Reflect)]
-#[reflect(Default)]
+/// Current zooming state.
+#[derive(Resource, Debug, Default, Reflect, PartialEq)]
+#[reflect(Resource, Default)]
 #[type_path = "game"]
-pub struct ViewerCameraAlignRate(pub f32);
+pub enum FovZoomState {
+    /// Not zooming at all.
+    #[default]
+    Inactive,
+    /// Actions or scripting is changing zoom.
+    Zooming,
+    /// User stopped zooming.
+    /// The duration is initialized from [PlayerCameraSettings::fov_delta_hold_time]
+    /// and counts down.
+    AtZoom(Duration),
+    /// Currently restoring zoom back to 0.
+    Unzooming,
+}
 
 /// This marks the Camera representing the player's point of view.
+///
+/// These values are aesthetic adjustments to the "true"
+/// rotation and position of the camera used to simulate
+/// an e.g. human head moving on a body.
 #[derive(Component, Default, Reflect)]
 #[require(Saveable)]
-#[reflect(Default)]
+#[reflect(Component, Default)]
 #[type_path = "game"]
 pub struct OurCamera {
     /// Current dynamic roll, in radians
@@ -125,7 +157,6 @@ pub struct OurCamera {
 }
 
 impl OurCamera {
-
     pub fn adjust_bob_roll_pitch(
         &mut self,
         settings: &PlayerCameraSettings,
@@ -152,14 +183,14 @@ impl OurCamera {
                 EaseFunction::QuadraticOut,
                 0.0,
                 roll_angle_max * self.roll_z_dir,
-                settings.roll_angle_time,
+                settings.roll_angle_time.as_secs_f32(),
                 &mut self.roll_z_timer)
         } else {
             move_toward(
                 EaseFunction::ExponentialOut,
                 roll_angle_max * self.roll_z_ang.signum(),
                 0.0,
-                settings.roll_angle_time,
+                settings.roll_angle_time.as_secs_f32(),
                 &mut self.roll_z_timer)
 
         }).clamp(-roll_angle_max, roll_angle_max);
@@ -179,14 +210,14 @@ impl OurCamera {
                 EaseFunction::QuadraticOut,
                 0.0,
                 pitch_max * self.pitch_x_dir,
-                settings.pitch_angle_time,
+                settings.pitch_angle_time.as_secs_f32(),
                 &mut self.pitch_x_timer)
         } else {
             move_toward(
                 EaseFunction::ExponentialOut,
                 pitch_max * self.pitch_x_ang.signum(),
                 0.0,
-                settings.pitch_angle_time,
+                settings.pitch_angle_time.as_secs_f32(),
                 &mut self.pitch_x_timer)
         }).clamp(-pitch_max, pitch_max);
 
@@ -203,7 +234,7 @@ impl OurCamera {
 
             if speed >= 0.25 {
                 let bob_max = speed * settings.bob_distance.abs();
-                self.bob_distance = ops::sin(self.bob_timer * std::f32::consts::TAU / settings.bob_time) * bob_max;
+                self.bob_distance = ops::sin(self.bob_timer * std::f32::consts::TAU / settings.bob_time.as_secs_f32()) * bob_max;
                 self.bob_timer += dt;
             } else {
                 self.bob_distance *= 0.5;
@@ -270,7 +301,7 @@ pub fn sync_view_camera_to_player(
         Single<&Transform, (With<Camera3d>, With<WorldCamera>, With<OurCamera>)>,
         Single<&mut Transform, (With<Camera3d>, With<ViewerCamera>)>
     )>,
-    align_rate: Res<ViewerCameraAlignRate>,
+    settings: Res<PlayerCameraSettings>,
 ) {
     let camera_xfrm = params.p0().clone();
     let mut view_camera_q = params.p1();
@@ -280,7 +311,7 @@ pub fn sync_view_camera_to_player(
     view_camera_q.translation = camera_xfrm.translation;
 
     // Slowly align but don't tilt.
-    let target_rot = view_camera_q.rotation.lerp(camera_xfrm.rotation, align_rate.0);
+    let target_rot = view_camera_q.rotation.lerp(camera_xfrm.rotation, settings.viewer_camera_align_time.as_secs_f32());
     let (ex, ey, _ez) = target_rot.to_euler(default());
     let target_rot = Quat::from_euler(default(), ex, ey, 0.0);
     view_camera_q.rotation = target_rot;
@@ -295,6 +326,8 @@ pub fn handle_player_camera_actions(
     #[cfg(feature = "input_bei")]
     zoom_camera: Query<&Action<Zoom>, (With<PlayerAction>,)>,
     mut fov_delta: ResMut<FovDelta>,
+    mut zoom_state: ResMut<FovZoomState>,
+    settings: Res<PlayerCameraSettings>,
 ) {
     #[cfg(feature = "input_lim")]
     {
@@ -312,6 +345,12 @@ pub fn handle_player_camera_actions(
         if let Some(zoom_camera) = zoom_camera.iter().next() {
             if zoom_camera.length() > 0. {
                 **fov_delta = (**fov_delta + zoom_camera.y).clamp(-90.0, 90.0);
+                *zoom_state = FovZoomState::Zooming;
+            } else {
+                if *zoom_state == FovZoomState::Zooming {
+                    // No longer zooming, reset eventually.
+                    *zoom_state = FovZoomState::AtZoom(settings.fov_delta_hold_time)
+                }
             }
         }
     }
@@ -351,5 +390,50 @@ pub fn update_player_ui(
                 Color::WHITE,
             );
         }
+    }
+}
+
+fn decay_camera_zoom(
+    settings: Res<PlayerCameraSettings>,
+    time: Res<Time>,
+    mut zoom_state: ResMut<FovZoomState>,
+    mut fov_delta: ResMut<FovDelta>,
+
+    player_q: Query<&PlayerMovement, With<OurPlayer>,>,
+) {
+    // In a zoom?
+    if let FovZoomState::AtZoom(decay) = *zoom_state {
+        // Did the user move?
+        if let Some(movement) = player_q.iter().next()
+        && movement.state.is_moving() {
+            *zoom_state = FovZoomState::Unzooming;
+        } else {
+            // Time to decay?
+            let decay = decay.saturating_sub(time.delta());
+            if decay.is_zero() {
+                *zoom_state = FovZoomState::Unzooming;
+            } else {
+                *zoom_state = FovZoomState::AtZoom(decay);
+            }
+        }
+    }
+    if *zoom_state != FovZoomState::Unzooming {
+        return
+    }
+
+    // Do we reset immediately?
+    if settings.fov_delta_decay_time.is_zero() {
+        **fov_delta = 0.;
+        *zoom_state = FovZoomState::Inactive;
+        return
+    }
+
+    // Else, slowly move back towards 0.
+    let q = time.delta().div_duration_f32(settings.fov_delta_decay_time);
+    **fov_delta = **fov_delta * ops::exp(-q);
+
+    // Back at start?
+    if fov_delta.abs() < 0.01 {
+        *zoom_state = FovZoomState::Inactive;
     }
 }

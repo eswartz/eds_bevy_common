@@ -1,6 +1,5 @@
 
 use bevy::prelude::*;
-use avian3d::prelude::*;
 use bevy_tweening::Lens;
 use bevy_tweening::TweeningPlugin;
 
@@ -26,7 +25,7 @@ impl Plugin for EffectsPlugin {
 pub struct ShrinkAndDisappear(pub f32);
 
 fn shrink_and_disappear(mut commands: Commands,
-    time: Res<Time<Physics>>,
+    time: Res<Time>,
     mut shrink_q: Query<(Entity, &ShrinkAndDisappear, &mut Transform)>
 ) {
     for (ent, sad, mut xfrm) in shrink_q.iter_mut() {
@@ -47,14 +46,11 @@ fn shrink_and_disappear(mut commands: Commands,
 pub struct AimForCamera;
 
 fn aim_for_camera(
-    // mut commands: Commands,
-    // time: Res<Time<Physics>>,
     camera_q: Single<(Entity, &Transform), (With<WorldCamera>, Without<AimForCamera>)>,
     mut aim_q: Query<(Entity, &mut Transform, &GlobalTransform), With<AimForCamera>>
 ) {
     let (_cam_ent, cam_xfrm) = *camera_q;
     for (_ent, mut xfrm, _gxfrm) in aim_q.iter_mut() {
-        // dbg!(xfrm.translation, cam_xfrm.translation);
         xfrm.translation = xfrm.translation.lerp(cam_xfrm.translation, 0.25);
     }
 }

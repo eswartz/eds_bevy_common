@@ -23,7 +23,6 @@ pub struct ActionPlugin;
 impl Plugin for ActionPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(InputManagerPlugin::<UserAction>::default())
-            .register_type::<UserAction>()
             .add_message::<ActionDiffMessage<UserAction>>()
             .init_resource::<ActionState<UserAction>>()
             // Note: this only helps with Buttonlike actions. [Dual]Axis actions are not considered.

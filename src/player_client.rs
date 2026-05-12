@@ -8,9 +8,7 @@ pub struct PlayerClientPlugin;
 
 impl Plugin for PlayerClientPlugin {
     fn build(&self, app: &mut App) {
-        app.register_type::<OurPlayer>()
-            .register_type::<OurUser>()
-            .add_systems(PreUpdate, sync_player);
+        app.add_systems(PreUpdate, sync_player);
     }
 }
 

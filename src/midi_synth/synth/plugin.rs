@@ -29,7 +29,6 @@ impl Plugin for MidiSynthPlugin {
 
         app.init_asset::<SoundFont>()
             .init_asset_loader::<SoundFontLoader>()
-            .register_type::<MidiSynthParams>()
             .init_resource::<MidiSynths>()
             .init_resource::<MidiSynthsPaused>()
             .add_systems(

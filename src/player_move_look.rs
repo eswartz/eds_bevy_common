@@ -11,10 +11,7 @@ pub struct PlayerMovementPlugin;
 
 impl Plugin for PlayerMovementPlugin {
     fn build(&self, app: &mut App) {
-        app.register_type::<PlayerInputSettings>()
-            .register_type::<PlayerMovement>()
-            .register_type::<PlayerLook>()
-            .register_type::<PlayerCamera>()
+        app
             // .add_systems(
             //     OnEnter(OverlayState::DebugGuiVisible),
             //     clear_player_velocity
@@ -183,12 +180,10 @@ impl MovementState {
             MovementState::Grounded | MovementState::Walking | MovementState::Running
         )
     }
-    #[allow(unused)]
     pub fn is_moving(&self) -> bool {
         matches!(
             *self,
-            MovementState::Grounded
-                | MovementState::Walking
+                MovementState::Walking
                 | MovementState::Running
                 | MovementState::OnSlope
         )
