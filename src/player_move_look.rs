@@ -12,17 +12,13 @@ pub struct PlayerMovementPlugin;
 impl Plugin for PlayerMovementPlugin {
     fn build(&self, app: &mut App) {
         app
-            // .add_systems(
-            //     OnEnter(OverlayState::DebugGuiVisible),
-            //     clear_player_velocity
-            //         .run_if(not(is_paused))
-            // )
             .add_systems(
                 FixedPostUpdate,
                 (
                     clear_player_velocity.run_if(
                         window_changed_focus
-                        .or(resource_changed::<PlayerMode>)),
+                        .or(resource_changed::<PlayerMode>)
+                    ),
                     check_player_environment_fps,
                     check_player_environment_space,
                     process_player_input_movement_for_cheats.run_if(is_cheating),

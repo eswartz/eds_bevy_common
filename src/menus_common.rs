@@ -1,5 +1,6 @@
 //! Stock widgetry for handling menus.
 //!
+use bevy::input_focus::AutoFocus;
 use bevy::platform::collections::HashMap;
 use std::hash::BuildHasher as _;
 use std::marker::PhantomData;
@@ -67,6 +68,7 @@ impl Plugin for MenuCommonPlugin {
                 // Common handling for any menu.
                 (
                     on_added_menu_item,
+                    on_focus_change,
                     handle_menu_action,
                     handle_menu_item_decoration,
                     handle_menu_mouse_drag,
@@ -81,6 +83,7 @@ impl Plugin for MenuCommonPlugin {
                     handle_menu_slider_actions,
                     handle_menu_slider_refresh,
                 )
+                .chain()
                 .run_if(is_in_menu)
             )
             .add_systems(
@@ -89,6 +92,7 @@ impl Plugin for MenuCommonPlugin {
                     handle_menu_back,
                     handle_menu_into,
                 )
+                .chain()
             )
         ;
 
@@ -165,15 +169,10 @@ impl<T> CountAccumulator<T> {
 }
 
 fn handle_menu_back(mut commands: Commands,
-    go_back_in_menu_request: Option<Res<GoBackInMenuRequest>>,
+    _go_back_in_menu_request: If<Res<GoBackInMenuRequest>>,
     overlay_state: Res<State<OverlayState>>,
     mut prev_menu: ResMut<PreviousMenuStack>,
 ) {
-    // Inner filtering for clarity.
-    if go_back_in_menu_request.is_none() {
-        return
-    }
-
     // Ok, pop something.
     if let Some(prev) = prev_menu.0.pop() {
         commands.set_state(prev);
@@ -187,17 +186,12 @@ fn handle_menu_back(mut commands: Commands,
 }
 
 fn handle_menu_into(mut commands: Commands,
-    go_into_in_menu_request: Option<Res<GoIntoMenuRequest>>,
+    go_into_in_menu_request: If<Res<GoIntoMenuRequest>>,
     overlay_state: Res<State<OverlayState>>,
     mut prev_menu: ResMut<PreviousMenuStack>,
 ) {
-    // Inner filtering for clarity.
-    let Some(request) = go_into_in_menu_request else {
-        return;
-    };
-
     let current = *overlay_state.get();
-    let to_enter: OverlayState = request.0;
+    let to_enter: OverlayState = ***go_into_in_menu_request;
     if current == to_enter {
         return;
     }
@@ -214,7 +208,7 @@ fn handle_menu_into(mut commands: Commands,
         // Do it.
         commands.set_state(to_enter);
     } else {
-        log::warn!("not a menu: {to_enter:?}");
+        warn!("not a menu: {to_enter:?}");
     }
 
     // Handled, whether or not it did anything.
@@ -242,6 +236,7 @@ impl<'w, 's> MenuItemBuilder<'w, 's> {
         font_scale: f32,
         history: &MenuItemSelectionHistory,
     ) -> Self {
+       commands.remove_resource::<LastMenuFocus>();
         let page = commands
             .spawn((
                 DespawnOnExit(overlay),
@@ -298,7 +293,9 @@ impl<'w, 's> MenuItemBuilder<'w, 's> {
                 .commands()
                 .entity(ent_id)
                 .insert(Name::new(text.clone()))
-                .insert(other_menu_items);
+                .insert(other_menu_items)
+                .insert_if(AutoFocus, || self.item_index == 0)
+            ;
         });
 
         self.item_index += 1;
@@ -396,7 +393,7 @@ pub struct GoBackInMenuRequest;
 /// A client defines this resource to request going into a specific menu.
 /// This specific form, vs. just setting the OverlayState directly,
 /// implies keeping history via `PreviousMenuStack`.
-#[derive(Resource, Debug, Default, Clone)]
+#[derive(Resource, Debug, Default, Clone, Deref)]
 pub struct GoIntoMenuRequest(pub OverlayState);
 
 /////
@@ -701,7 +698,7 @@ fn on_added_menu_item(
 
         if toggle {
             ent_commands.observe(
-                move |trigger: On<Pointer<Click>>,
+                move |mut trigger: On<Pointer<Click>>,
                       mut focus: ResMut<InputFocus>,
                       mut visible: ResMut<InputFocusVisible>,
                       dragging: Option<Res<DraggingMenuItem>>,
@@ -710,6 +707,7 @@ fn on_added_menu_item(
                     visible.0 = true;
                     if dragging.is_none() {
                         writer.write(MenuActionMessage::Activate(trigger.event().entity));
+                        trigger.propagate(false);
                     }
                 },
             );
@@ -717,7 +715,7 @@ fn on_added_menu_item(
 
         if enm {
             ent_commands.observe(
-                move |trigger: On<Pointer<Click>>,
+                move |mut trigger: On<Pointer<Click>>,
                       mut focus: ResMut<InputFocus>,
                       mut visible: ResMut<InputFocusVisible>,
                       dragging: Option<Res<DraggingMenuItem>>,
@@ -726,6 +724,7 @@ fn on_added_menu_item(
                     visible.0 = true;
                     if dragging.is_none() {
                         writer.write(MenuActionMessage::Next(trigger.event().entity));
+                        trigger.propagate(false);
                     }
                 },
             );
@@ -763,6 +762,52 @@ fn on_added_menu_item(
                     },
                 );
         }
+    }
+}
+
+/// The last item focused, to restore if we click away from focusable items.
+#[derive(Resource, Debug, Reflect, Deref, DerefMut)]
+#[reflect(Resource, Debug)]
+#[type_path = "game"]
+struct LastMenuFocus(Entity);
+
+// HACK: clicking outside a menu item gives focus to nothing at all.
+fn on_focus_change(
+    mut commands: Commands,
+    mut focus: ResMut<InputFocus>,
+    prev_focus: Option<Res<LastMenuFocus>>,
+    menu_item_q: Query<Entity, With<MenuItem>>,
+    auto_focus_q: Query<&AutoFocus, With<MenuItem>>,
+) {
+    if !focus.is_changed() {
+        return
+    }
+
+    if focus.get().is_none() {
+        debug!("lost focus");
+
+        // Did we click off something?
+        let mut auto = None;
+        for ent in menu_item_q {
+            if prev_focus.as_ref().is_some_and(|prev| ***prev == ent) {
+                debug!("switch to previous {ent}");
+                focus.set(ent);
+                return
+            }
+            if auto.is_none() && auto_focus_q.contains(ent) {
+                auto = Some(ent);
+            }
+        }
+
+        // Nothing.
+        if let Some(ent) = auto {
+            debug!("switch to Auto {ent}");
+            focus.set(ent);
+        }
+    }
+
+    if let Some(ent) = focus.get() {
+        commands.insert_resource(LastMenuFocus(ent));
     }
 }
 
@@ -977,9 +1022,9 @@ fn handle_menu_navigation(
 }
 
 #[derive(Resource)]
-struct MousePressedDuration {
+struct MouseSliderReleaseTime {
     ent: Entity,
-    time: Duration,
+    slider_release_time: Duration,
 }
 
 fn handle_menu_mouse_drag(
@@ -997,7 +1042,7 @@ fn handle_menu_mouse_drag(
                 event.distance.x / window.width(),
             ));
             dragging.0 = Some(*focus);
-            commands.remove_resource::<MousePressedDuration>();
+            commands.remove_resource::<MouseSliderReleaseTime>();
         }
     }
 }
@@ -1007,22 +1052,30 @@ fn handle_menu_mouse_click(
     int_q: Query<(Entity, &Interaction), (Changed<Interaction>, With<MenuItem>)>,
     slider_q: Query<&MenuSlider>,
     time: Res<Time>,
-    pressed: Option<Res<MousePressedDuration>>,
+    pressed: Option<Res<MouseSliderReleaseTime>>,
     mut focus: ResMut<InputFocus>,
 ) {
+    // Delay before
+    const DELAY: Duration = Duration::from_millis(250);
     for (ent, int) in int_q.iter() {
         if *int == Interaction::Pressed {
-            // Queue to activate menu item on release.
-            commands.insert_resource(MousePressedDuration{ ent, time: time.elapsed() });
+            // Queue to activate menu item on release later if it's a slider.
+            commands.insert_resource(MouseSliderReleaseTime{
+                ent,
+                slider_release_time: time.elapsed().saturating_add(DELAY)
+            });
             focus.set(ent);
         }
-        else if let Some(ref pressed) = pressed
-        && pressed.ent == ent
-        && if slider_q.contains(ent) { time.elapsed().saturating_sub(pressed.time) >= Duration::from_millis(250) } else { true }
-            && *int == Interaction::Hovered {
+        else if *int == Interaction::Hovered
+        && let Some(pressed) = &pressed
+        && pressed.ent == ent {
+            let should_fire = !slider_q.contains(ent)
+                || time.elapsed() >= pressed.slider_release_time;
+            if should_fire {
                 commands.write_message(MenuActionMessage::Activate(ent));
-                commands.remove_resource::<MousePressedDuration>();
+                commands.remove_resource::<MouseSliderReleaseTime>();
             }
+        }
     }
 }
 
@@ -1061,7 +1114,7 @@ fn handle_menu_action(world: &mut World) {
     );
     reader.initialize(world);
     let Ok(events) = reader.run((), world) else {
-        log::error!("failed to fetch menu action events");
+        error!("failed to fetch menu action events");
         return
     };
 
