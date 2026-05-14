@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, sync::LazyLock};
 
 use bevy::{ecs::{query::QueryFilter, system::SystemParam}, prelude::*};
 use bevy_egui::{EguiContext, EguiContexts, EguiGlobalSettings, EguiPlugin, EguiPrimaryContextPass, PrimaryEguiContext, input::{EguiWantsInput, egui_wants_any_keyboard_input, egui_wants_any_pointer_input}};
@@ -149,6 +149,9 @@ pub fn setup_egui_style(
 pub(crate) const ENTITY_FILTER_ID: &str = "my_inspector_entity_filter";
 pub(crate) const SELECTED_ENTITY_FILTER_ID: &str = "selected_inspector_entity_filter";
 
+// pattern for an Entity filter
+static ENT_RX: LazyLock<regex::Regex> = LazyLock::new(|| regex::Regex::new(r"^([0-9]+)v([0-9]+)$").unwrap());
+
 pub fn update_egui_inspector_ui(
     world: &mut World,
     mut show_tree: Local<bool>,
@@ -191,8 +194,7 @@ pub fn update_egui_inspector_ui(
                 let new_filter = format!("{selected}");
                 if filter.is_empty() || (
                     last_filter != new_filter && {
-                        let ent_rx = regex::Regex::new(r"^([0-9]+)v([0-9]+)$").unwrap();
-                        ent_rx.find(&last_filter).is_none()
+                        ENT_RX.find(&last_filter).is_none()
                     }
                 ) {
                     ui.memory_mut(|mem| {
