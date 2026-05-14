@@ -166,6 +166,7 @@ bevy_seedling = { git = "https://github.com/CorvusPrudens/bevy_seedling.git", re
 ] }
 
 rustc-hash = "2.1.1"
+regex = "1.12"
 
 strum = { version = "0.27.2", features = ["derive", "strum_macros"] }
 strum_macros = "0.27.2"

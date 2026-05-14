@@ -37,7 +37,6 @@ impl Plugin for GuiPlugin {
     fn build(&self, app: &mut App) {
         app
         .insert_resource(GuiState::default())
-        .insert_resource(StatusVisible(false))
         .init_resource::<GrabState>()
         .add_message::<GrabCursor>()
         .add_systems(Startup,
@@ -373,10 +372,6 @@ const GRABBED_MODE: CursorGrabMode = CursorGrabMode::Locked;
 #[derive(Message, Debug)]
 pub struct GrabCursor(pub bool);
 
-/// Tells whether we're in a mode where the [GameStatusArea] is displayed.
-#[derive(Resource, Debug, Clone, PartialEq)]
-pub(crate) struct StatusVisible(pub bool);
-
 /// Flags
 #[derive(Resource, Debug, Clone, PartialEq, Reflect)]
 #[reflect(Resource)]
@@ -405,6 +400,10 @@ impl Default for GuiState {
 }
 
 impl GuiState {
+    pub fn is_debug_ui_inspector_visible(&self) -> bool {
+        self.show_inspector_always ||
+        (self.enabled && self.show_inspector)
+    }
     pub fn show_cursor(&self) -> bool {
         self.enabled || self.show_inspector_always
     }
@@ -417,32 +416,30 @@ pub fn is_debug_ui_enabled(gui_state: Option<Res<GuiState>>) -> bool {
     gui_state.is_some_and(|g| g.enabled)
 }
 
-pub fn is_debug_ui_inspector_active(
-    gui_state: If<Res<GuiState>>,
-    ovl_state: If<Res<State<OverlayState>>>,
-) -> bool {
-    gui_state.show_inspector_always ||
-    (
-        gui_state.enabled &&
-        (gui_state.show_inspector &&
-            !ovl_state.is_menu() || **ovl_state == OverlayState::ControlsMenu // allow testing
-        )
-    )
+pub fn is_debug_ui_inspector_visible(gui_state: If<Res<GuiState>>) -> bool {
+    gui_state.is_debug_ui_inspector_visible()
 }
 
+/// Tells whether we're in a mode where the [GameStatusArea] is displayed.
+#[derive(Resource, Debug, Clone, PartialEq)]
+pub(crate) struct StatusVisible(pub bool);
+
+/// State held while a grab operation is occurring.
 #[derive(Resource)]
-pub struct GrabState{ was_grabbed: bool, options: CursorOptions }
+pub(crate) struct GrabState{ was_grabbed: bool, options: CursorOptions }
 
 fn update_gui_state(
     state: Res<GuiState>,
     fps_visible: Option<ResMut<StatsOverlayVisible>>,
-    mut status_visible: ResMut<StatusVisible>,
+    mut status_visible: Option<ResMut<StatusVisible>>,
     mut gizmo_config: ResMut<GizmoConfigStore>,
 ) {
     if let Some(mut fps_visible) = fps_visible {
         fps_visible.0 = state.show_stats || state.enabled;
     }
-    status_visible.0 = state.show_player_status;
+    if let Some(mut status_visible) = status_visible {
+        status_visible.0 = state.show_player_status;
+    }
 
     let was_enabled = gizmo_config.config::<PhysicsGizmos>().0.enabled;
     if was_enabled != state.show_physics_gizmos {

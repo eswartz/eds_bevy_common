@@ -80,6 +80,23 @@ impl Plugin for CommonAssetsPlugin {
             log::error!("error: did not find eds_bevy_common git repo checkout");
         }
 
+        // Available from cwd?
+        #[cfg(not(target_arch = "wasm32"))]
+        if let Ok(cwd) = std::env::current_dir() {
+            let assets = cwd.join("../eds_bevy_common/assets");
+            if assets.is_dir() {
+                log::info!("Using {assets:?} for 'common' assets");
+                app.register_asset_source(
+                    "common",
+                    AssetSourceBuilder::platform_default(
+                        &assets.display().to_string(),
+                        None,
+                    ),
+                );
+                return;
+            }
+        }
+
         // Assets better be installed.
         if let Ok(base_dir) = find_runtime_base_directory_by_folder("assets") {
             log::info!("Using {base_dir:?} for 'common' assets");

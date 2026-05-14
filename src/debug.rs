@@ -42,7 +42,7 @@ impl Plugin for DebugPlugin {
             .add_systems(
                 EguiPrimaryContextPass,
                 update_egui_inspector_ui
-                .run_if(is_debug_ui_inspector_active),
+                .run_if(is_debug_ui_inspector_visible),
             )
             .add_systems(
                 EguiPrimaryContextPass,
@@ -189,7 +189,12 @@ pub fn update_egui_inspector_ui(
                 });
 
                 let new_filter = format!("{selected}");
-                if filter.is_empty() || last_filter != new_filter {
+                if filter.is_empty() || (
+                    last_filter != new_filter && {
+                        let ent_rx = regex::Regex::new(r"^([0-9]+)v([0-9]+)$").unwrap();
+                        ent_rx.find(&last_filter).is_none()
+                    }
+                ) {
                     ui.memory_mut(|mem| {
                         let filter: &mut String = mem.data.get_persisted_mut_or_default(id);
                         *filter = new_filter.clone();
@@ -381,17 +386,17 @@ pub fn update_egui_settings_ui(
             egui::CollapsingHeader::new("UI")
                 .default_open(true)
                 .show(ui, |ui| {
-                ui.checkbox(&mut state.show_player_status, "Always Show Player Status")
-                    .on_hover_text("Show player status (position/movement) during gameplay");
-                ui.checkbox(&mut state.show_stats, "Show FPS Always")
-                    .on_hover_text("Show FPS overlay, even outside the control UI.");
+                ui.checkbox(&mut state.show_player_status, "Show Player Status")
+                    .on_hover_text("Show first Player status (position/movement)");
+                ui.checkbox(&mut state.show_stats, "Always Show Stats")
+                    .on_hover_text("Show stats overlay even during play.");
                 // ui.checkbox(&mut state.show_skybox, "Show Skybox")
                 //     .on_hover_text("Show skybox.");
                 ui.checkbox(&mut state.show_inspector, "Show Inspector")
                     .on_hover_text("Show Bevy inspector.");
                 ui.add_enabled_ui(state.show_inspector, |ui|
                     ui.indent("inspector", |ui| {
-                        ui.checkbox(&mut state.show_inspector_always, "Always")
+                        ui.checkbox(&mut state.show_inspector_always, "Always Show Bevy Inspector")
                         .on_hover_text("Always show Bevy inspector.");
                     })
                 );

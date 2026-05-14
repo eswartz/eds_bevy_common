@@ -27,13 +27,21 @@ impl Plugin for SplitIntoCubesPlugin {
     }
 }
 
-/// Mark a mesh that needs to be split into cubes (and then [TrimeshFromMesh])
-#[derive(Component, Clone, Reflect, Default)]
+/// Mark a mesh that needs to be split into cubes (and then [TrimeshFromMesh]).
+///
+/// If set to 0.0, this is ignored.
+#[derive(Component, Clone, Reflect)]
 #[require(ConfigureBeforePlaying)]
 #[reflect(Component, Clone, Default)]
 #[type_path = "game"]
 pub struct SplitIntoCubes {
     pub size: f32,
+}
+
+impl Default for SplitIntoCubes {
+    fn default() -> Self {
+        Self{ size: 128.0 }
+    }
 }
 
 fn handle_split_into_cubes(
@@ -59,11 +67,16 @@ fn handle_split_into_cubes(
     ) in split_q.iter() {
         let mesh = meshes.get(&mesh.0).unwrap().clone();
 
-        let split = split.size.max(64.);
         let full_extents = aabb.half_extents.mul(2.0).to_vec3() * xfrm.scale;
-        let zn = (full_extents.z as f32 / split).ceil() as i32;
-        let yn = (full_extents.y as f32 / split).ceil() as i32;
-        let xn = (full_extents.x as f32 / split).ceil() as i32;
+        let (xn, yn, zn) = if split.size == 0. {
+            (1, 1, 1)
+        } else {
+            let split = split.size.max(64.);
+            let zn = (full_extents.z as f32 / split).ceil() as i32;
+            let yn = (full_extents.y as f32 / split).ceil() as i32;
+            let xn = (full_extents.x as f32 / split).ceil() as i32;
+            (xn, yn, zn)
+        };
 
         let zs = full_extents.z / zn as f32;
         let ys = full_extents.y / yn as f32;

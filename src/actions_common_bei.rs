@@ -166,7 +166,7 @@ pub mod actions {
     /// (Try to) grab selected item(s).
     #[derive(InputAction)]
     #[action_output(bool)]
-    pub struct StartGrab;
+    pub struct AltFiring;
 
     /// (Try to) stop grabbing items.
     /// This has a lead-up time so that quick taps release/drop the item,
@@ -219,7 +219,7 @@ pub(crate) fn handle_debug_ui(
 }
 
 pub(crate) fn handle_full_screen(
-    _event: On<Start<actions::FullScreen>>,
+    _event: On<Complete<actions::FullScreen>>,
     mut primary_window: Query<&mut Window, With<PrimaryWindow>>,
 ) {
     let Ok(mut window) = primary_window.single_mut() else {
@@ -227,14 +227,15 @@ pub(crate) fn handle_full_screen(
     };
 
     let cur_mode = window.mode;
-    window.mode = match cur_mode {
+    let new_mode = match cur_mode {
         WindowMode::Windowed => WindowMode::BorderlessFullscreen(MonitorSelection::Current),
         WindowMode::BorderlessFullscreen(_monitor_selection) => WindowMode::Windowed,
 
         // WindowMode::BorderlessFullscreen(monitor_selection) => WindowMode::Fullscreen(
         //     monitor_selection, VideoModeSelection::Current),
         WindowMode::Fullscreen(_monitor_selection, _video_mode_selection) => WindowMode::Windowed,
-    }
+    };
+    window.mode = new_mode;
 }
 
 pub(crate) fn handle_mute(
@@ -301,6 +302,12 @@ pub fn assign_stock_common_actions(
     commands.spawn((
         include.clone(),
         Action::<actions::FullScreen>::new(),
+        ActionSettings {
+            require_reset: true,
+            ..default()
+        },
+        // Avoid spurious invocation when slow and switching focus.
+        Hold::new(0.1),
         bindings![
             KeyCode::F11,
             KeyCode::Enter.with_mod_keys(ModKeys::ALT),
@@ -509,6 +516,29 @@ pub fn assign_stock_player_actions(
             GamepadButton::RightTrigger2,
         ],
     ));
+
+    commands.spawn((
+        include.clone(),
+        Action::<actions::AltFiring>::new(),
+        ActionSettings {
+            require_reset: true,
+            ..default()
+        },
+        bindings![
+            MouseButton::Right,
+            GamepadButton::LeftTrigger2,
+
+            // "g"rab, "g"un, and not "f", which could be hit
+            // accidentally when failing to hit "d/r/c"
+            KeyCode::KeyG,
+
+            // This first one is dangerous-ish since they must be used in isolation
+            // and not with keyboard combinations. See stock handlers.
+            KeyCode::AltLeft,
+            KeyCode::AltRight,
+        ],
+    ));
+
     commands.spawn((
         include.clone(),
         Action::<actions::Reset>::new(),
@@ -529,22 +559,6 @@ pub fn assign_stock_player_actions(
             // These are dangerous since they must be used in isolation
             // and not with keyboard combinations.
             // See code in [actions_common::handle_escape].
-            KeyCode::AltLeft,
-            KeyCode::AltRight,
-        ],
-    ));
-
-    commands.spawn((
-        include.clone(),
-        Action::<actions::StartGrab>::new(),
-        bindings![
-            MouseButton::Right,
-            GamepadButton::LeftTrigger2,
-
-            KeyCode::KeyF,
-
-            // These are dangerous since they must be used in isolation
-            // and not with keyboard combinations.
             KeyCode::AltLeft,
             KeyCode::AltRight,
         ],

@@ -34,6 +34,7 @@ use crate::WorldCamera;
 use crate::actions;
 #[cfg(feature = "input_bei")]
 use crate::debug_gui_wants_direct_input;
+use crate::debug_gui_wants_input;
 #[cfg(feature = "input_bei")]
 use crate::is_in_menu;
 #[cfg(feature = "input_bei")]
@@ -61,7 +62,7 @@ impl Plugin for GrabbingPlugin {
                     .run_if(not(is_in_menu))
                     .run_if(is_level_active)
                     .run_if(not(is_paused))
-                    .run_if(not(debug_gui_wants_direct_input))
+                    .run_if(not(debug_gui_wants_input))
                     .run_if(in_state(ProgramState::InGame)),
             )
             .add_systems(
@@ -283,14 +284,14 @@ impl Default for GrabbingBehavior {
 
 /// See if the user is grabbing/dragging/ungrabbing something.
 fn on_start_grab(
-    _event: On<Start<actions::StartGrab>>,
+    _event: On<Start<actions::AltFiring>>,
     inputs: Res<ButtonInput<KeyCode>>,
     mut commands: Commands,
     grabbable_q: Query<Entity, With<Grabbable>>,
     grabbed_opt: Option<Res<GrabbedItem>>,
     #[cfg(feature = "highlighting")]
     mut highlighting_mode: ResMut<HighlightingMode>,
-    release_q: Query<&ActionEvents, Or<(With<Action<actions::ToggleSelect>>, With<Action<actions::StartGrab>>)>>,
+    release_q: Query<&ActionEvents, Or<(With<Action<actions::ToggleSelect>>, With<Action<actions::AltFiring>>)>>,
 ) {
     if grabbed_opt.is_some()
     // be careful with these keys triggering false re-starts e.g. on tabbing into a window
@@ -327,6 +328,7 @@ fn on_end_grab_drop(
     } else {
         commands.write_message(GrabbingCommand::CancelGrabItems);
     }
+    commands.insert_resource(HighlightingMode::Disabled);
 }
 
 /// User long-drops/fires the item.

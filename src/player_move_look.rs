@@ -368,9 +368,10 @@ impl CameraMode {
 pub struct PlayerLook {
     /// Where we're looking.
     pub rotation: Quat,
-    /// Current dynamic crouch distance (moving eyes down)
+    /// Previous rotation, for use in FOV detection.
+    pub prev_rotation: Quat,
+    /// Current dynamic crouch distance (moving eyes down).
     pub crouch_y: f32,
-    pub crouch_y_dir: f32,
     pub turn_time_secs: f32,
     pub turn_deadline_secs: f32,
     pub turn_curve: Option<EasingCurve<Quat>>,
@@ -381,8 +382,8 @@ impl Default for PlayerLook {
     fn default() -> Self {
         Self {
             rotation: default(),
+            prev_rotation: default(),
             crouch_y: 0.0,
-            crouch_y_dir: 0.0,
             turn_time_secs: 0.0,
             turn_deadline_secs: 0.0,
             turn_curve: None,
@@ -401,6 +402,8 @@ impl PlayerLook {
     }
 
     pub fn apply_turn(&mut self, dt: f32, rot_delta: Vec3) -> bool {
+        self.prev_rotation = self.rotation;
+
         if let Some(turn_curve) = &mut self.turn_curve {
             // Scripted case.
             if rot_delta != Vec3::ZERO {
@@ -780,11 +783,13 @@ pub fn process_player_input_movement_for_fps(
     for input in inputs.read() {
         let res = player_q.get_mut(input.player_entity());
 
-        let Ok((mut forces, /* cheats, */ mut movement, mut look, mut transform)) = res
-        else {
-            let e = unsafe { res.unwrap_err_unchecked() };
-            warn!("invalid player entity {}: {:?}", input.player_entity(), e);
-            continue;
+        let (mut forces, /* cheats, */ mut movement, mut look, mut transform) = match res {
+            Ok((forces, /* cheats, */ movement, look, transform)) =>
+                (forces, /* cheats, */ movement, look, transform),
+            Err(e) => {
+                warn!("invalid player entity {}: {:?}", input.player_entity(), e);
+                continue;
+            }
         };
 
         let mut vel = forces.linear_velocity();

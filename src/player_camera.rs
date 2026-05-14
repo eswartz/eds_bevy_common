@@ -108,7 +108,7 @@ impl Default for PlayerCameraSettings {
             bob_distance: 0.05,
             bob_time: Duration::from_secs_f32(0.75),
             viewer_camera_align_time: Duration::from_secs_f32(0.125),
-            fov_delta_hold_time: Duration::from_secs_f32(5.0),
+            fov_delta_hold_time: Duration::from_secs_f32(0.0),
             fov_delta_decay_time: Duration::from_secs_f32(0.5),
         }
     }
@@ -328,6 +328,7 @@ pub fn handle_player_camera_actions(
     mut fov_delta: ResMut<FovDelta>,
     mut zoom_state: ResMut<FovZoomState>,
     settings: Res<PlayerCameraSettings>,
+    time: Res<Time>,
 ) {
     #[cfg(feature = "input_lim")]
     {
@@ -344,7 +345,9 @@ pub fn handle_player_camera_actions(
         }
         if let Some(zoom_camera) = zoom_camera.iter().next() {
             if zoom_camera.length() > 0. {
-                **fov_delta = (**fov_delta + zoom_camera.y).clamp(-90.0, 90.0);
+                // **fov_delta = (**fov_delta + zoom_camera.y).clamp(-90.0, 90.0);
+                let q = ops::exp(-time.delta_secs() / 10.0);
+                **fov_delta = fov_delta.lerp(**fov_delta + zoom_camera.y, q).clamp(-90.0, 90.0);
                 *zoom_state = FovZoomState::Zooming;
             } else {
                 if *zoom_state == FovZoomState::Zooming {
@@ -399,22 +402,26 @@ fn decay_camera_zoom(
     mut zoom_state: ResMut<FovZoomState>,
     mut fov_delta: ResMut<FovDelta>,
 
-    player_q: Query<&PlayerMovement, With<OurPlayer>,>,
+    player_q: Query<(&PlayerMovement, &PlayerLook), With<OurPlayer>,>,
 ) {
-    // In a zoom?
+    // In a zoom? This is held for some time to avoid snap-back.
     if let FovZoomState::AtZoom(decay) = *zoom_state {
-        // Did the user move?
-        if let Some(movement) = player_q.iter().next()
-        && movement.state.is_moving() {
-            *zoom_state = FovZoomState::Unzooming;
-        } else {
-            // Time to decay?
-            let decay = decay.saturating_sub(time.delta());
-            if decay.is_zero() {
+        if let Some((movement, look)) = player_q.iter().next() {
+            // Did the user move or look away quickly?
+            if movement.state.is_moving()
+            || look.rotation.angle_between(look.prev_rotation) > std::f32::consts::PI / 16.0 {
                 *zoom_state = FovZoomState::Unzooming;
-            } else {
-                *zoom_state = FovZoomState::AtZoom(decay);
+            } else if ! settings.fov_delta_hold_time.is_zero() {
+                // Time to decay?
+                let decay = decay.saturating_sub(time.delta());
+                if decay.is_zero() {
+                    *zoom_state = FovZoomState::Unzooming;
+                } else {
+                    *zoom_state = FovZoomState::AtZoom(decay);
+                }
             }
+        } else {
+            *zoom_state = FovZoomState::Unzooming;
         }
     }
     if *zoom_state != FovZoomState::Unzooming {

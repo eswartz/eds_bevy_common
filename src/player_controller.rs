@@ -28,11 +28,11 @@ impl Plugin for PlayerControllerPlugin {
                 FixedPreUpdate,
                 (
                     collect_player_movement,
-                    collect_player_look.run_if(not(is_debug_ui_inspector_active)),
+                    collect_player_look,
                     collect_player_input,
                 )
-                    .run_if(not(is_paused))
-                    .run_if(not(debug_gui_wants_direct_input))
+                .run_if(not(is_paused))
+                .run_if(not(debug_gui_wants_direct_input))
             );
     }
 }
@@ -280,6 +280,8 @@ fn collect_player_look(
     look: Query<&Action<Look>, (With<Action<Look>>, With<PlayerAction>)>,
     turn_around_events: Query<&ActionEvents, (With<Action<TurnAround>>, With<PlayerAction>)>,
     reset_events: Query<&ActionEvents, (With<Action<Reset>>, With<PlayerAction>)>,
+    // alt_fire_events: Query<&ActionEvents, (With<Action<Firing>>, With<PlayerAction>)>,
+    mouse_button_events: Res<ButtonInput<MouseButton>>,
 
     settings: Res<PlayerControllerSettings>,
     player_q: Single<Entity, With<OurPlayer>>,
@@ -294,22 +296,30 @@ fn collect_player_look(
         return;
     }
 
+    // Only accept player-look movement in debug mode if right MB held.
+    let alt_fire = mouse_button_events.pressed(MouseButton::Right);
+    let ignore_mouse = gui_state.is_debug_ui_inspector_visible() && !alt_fire;
+
     let look_axis = **look.single().unwrap();
 
     let mut instant_body_turn = Vec3::ZERO;
     let mut instant_head_turn = Vec3::ZERO;
 
-    // Note: swap axes here.  From mouse, "Y" is up/down in userland, "X" is left/right.
-    instant_body_turn.y = (if settings.invert_turn_x { 1.0 } else { -1.0 })
-        * (settings.turn_scale.x * look_axis.x).to_radians();
-    instant_head_turn.y = instant_body_turn.y;
+    if !ignore_mouse {
+        // Note: swap axes here.  From mouse, "Y" is up/down in userland, "X" is left/right.
+        instant_body_turn.y = (if settings.invert_turn_x { 1.0 } else { -1.0 })
+            * (settings.turn_scale.x * look_axis.x).to_radians();
+        instant_head_turn.y = instant_body_turn.y;
 
-    instant_head_turn.x = (if settings.invert_turn_y { 1.0 } else { -1.0 })
-        * (settings.turn_scale.y * look_axis.y).to_radians();
+        instant_head_turn.x = (if settings.invert_turn_y { 1.0 } else { -1.0 })
+            * (settings.turn_scale.y * look_axis.y).to_radians();
 
-    if settings.center_mouse && !gui_state.show_cursor() && !overlay_state.is_menu() {
-        let center = Vec2::new(window.width() / 2.0, window.height() / 2.0);
-        window.set_cursor_position(Some(center));
+        if settings.center_mouse && !gui_state.show_cursor() && !overlay_state.is_menu() {
+            // Keep mouse cursor set window center when while invisible,
+            // so look movements will not go outside the window.
+            let center = Vec2::new(window.width() / 2.0, window.height() / 2.0);
+            window.set_cursor_position(Some(center));
+        }
     }
 
     // let mut tilt = action_state.value(&UserAction::Tilt);
