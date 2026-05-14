@@ -567,7 +567,7 @@ pub fn assign_stock_player_actions(
     commands.spawn((
         include.clone(),
         Action::<actions::ReleaseGrab>::new(),
-        Hold::new(0.5),
+        Hold::new(0.25),
         // Cooldown::new(0.125),
         bindings![
             MouseButton::Left,

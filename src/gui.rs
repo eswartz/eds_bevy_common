@@ -431,7 +431,7 @@ pub(crate) struct GrabState{ was_grabbed: bool, options: CursorOptions }
 fn update_gui_state(
     state: Res<GuiState>,
     fps_visible: Option<ResMut<StatsOverlayVisible>>,
-    mut status_visible: Option<ResMut<StatusVisible>>,
+    status_visible: Option<ResMut<StatusVisible>>,
     mut gizmo_config: ResMut<GizmoConfigStore>,
 ) {
     if let Some(mut fps_visible) = fps_visible {
