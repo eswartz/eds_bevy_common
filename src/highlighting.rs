@@ -7,8 +7,6 @@
 //!
 //! Highlighting is represented with the [Highlighted] component.
 //!
-#[cfg(feature = "input_lim")]
-use bevy_enhanced_input::action::ActionState;
 use bevy_mod_outline::{InheritOutline, OutlineStencil};
 use bevy_mod_outline::{OutlineMode, OutlinePlugin, OutlineVolume};
 use bevy_seedling::sample::PlaybackSettings;
@@ -18,8 +16,6 @@ use bevy::prelude::*;
 use rand::RngExt as _;
 use rand::seq::IndexedRandom as _;
 
-#[cfg(feature = "input_lim")]
-use leafwing_input_manager::prelude::*;
 #[cfg(feature = "input_bei")]
 use bevy_enhanced_input::prelude::*;
 
@@ -161,29 +157,6 @@ pub fn is_highlighting_enabled(res: Res<HighlightingMode>) -> bool {
 
 /// Marker for CountAccumulator.
 struct HighlightedItemCycle;
-
-#[cfg(feature = "input_lim")]
-fn check_actions(
-    mut commands: Commands,
-    actions: Res<ActionState<UserAction>>,
-    crosshair_targets: Res<CrosshairTargets>,
-    cycle_action_q: Query<(&ActionEvents, &Action<actions::CycleHighlightedItem>), With<PlayerAction>>,
-    mut cycle_ctr: ResMut<CountAccumulator<HighlightedItemCycle>>,
-) {
-    if actions.just_pressed(&UserAction::CycleHighlightedItem) {
-        cycle_ctr.reset();
-    }
-
-    if let Some(dir) = cycle_ctr.add_and_test(actions.value(&UserAction::CycleHighlightedItem))
-    && !crosshair_targets.targets.is_empty() {
-        commands.write_message(ChangeHighlightedItem(dir as isize));
-    }
-
-    if actions.just_pressed(&UserAction::CycleHighlightedItem) {
-        cycle_ctr.reset();
-    }
-
-}
 
 fn clear_highlighted(
     mut commands: Commands,

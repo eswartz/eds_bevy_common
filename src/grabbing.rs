@@ -14,8 +14,6 @@ use bevy::prelude::*;
 
 use bevy_mod_outline::{OutlineMode, OutlinePlugin, OutlineVolume};
 
-#[cfg(feature = "input_lim")]
-use leafwing_input_manager::prelude::*;
 #[cfg(feature = "input_bei")]
 use bevy_enhanced_input::prelude::*;
 

@@ -45,7 +45,7 @@ But it contains:
 * player camera and FPS or space/flying controller
 ** keyboard/mouse integration so far
 ** support for animated "manual" camera control sections
-* common action setup using leafwing-input-manager (`UserActions`)
+* common action setup using bevy_enhanced_input
 * skybox and reflection probe setup from .exr files which occurs when asset collections are ready
 and performs conversions into cubemaps
 

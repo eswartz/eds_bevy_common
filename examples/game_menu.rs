@@ -14,8 +14,6 @@ use bevy_seedling::spatial::SpatialListener3D;
 use bevy_skein::SkeinPlugin;
 use bevy::winit::WinitSettings;
 
-#[cfg(feature = "input_lim")]
-use leafwing_input_manager::prelude::{ActionState, InputMap};
 use strum::VariantArray;
 use std::time::Duration;
 
@@ -107,8 +105,6 @@ fn main() -> AppExit {
         )
     ;
 
-    #[cfg(feature = "input_lim")]
-    app.insert_resource(create_input_map());
     #[cfg(feature = "input_bei")]
     app.add_systems(Startup, create_input_map);
 
@@ -133,14 +129,6 @@ fn main() -> AppExit {
     }
 
     app.run()
-}
-
-#[cfg(feature = "input_lim")]
-fn create_input_map() -> InputMap::<UserAction> {
-    let mut map = InputMap::default();
-    map.merge(&stock_input_maps::default_gui_input_map());
-    map.merge(&stock_input_maps::default_fps_input_map());
-    map
 }
 
 #[cfg(feature = "input_bei")]

@@ -6,13 +6,9 @@ use std::time::Duration;
 use avian3d::prelude::*;
 use bevy::prelude::*;
 
-#[cfg(feature = "input_lim")]
-use leafwing_input_manager::prelude::ActionState;
 #[cfg(feature = "input_bei")]
 use bevy_enhanced_input::prelude::*;
 
-#[cfg(feature = "input_lim")]
-use crate::UserAction;
 #[cfg(feature = "input_bei")]
 use crate::actions_common_bei::actions::*;
 
@@ -318,8 +314,6 @@ pub fn sync_view_camera_to_player(
 }
 
 pub fn handle_player_camera_actions(
-    #[cfg(feature = "input_lim")]
-    action_state: Res<ActionState<UserAction>>,
     #[cfg(feature = "input_bei")]
     change_camera: Query<&ActionEvents, (With<Action<ChangeCamera>>, With<PlayerAction>)>,
     mut camera_q: Single<&mut PlayerCamera, (With<WorldCamera>, With<OurCamera>)>,
@@ -330,12 +324,6 @@ pub fn handle_player_camera_actions(
     settings: Res<PlayerCameraSettings>,
     time: Res<Time>,
 ) {
-    #[cfg(feature = "input_lim")]
-    {
-        if action_state.just_pressed(&UserAction::ChangeCamera) {
-            camera_q.0 = camera_q.0.next();
-        }
-    }
     #[cfg(feature = "input_bei")]
     {
         if let Some(change_camera) = change_camera.iter().next() {

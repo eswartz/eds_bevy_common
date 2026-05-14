@@ -1,8 +1,6 @@
 #![feature(iter_array_chunks)]
 
 pub mod base_dir;
-#[cfg(feature = "input_lim")]
-pub mod actions_common_lim;
 #[cfg(feature = "input_bei")]
 pub mod actions_common_bei;
 pub mod actions_common;
@@ -54,8 +52,6 @@ pub mod client_synth;
 pub mod midi_synth;
 
 pub use base_dir::*;
-#[cfg(feature = "input_lim")]
-pub use actions_common_lim::*;
 #[cfg(feature = "input_bei")]
 pub use actions_common_bei::*;
 pub use actions_common::*;

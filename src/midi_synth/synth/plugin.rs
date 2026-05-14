@@ -110,81 +110,7 @@ pub struct MidiSynthListener {
 
 }
 
-// #[cfg(feature = "kira")]
-// type AudioVolume = kira::Decibels;
-// #[cfg(feature = "firewheel")]
-// type AudioVolume = firewheel::Volume;
-
-// #[cfg(feature = "kira")]
-// fn linear_to_decibels(x: f32) -> AudioVolume {
-//     if x <= 0.0 { AudioVolume::SILENCE } else { kira::Decibels(20_f32 * x.log10()) }
-// }
-// #[cfg(feature = "firewheel")]
-// fn linear_to_decibels(x: f32) -> AudioVolume {
-//     if x <= 0.0 { AudioVolume::SILENT } else { AudioVolume::Decibels(20_f32 * x.log10()) }
-// }
-
 impl MidiSynth {
-
-    /// Create with the given configuration.
-    #[cfg(feature = "kira")]
-    pub fn new(manager: Arc<Mutex<kira::AudioManager>>, params: MidiSynthParams, sound_font: Handle<SoundFont>, muted: Arc<AtomicBool>, entity: Entity) -> Result<Self> {
-        use kira::*;
-        use kira::track::*;
-        use kira::effect::reverb::*;
-        use kira::effect::filter::*;
-        let mut mgr = manager.lock().unwrap();
-        let reverb_send = mgr.add_send_track(
-            SendTrackBuilder::new()
-            .with_effect(ReverbBuilder::new()
-                .mix(Mix::WET)
-                .damping(0.25)
-                .feedback(params.reverb as f64))
-        ).unwrap();
-        let listener = mgr.add_listener(glam::Vec3::ZERO, glam::Quat::IDENTITY).unwrap();
-        let spatial_track = mgr.add_spatial_sub_track(&listener, glam::Vec3::ZERO,
-            SpatialTrackBuilder::new()
-                .persist_until_sounds_finish(false)
-                .distances(SpatialTrackDistances {
-                    min_distance: 0.1,
-                    max_distance: 500.0,
-                })
-                .spatialization_strength(1.0)
-                .with_effect(
-                    FilterBuilder::new().cutoff(Value::FromListenerDistance(Mapping {
-                            input_range: (0.0, 200.0),
-                            output_range: (18000.0, 8000.0),
-                            easing: Easing::Linear,
-                    })),
-                )
-                .with_send(
-                    &reverb_send,
-                    Value::FromListenerDistance(Mapping {
-                            input_range: (0.0, 200.0),
-                            output_range: (Decibels(-12.0), Decibels(12.0)),
-                            easing: Easing::Linear,
-                    }),
-                ),
-            ).unwrap();
-
-        drop(mgr);
-        let (render_sender, render_receiver) = crossbeam_channel::unbounded();
-
-        Ok(Self {
-            params,
-            entity,
-            synth_state: SynthState::LoadHandle { sound_font, pending: vec![] },
-            reverb_send,
-            listener,
-            spatial_track: Arc::new(Mutex::new(spatial_track)),
-            volume_linear: 1.0,
-            thread_quit: Arc::new(AtomicBool::new(false)),
-            muted,
-            thread_handle: None,
-            render_sender,
-            render_receiver,
-        })
-    }
     /// Create with the given configuration.
     #[cfg(feature = "firewheel")]
     pub fn new(
@@ -274,8 +200,6 @@ impl MidiSynth {
         let thread_quit = self.thread_quit.clone();
         let muted = self.muted.clone();
         let thread_params = self.params;
-        #[cfg(feature = "kira")]
-        let thread_track = self.spatial_track.clone();
 
         let decoder = SynthDecoder::new(
             &thread_params, self.entity, self.render_sender.clone(),
