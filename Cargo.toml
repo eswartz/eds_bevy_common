@@ -69,7 +69,7 @@ web = [
 ]
 
 [dependencies]
-bevy = { version = "0.18.0", default-features = false, features = [
+bevy = { version = "0.19.0-rc.1", default-features = false, features = [
     # 3d without sound.
     "default_app",
     "default_platform",
@@ -122,8 +122,9 @@ avian3d = { git = "https://github.com/Jondolf/avian.git", branch = "main", defau
     "xpbd_joints", # optional
     "serialize",
 ] }
-bevy_egui = { version = "0.39", features = ["render", "serde"] }
-bevy-inspector-egui = { version = "0.36", default-features = false, features = ["bevy", "bevy_gizmos", "egui_clipboard" ] } #, "documentation"] } #"highlight_changes"] }
+bevy_egui = { version = "0.40", features = ["render", "serde"] }
+#bevy-inspector-egui = { version = "0.36", default-features = false, features = ["bevy", "bevy_gizmos", "egui_clipboard" ] } #, "documentation"] } #"highlight_changes"] }
+bevy-inspector-egui = { path = "/home/ejs/devel/bevy-inspector-egui/crates/bevy-inspector-egui", default-features = false, features = ["bevy", "bevy_gizmos", "egui_clipboard" ] } #, "documentation"] } #"highlight_changes"] }
 egui = { version = "0.33", features = ["bytemuck"] }
 
 firewheel = { git = "https://github.com/BillyDM/Firewheel", rev = "f1e8219", optional = true }
@@ -177,7 +178,7 @@ bevy_trenchbroom_avian = { optional = true, version = "0.12", default-features =
 
 bevy_skein = { optional = true, version = "0.5.0" }
 
-bevy_mod_outline = { version = "0.12", optional = true }
+bevy_mod_outline = { version = "0.13", optional = true }
 bevy_tweening = "0.15.0"
 obj = "0.10"
 
