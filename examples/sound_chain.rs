@@ -1000,7 +1000,7 @@ fn lost_level(
 fn check_end_level(
     mut commands: Commands,
     mut end_timer: ResMut<AutoEndLevelTimer>,
-    time: Res<Time<Physics>>,
+    time: Res<Time>,
 ) {
     if !end_timer.0.tick(time.delta()).is_finished() {
         return;
@@ -1210,7 +1210,7 @@ pub(crate) fn spawn_midi_sphere(
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut meshes: ResMut<Assets<Mesh>>,
 
-    time: Res<Time<Physics>>,
+    time: Res<Time>,
     mut last_time: Local<Duration>,
     mut mesh_holder: Local<Option<Handle<Mesh>>>,
 ) {

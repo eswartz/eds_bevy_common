@@ -24,6 +24,7 @@ use crate::Grabbed;
 use crate::Highlighted;
 #[cfg(feature = "highlighting")]
 use crate::HighlightingMode;
+use crate::PhysicsPaused;
 #[cfg(feature = "input_bei")]
 use crate::ProgramState;
 #[cfg(feature = "input_bei")]
@@ -227,7 +228,7 @@ pub struct GrabbedItem {
     #[cfg(feature = "highlighting")]
     orig_mode: HighlightingMode,
     /// Movement from original location to un-stick item.
-    movement: f32,
+    movement: Vec3,
     /// Movement from original location to un-stick item.
     speed: f32,
 
@@ -360,104 +361,6 @@ fn on_change_grab_distance(
     }
 }
 
-fn move_grabbed_item(
-    mut commands: Commands,
-    mut grabbed: ResMut<GrabbedItem>,
-    grabbing_force: Res<GrabbingBehavior>,
-
-    camera_q: Query<&GlobalTransform, (With<Camera3d>, With<WorldCamera>)>,
-
-    mut gizmos: Gizmos,
-    mut world_info_q: Query<(Option<Forces>, &mut Transform, &GlobalTransform, Option<&Mass>)>,
-    time: Res<Time>,
-) {
-    let Ok((forces_opt, mut item_xfrm, item_global_xfrm, mass_opt)) = world_info_q.get_mut(grabbed.entity) else {
-        // Despawned?
-        warn!("missing grabbable {}", grabbed.entity);
-        commands.write_message(GrabbingCommand::CancelGrabItems);
-        return
-    };
-
-    let Ok(cam_global_xfrm) = camera_q.single() else {
-        // This might mean we've left gameplay... stop already.
-        warn!("no camera for grabbing {}", grabbed.entity);
-        commands.write_message(GrabbingCommand::CancelGrabItems);
-        return
-    };
-
-    // Compute the desired new location, i.e. the current
-    // position plus the camera's position + original distance.
-    let cur_pos = item_global_xfrm.translation() + grabbed.orig_offset;
-
-    let new_pos = cam_global_xfrm.translation() + cam_global_xfrm.rotation() * Vec3::NEG_Z * grabbed.distance;
-
-    const MIN_MOVE: Scalar = 0.01;
-
-    let offset = new_pos - cur_pos;
-
-    let movement = offset.length();
-    if movement > MIN_MOVE {
-        let vel = offset;
-        let is_rigid;
-        let vel = if let Some(mass) = mass_opt {
-            is_rigid = true;
-            if !grabbing_force.ignore_mass {
-                vel / **mass
-            } else {
-                vel
-            }
-        } else {
-            is_rigid = false;
-            vel
-        };
-        let vel = vel * grabbing_force.force;
-
-        if is_rigid && let Some(mut forces) = forces_opt {
-            // Convert movement in world space to an effective impulse.
-            // We directly set the linear velocity so it will move
-            // in sync with the camera movement.
-            let mut new_vel = vel.clamp_length_max(grabbing_force.max_speed);
-            if new_vel.x.abs() < MIN_MOVE {
-                new_vel.x = 0.;
-            }
-            if new_vel.y.abs() < MIN_MOVE {
-                new_vel.y = 0.;
-            }
-            if new_vel.z.abs() < MIN_MOVE {
-                new_vel.z = 0.;
-            }
-            *forces.linear_velocity_mut() = new_vel.adjust_precision();
-            *forces.angular_velocity_mut() = default();
-        } else {
-            // Non-physical, just move.
-            let xfrmed = item_global_xfrm.affine().inverse().transform_point(
-                new_pos /* + item_xfrm.rotation.inverse() * grabbed.orig_offset */);
-            item_xfrm.translation = item_xfrm.translation.lerp(xfrmed, time.delta_secs());
-        }
-
-        grabbed.movement += movement;
-    } else {
-        grabbed.speed *= 0.95;
-    }
-
-    // Draw axes from all edges.
-    let xfrm = item_global_xfrm.compute_transform();
-    let size = grabbing_force.force;
-    gizmos.axes(xfrm, size);
-
-    let mut inv_xfrm = xfrm.clone();
-    inv_xfrm.rotate_local_x(std::f32::consts::PI);
-    gizmos.axes(inv_xfrm, size);
-
-    let mut inv_xfrm = xfrm.clone();
-    inv_xfrm.rotate_local_y(std::f32::consts::PI);
-    gizmos.axes(inv_xfrm, size);
-
-    let mut inv_xfrm = xfrm.clone();
-    inv_xfrm.rotate_local_z(std::f32::consts::PI);
-    gizmos.axes(inv_xfrm, size);
-}
-
 fn process_grab_commands(
     mut reader: MessageReader<GrabbingCommand>,
 
@@ -492,8 +395,8 @@ fn process_grab_commands(
                 };
 
                 // We can have clicked anywhere on the grabbed object,
-                // but later compute grab distance based on the center.
-                // Account for that here.
+                // but later compute grab distance based on the center
+                // coordinate. Remember the offset.
                 let cam_pos = cam_global_xfrm.translation();
                 let cam_dir = cam_global_xfrm.rotation() * Dir3::NEG_Z;
                 let cur_pos = item_global_xfrm.translation();
@@ -520,8 +423,8 @@ fn process_grab_commands(
                     orig_axes: axes_opt.map_or(default(), |a| *a),
                     orig_layers_opt: layers_opt.cloned(),
                     orig_gravity_opt: gravity_opt.cloned(),
-                    movement: 0.,
-                    speed: 0.,
+                    movement: default(),
+                    speed: default(),
                 });
 
                 if cfg!(feature = "highlighting") {
@@ -539,7 +442,9 @@ fn process_grab_commands(
                         // RigidBody:: Kinematic, // avoid going through world
                         GravityScale(0.),
                         if let Some(layers) = layers_opt {
-                            // Do not collide with (and fly out from) the player.
+                            // Do not collide with the player.
+                            // 1) otherwise player stands on item, grabs, pulls both up into air
+                            // 2) avoid disturbing the player also to avoid unwanted movement
                             CollisionLayers::from_bits(
                                 *layers.memberships,
                                 *((layers.filters | GameLayer::Player) ^ GameLayer::Player)
@@ -593,7 +498,7 @@ fn process_grab_commands(
                     }
 
                     if is_rigid {
-                        ent_commands.try_remove::<Sleeping>();
+                        // ent_commands.try_remove::<Sleeping>();
                     }
 
                     styler.remove_from(ent_commands);
@@ -607,7 +512,6 @@ fn process_grab_commands(
                 }
             }
             GrabbingCommand::CancelGrabItems => {
-                commands.remove_resource::<GrabbedItem>();
                 #[cfg(feature = "highlighting")]
                 {
                     *mode = HighlightingMode::Disabled;
@@ -615,4 +519,102 @@ fn process_grab_commands(
             }
         }
     }
+}
+
+fn move_grabbed_item(
+    mut commands: Commands,
+    mut grabbed: ResMut<GrabbedItem>,
+    grabbing_force: Res<GrabbingBehavior>,
+
+    camera_q: Query<&GlobalTransform, (With<Camera3d>, With<WorldCamera>)>,
+
+    mut gizmos: Gizmos,
+    mut world_info_q: Query<(Option<Forces>, &mut Transform, &GlobalTransform, Option<&Mass>)>,
+    time: Res<Time>,
+    physics_paused: Res<PhysicsPaused>,
+) {
+    let Ok((forces_opt, mut item_xfrm, item_global_xfrm, mass_opt)) = world_info_q.get_mut(grabbed.entity) else {
+        // Despawned?
+        warn!("missing grabbable {}", grabbed.entity);
+        commands.write_message(GrabbingCommand::CancelGrabItems);
+        return
+    };
+
+    let Ok(cam_global_xfrm) = camera_q.single() else {
+        // This might mean we've left gameplay... stop already.
+        warn!("no camera for grabbing {}", grabbed.entity);
+        commands.write_message(GrabbingCommand::CancelGrabItems);
+        return
+    };
+
+    // Compute the desired new location, i.e. the current
+    // position plus the camera's position + original distance.
+    let cur_pos = item_global_xfrm.translation() + grabbed.orig_offset;
+
+    let new_pos = cam_global_xfrm.translation() + cam_global_xfrm.rotation() * Vec3::NEG_Z * grabbed.distance;
+
+    const MIN_MOVE: Scalar = 0.01;
+
+    let offset = new_pos - cur_pos;
+
+    let movement = offset.length();
+    if movement > MIN_MOVE {
+        let vel = offset;
+        let is_rigid;
+        let vel = if let Some(mass) = mass_opt {
+            is_rigid = true;
+            if !grabbing_force.ignore_mass {
+                vel / **mass
+            } else {
+                vel
+            }
+        } else {
+            is_rigid = false;
+            vel
+        };
+        let vel = vel * grabbing_force.force;
+
+        if !**physics_paused && is_rigid && let Some(mut forces) = forces_opt {
+            // Convert movement in world space to an effective impulse.
+            // We directly set the linear velocity so it will move
+            // in sync with the camera movement.
+            let mut new_vel = vel.clamp_length_max(grabbing_force.max_speed);
+            if new_vel.x.abs() < MIN_MOVE {
+                new_vel.x = 0.;
+            }
+            if new_vel.y.abs() < MIN_MOVE {
+                new_vel.y = 0.;
+            }
+            if new_vel.z.abs() < MIN_MOVE {
+                new_vel.z = 0.;
+            }
+            *forces.linear_velocity_mut() = new_vel.adjust_precision();
+            *forces.angular_velocity_mut() = default();
+        } else {
+            // Non-physical, just move.
+            let new_xlat = new_pos + item_xfrm.rotation * -grabbed.orig_offset;
+            item_xfrm.translation = item_xfrm.translation.lerp(new_xlat, time.delta_secs().min(1.0));
+        }
+
+        grabbed.movement += movement;
+    } else {
+        grabbed.speed *= 0.95;
+    }
+
+    // Draw axes from all edges.
+    let xfrm = item_global_xfrm.compute_transform();
+    let size = grabbing_force.force;
+    gizmos.axes(xfrm, size);
+
+    let mut inv_xfrm = xfrm.clone();
+    inv_xfrm.rotate_local_x(std::f32::consts::PI);
+    gizmos.axes(inv_xfrm, size);
+
+    let mut inv_xfrm = xfrm.clone();
+    inv_xfrm.rotate_local_y(std::f32::consts::PI);
+    gizmos.axes(inv_xfrm, size);
+
+    let mut inv_xfrm = xfrm.clone();
+    inv_xfrm.rotate_local_z(std::f32::consts::PI);
+    gizmos.axes(inv_xfrm, size);
 }

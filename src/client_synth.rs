@@ -160,7 +160,7 @@ fn handle_synth_events(
                 send_synth_command(&event.1, &mut synth);
                 let _ = waiting.pop_front();
             } else {
-                error!("no MidiSynth component for entity {}", target);
+                error_once!("no MidiSynth component for entity {}", target);
                 let _ = waiting.drain(..);
             }
         } else {

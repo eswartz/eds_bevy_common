@@ -1032,7 +1032,7 @@ fn lost_level(
 fn check_end_level(
     mut commands: Commands,
     mut end_timer: ResMut<AutoEndLevelTimer>,
-    time: Res<Time<Physics>>,
+    time: Res<Time>,
 ) {
     if !end_timer.0.tick(time.delta()).is_finished() {
         return;

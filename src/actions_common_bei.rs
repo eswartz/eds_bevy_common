@@ -19,7 +19,8 @@ impl Plugin for ActionPlugin {
             .add_input_context::<MenuContext>()
             .add_systems(Update, handle_escape)
             .add_systems(Update, toggle_context.run_if(resource_changed::<State<OverlayState>>))
-            .add_observer(handle_pause)
+            .add_observer(handle_pause_gameplay)
+            .add_observer(handle_pause_physics)
             .add_observer(handle_debug_ui)
             .add_observer(handle_full_screen)
             .add_observer(handle_mute)
@@ -179,6 +180,11 @@ pub mod actions {
     #[derive(InputAction)]
     #[action_output(f32)]
     pub struct CycleHighlightedItem;
+
+    /// Toggle physics.
+    #[derive(InputAction)]
+    #[action_output(bool)]
+    pub struct PausePhysics;
 }
 
 fn toggle_context(
@@ -196,7 +202,7 @@ fn toggle_context(
     }
 }
 
-pub(crate) fn handle_pause(_event: On<Start<actions::PauseGameplay>>, keys: Res<ButtonInput<KeyCode>>, mut pause_state: ResMut<PauseState>) {
+pub(crate) fn handle_pause_gameplay(_event: On<Start<actions::PauseGameplay>>, keys: Res<ButtonInput<KeyCode>>, mut pause_state: ResMut<PauseState>) {
     // Ignore overlap with PauseScripting
     if keys.any_pressed([KeyCode::ShiftLeft, KeyCode::ShiftRight]) {
         return
@@ -208,6 +214,10 @@ pub(crate) fn handle_pause(_event: On<Start<actions::PauseGameplay>>, keys: Res<
 }
 
 // note, ^^^ scripting plugin needs to handle PauseScripting
+
+pub(crate) fn handle_pause_physics(_event: On<Start<actions::PausePhysics>>, mut pause_state: ResMut<PhysicsPaused>) {
+    **pause_state ^= true;
+}
 
 pub(crate) fn handle_debug_ui(
     _event: On<Start<actions::DebugUi>>,
@@ -531,11 +541,6 @@ pub fn assign_stock_player_actions(
             // "g"rab, "g"un, and not "f", which could be hit
             // accidentally when failing to hit "d/r/c"
             KeyCode::KeyG,
-
-            // This first one is dangerous-ish since they must be used in isolation
-            // and not with keyboard combinations. See stock handlers.
-            KeyCode::AltLeft,
-            KeyCode::AltRight,
         ],
     ));
 
@@ -567,7 +572,7 @@ pub fn assign_stock_player_actions(
     commands.spawn((
         include.clone(),
         Action::<actions::ReleaseGrab>::new(),
-        Hold::new(0.25),
+        // Hold::new(0.125),
         // Cooldown::new(0.125),
         bindings![
             MouseButton::Left,
@@ -583,6 +588,13 @@ pub fn assign_stock_player_actions(
             Bidirectional::new(KeyCode::ArrowUp, KeyCode::ArrowDown),
             Bidirectional::new(GamepadButton::RightTrigger, GamepadButton::LeftTrigger),
         )),
+    ));
+    commands.spawn((
+        include.clone(),
+        Action::<actions::PausePhysics>::new(),
+        bindings![
+            KeyCode::ScrollLock,
+        ],
     ));
 
 }

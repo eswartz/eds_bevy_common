@@ -122,7 +122,7 @@ fn collect_player_movement(
         instant_thrust.y += ctrl_settings.move_scale.y;
     }
 
-    let (player, vel) = &*player_vel_q;
+    let (player, vel) = *player_vel_q;
 
     // For bob, apply the actual speed, not the intended speed.
     let actual_speed = vel.xz().length() / input_settings.base_xz_speed as Scalar;
@@ -137,10 +137,10 @@ fn collect_player_movement(
     );
 
     if crouch_events.iter().next().unwrap().contains(ActionEvents::START) {
-        writer.write(PlayerInput::ToggleCrouch(*player));
+        writer.write(PlayerInput::ToggleCrouch(player));
     }
     writer.write(PlayerInput::Move(
-        *player,
+        player,
         PlayerMove::new(instant_thrust, speed),
     ));
 }
@@ -226,11 +226,9 @@ fn collect_player_look(
 
 #[cfg(feature = "input_bei")]
 fn collect_player_input(
-    mut commands: Commands,
-
-    fire_events: Query<&ActionEvents, (With<Action<Firing>>, With<PlayerAction>)>,
-
-    player_q: Single<Entity, With<OurPlayer>>,
+    // mut commands: Commands,
+    // // fire_events: Query<&ActionEvents, (With<Action<Firing>>, With<PlayerAction>)>,
+    // player_q: Single<Entity, With<OurPlayer>>,
 
     mut focused: MessageReader<WindowFocused>,
     mut ignore_mouse: Local<bool>,

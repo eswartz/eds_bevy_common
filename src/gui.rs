@@ -4,6 +4,7 @@ use std::path::PathBuf;
 use std::time::Duration;
 
 use avian3d::prelude::PhysicsGizmos;
+use avian3d::prelude::PhysicsTime;
 use bevy::asset::AssetPath;
 use bevy::camera::visibility::RenderLayers;
 use bevy::color::palettes::tailwind;
@@ -39,6 +40,7 @@ impl Plugin for GuiPlugin {
         .insert_resource(GuiState::default())
         .init_resource::<GrabState>()
         .add_message::<GrabCursor>()
+        .init_resource::<PhysicsPaused>()
         .add_systems(Startup,
             load_ui_font,
         )
@@ -113,6 +115,7 @@ impl Plugin for GuiPlugin {
             (
                 update_pause_ui,
                 update_mute_ui,
+                update_physics_pause_ui,
             )
             // .in_set(InteractionSystems)
             .run_if(in_state(ProgramState::InGame))
@@ -845,6 +848,34 @@ fn update_mute_ui(
     }
 }
 
+#[derive(Resource, Debug, Default, Deref, DerefMut, Reflect)]
+#[reflect(Resource, Default)]
+pub struct PhysicsPaused(pub bool);
+
+fn update_physics_pause_ui(
+    paused: Res<PhysicsPaused>,
+    mut vis_q: ParamSet<(
+        Query<&mut Visibility, With<PhysicsRunningArea>>,
+        Query<&mut Visibility, With<PhysicsRunningCrossArea>>,
+    )>,
+    mut time: ResMut<Time<avian3d::prelude::Physics>>,
+) {
+    if let Ok(mut vis) = vis_q.p0().single_mut() {
+        // If we're here, we've got physics.
+        vis.set_if_neq(Visibility::Inherited);
+    }
+    if !paused.is_changed() {
+        return
+    }
+    if **paused {
+        time.pause();
+    } else {
+        time.unpause();
+    }
+    if let Ok(mut vis) = vis_q.p1().single_mut() {
+        vis.set_if_neq(if **paused { Visibility::Inherited } else { Visibility::Hidden });
+    }
+}
 
 /// Set the instruction text for level.
 #[derive(Resource, Reflect)]

@@ -26,6 +26,17 @@ impl Plugin for PlayerCameraPlugin {
                 (
                     // HACK: we "know" zoom and move-while-grabbed use the same actions
                     handle_player_camera_actions.run_if(not(is_grabbing_item)),
+                )
+                .chain()
+                .after(PhysicsSystems::Writeback)
+                .before(TransformSystems::Propagate)
+                .run_if(not(is_menu_paused))
+                .run_if(not(debug_gui_wants_input))
+                .run_if(is_game_active)
+                ,
+            )
+            .add_systems(FixedPreUpdate,
+                (
                     sync_world_camera_to_player,
                     sync_view_camera_to_player,
                 )
@@ -33,7 +44,6 @@ impl Plugin for PlayerCameraPlugin {
                 .after(PhysicsSystems::Writeback)
                 .before(TransformSystems::Propagate)
                 .run_if(not(is_menu_paused))
-                .run_if(not(debug_gui_wants_input))
                 .run_if(is_game_active)
                 ,
             )
@@ -256,7 +266,6 @@ pub fn sync_world_camera_to_player(
 
     // let q = (time.delta_secs() * 10.0).min(1.0);
     let q = (-0.5 * time.delta_secs() * 100.0).exp();
-    // let q = 0.5;
 
     let eyes_pos = player_eyes(player_xfrm, player_aabb, look);
     match mode {
@@ -270,7 +279,6 @@ pub fn sync_world_camera_to_player(
 
             camera_xfrm.translation = eyes_pos
                 + camera_xfrm.rotation * Vec3::Y * cam.bob_distance;
-
         }
         CameraMode::ThirdPerson => {
             model_visibility.set_if_neq(Visibility::Inherited);

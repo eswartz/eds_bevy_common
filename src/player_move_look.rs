@@ -21,10 +21,11 @@ impl Plugin for PlayerMovementPlugin {
                     ),
                     check_player_environment_fps,
                     check_player_environment_space,
-                    process_player_input_movement_for_cheats.run_if(is_cheating),
+                    process_player_input_movement_for_cheats.run_if(is_cheating_or_paused),
                     process_player_input_movement_for_fps.run_if(not(is_cheating)),
                     process_player_input_movement_for_space.run_if(not(is_cheating)),
                     process_player_input_non_movement,
+                    sync_player_movement,
                 ).chain()
                 .before(TransformSystems::Propagate)
                 .after(PhysicsSystems::Writeback)
@@ -33,6 +34,16 @@ impl Plugin for PlayerMovementPlugin {
             )
         ;
     }
+}
+
+fn is_cheating_or_paused(
+    physics_paused: Res<PhysicsPaused>,
+) -> bool {
+    **physics_paused
+}
+
+fn is_cheating() -> bool {
+    false
 }
 
 #[derive(Resource, Debug, Clone, Copy, Default, Reflect, PartialEq)]
@@ -46,10 +57,6 @@ pub enum PlayerMode {
     /// Move as in a space ship / sim, moving in XYZ via
     /// impulses in the direction of the Player.
     Space,
-}
-
-fn is_cheating() -> bool {
-    false
 }
 
 #[derive(Resource, Debug, Clone, Default, Reflect)]
@@ -471,7 +478,7 @@ pub fn player_eyes(transform: &Transform, aabb: &ColliderAabb, look: &PlayerLook
     Vec3::new(
         transform.translation.x,
         aabb.max.y as f32 - 0.25 + look.crouch_y,
-        transform.translation.z,
+        transform.translation.z - 0.25,
     )
 }
 
@@ -678,18 +685,19 @@ pub fn process_player_input_movement_for_cheats(
             Forces,
             &mut PlayerMovement,
             &PlayerLook,
-            &Transform,
+            &mut Transform,
         ),
         With<Player>,
     >,
     mut inputs: MessageReader<PlayerInput>,
     time: Res<Time>,
-    settings: Res<PlayerInputSettings>,
+    input_settings: Res<PlayerInputSettings>,
+    physics_paused: Res<PhysicsPaused>,
 ) {
     for input in inputs.read() {
         let res = player_q.get_mut(input.player_entity());
 
-        let Ok((mut forces, mut movement, look, transform)) = res
+        let Ok((mut forces, mut movement, look, mut transform)) = res
         else {
             let e = unsafe { res.unwrap_err_unchecked() };
             warn!("invalid player entity {}: {:?}", input.player_entity(), e);
@@ -699,12 +707,12 @@ pub fn process_player_input_movement_for_cheats(
         let mut vel = forces.linear_velocity();
 
         let mut instant_thrust = Vec3::ZERO;
-        let mut overall_speed = settings.base_xz_speed as f32;
+        let mut overall_speed = input_settings.base_xz_speed as f32;
         match input {
             PlayerInput::Move(_, input) => {
-                instant_thrust.x = Into::<f32>::into(input.right_left) * settings.move_scale.x;
-                instant_thrust.y = Into::<f32>::into(input.up_down) * settings.move_scale.y;
-                instant_thrust.z = Into::<f32>::into(input.forward_back) * settings.move_scale.z;
+                instant_thrust.x = Into::<f32>::into(input.right_left) * input_settings.move_scale.x;
+                instant_thrust.y = Into::<f32>::into(input.up_down) * input_settings.move_scale.y;
+                instant_thrust.z = Into::<f32>::into(input.forward_back) * input_settings.move_scale.z;
 
                 instant_thrust = instant_thrust.clamp_length_max(2.0);
 
@@ -714,14 +722,15 @@ pub fn process_player_input_movement_for_cheats(
                     input.speed.slower()
                 };
                 let accel_scale = match move_speed {
-                    Speed::Fast => settings.accelerate_scale,
-                    Speed::Slow => 1.0 / settings.accelerate_scale,
-                    Speed::Crawl => 0.5 / settings.accelerate_scale,
+                    Speed::Fast => input_settings.accelerate_scale,
+                    Speed::Slow => 1.0 / input_settings.accelerate_scale,
+                    Speed::Crawl => 0.5 / input_settings.accelerate_scale,
                     Speed::Normal => 1.0,
                 };
                 overall_speed *= accel_scale;
 
-                let dir_velocity = transform.rotation * instant_thrust;
+                // let dir_velocity = transform.rotation * instant_thrust;
+                let dir_velocity = look.rotation * instant_thrust;
 
                 let delta = dir_velocity * overall_speed;
                 if delta.length_squared() > 0.01 {
@@ -730,7 +739,7 @@ pub fn process_player_input_movement_for_cheats(
                 } else {
                     // Slow down when not actively moving.
                     let decay = (-0.5 * time.delta_secs()
-                        / settings.movement_decay_time_secs
+                        / input_settings.movement_decay_time_secs
                         / accel_scale)
                         .exp() as Scalar;
                     vel = Vector::new(vel.x * decay, vel.y * decay, vel.z * decay);
@@ -740,17 +749,32 @@ pub fn process_player_input_movement_for_cheats(
         }
 
         // Clamp speed.
-        let cur_vel_xz = vel.xz();
-        let cur_len_xz = cur_vel_xz.length();
-        let clamped_vel_xz = if cur_len_xz < 0.1 {
+        // let cur_vel_xz = vel.xz();
+        // let cur_len_xz = cur_vel_xz.length();
+        // let clamped_vel_xz = if cur_len_xz < 0.1 {
+        //     movement.velocity_ramp = 0.0;
+        //     Vector2::splat(0.0)
+        // } else {
+        //     cur_vel_xz.clamp_length_max(settings.max_xz_speed as Scalar)
+        // };
+
+        // Clamp speed.
+        let cur_len = vel.length();
+        let clamped_vel = if cur_len < 0.1 {
             movement.velocity_ramp = 0.0;
-            Vector2::splat(0.0)
+            Vector3::splat(0.0)
         } else {
-            cur_vel_xz.clamp_length_max(settings.max_xz_speed as Scalar)
+            vel.clamp_length_max(input_settings.max_xz_speed as Scalar)
         };
 
-        // Do not fall or fly.
-        *forces.linear_velocity_mut() = Vector::new(clamped_vel_xz.x, 0.0, clamped_vel_xz.y);
+        // // Do not fall or fly.
+        // let clamped_vel = Vector::new(clamped_vel_xz.x, 0.0, clamped_vel_xz.y);
+
+        if !**physics_paused {
+            *forces.linear_velocity_mut() = clamped_vel;
+        } else {
+            transform.translation += clamped_vel * time.delta_secs();
+        }
     }
 }
 
@@ -770,8 +794,9 @@ pub fn process_player_input_movement_for_fps(
     input_settings: Res<PlayerInputSettings>,
     camera_settings: Res<PlayerCameraSettings>,
     mode: Res<PlayerMode>,
+    physics_paused: Res<PhysicsPaused>,
 ) {
-    if *mode != PlayerMode::Fps {
+    if *mode != PlayerMode::Fps || **physics_paused {
         return
     }
 
@@ -979,8 +1004,9 @@ pub fn process_player_input_movement_for_space(
     input_settings: Res<PlayerInputSettings>,
     camera_settings: Res<PlayerCameraSettings>,
     mode: Res<PlayerMode>,
+    physics_paused: Res<PhysicsPaused>,
 ) {
-    if *mode != PlayerMode::Space {
+    if *mode != PlayerMode::Space || **physics_paused {
         return
     }
 
@@ -1156,26 +1182,39 @@ pub fn process_player_input_non_movement(
             // Handled above.
             PlayerInput::Move(..) => (),
         }
+    }
+}
 
-        // // Fire before move.
-        // if let Some(next_time) = next_fire_time.as_mut() {
-        //     let left = next_time.saturating_sub(time.delta());
-        //     if left.is_zero() {
-        //         let eye_pos = player_eyes(&transform, aabb, &look);
-        //         let gun_pos = player_gun(&transform, eye_pos);
-        //         commands.spawn((
-        //             Name::new("Projectile"),
-        //             Transform::from_translation(gun_pos)
-        //                 .with_rotation(look.rotation * Quat::from_rotation_x(-std::f32::consts::PI))
-        //                 .with_scale(Vec3::ONE * 2.0),
-        //             Projectile(ProjectileType::Bullet, input.player_entity()),
-        //             LinearVelocity((look.rotation * Vec3::NEG_Z * 32.0).adjust_precision()),
-        //         ));
-        //         // *next_time = Duration::from_secs_f32(1.0 / 2.0);
-        //         *next_fire_time = None;
-        //     } else {
-        //         *next_time = left;
-        //     }
-        // }
+/// When physics is disabled, directly apply movement to the player.
+fn sync_player_movement(
+    mut player_q: Query<
+        (
+            &mut Transform,
+            &mut Position,
+            &mut LinearVelocity,
+            Option<&GravityScale>,
+        ),
+        With<Player>,
+    >,
+    grav: Res<Gravity>,
+    time: Res<Time>,
+    physics_paused: Res<PhysicsPaused>,
+) {
+    if !**physics_paused {
+        return
+    }
+
+    for (mut xfrm, mut pos, mut vel, grav_opt) in player_q.iter_mut() {
+        let orig = xfrm.translation;
+        let offs = vel.adjust_precision();
+        let offs = offs + grav_opt.map_or(1.0, |g| **g) * grav.0.adjust_precision();
+        let xfrm_delta = offs * time.delta_secs();
+        xfrm.translation += xfrm_delta;
+        // **pos = xfrm.translation.adjust_precision();
+        pos.x = xfrm.translation.x;
+        // pos.y = xfrm.translation.y;
+        pos.y = orig.y;
+        pos.z = xfrm.translation.z;
+        *vel = default();
     }
 }

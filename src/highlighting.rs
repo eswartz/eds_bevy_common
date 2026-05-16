@@ -333,9 +333,7 @@ fn update_highlightable(
 
     let mut any = false;
     for ent in now_hovered_q.iter() {
-        let mut ent_commands = commands.entity(ent);
-        ent_commands.try_insert(Highlighted);
-        style.apply_to(ent_commands);
+        style.apply_to(commands.entity(ent));
         any = true;
     }
 
