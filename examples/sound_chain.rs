@@ -60,7 +60,7 @@ fn main() -> AppExit {
                 }),
             PhysicsPlugins::default(),
         ))
-        .add_plugins(avian3d::debug_render::PhysicsDebugPlugin::default())
+        .add_plugins(avian3d::debug_render::PhysicsDebugPlugin)
         .insert_gizmo_config(
             avian3d::prelude::PhysicsGizmos::default(),
             GizmoConfig {
@@ -295,7 +295,7 @@ fn configure_world_camera(mut ent_commands: EntityCommands) {
         ),
 
         // Audio is from the perspective of the camera.
-        SpatialListener3D::default(),
+        SpatialListener3D,
     ));
 }
 
@@ -1110,7 +1110,7 @@ pub(crate) fn spawn_player_on_start(world: &mut World) {
         return;
     };
     drop(start_q);
-    let xfrm = xfrm.clone();
+    let xfrm = *xfrm;
 
     let mut queue = CommandQueue::default();
     let mut commands = Commands::new(&mut queue, world);
@@ -1190,7 +1190,7 @@ pub(crate) fn ensure_midi_synths(
     for ent in synth_q.iter() {
         let (sample_sender, sample_receiver) = crossbeam_channel::unbounded();
         let synth = MidiSynth::new(
-            params.clone(),
+            params,
             sf_assets.timgm6mb.clone(),
             muted.0.clone(),
             ent,

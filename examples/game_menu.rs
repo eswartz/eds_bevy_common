@@ -1,7 +1,6 @@
 use eds_bevy_common::*;
 
 use avian3d::PhysicsPlugins;
-use avian3d::prelude::Physics;
 use bevy::prelude::*;
 use bevy::asset::uuid::Uuid;
 use bevy::color::palettes::tailwind;
@@ -37,7 +36,7 @@ fn main() -> AppExit {
             DefaultPlugins,
             PhysicsPlugins::default(),
         ))
-        .add_plugins(avian3d::debug_render::PhysicsDebugPlugin::default())
+        .add_plugins(avian3d::debug_render::PhysicsDebugPlugin)
         .insert_gizmo_config(
             avian3d::prelude::PhysicsGizmos::default(),
             GizmoConfig {
@@ -218,7 +217,7 @@ fn configure_world_camera(mut ent_commands: EntityCommands) {
         ),
 
         // Audio is from the perspective of the camera.
-        SpatialListener3D::default(),
+        SpatialListener3D,
     ));
 }
 
@@ -1183,7 +1182,7 @@ pub(crate) fn spawn_player_on_start(world: &mut World) {
         return;
     };
     drop(start_q);
-    let xfrm = xfrm.clone();
+    let xfrm = *xfrm;
 
     let mut queue = CommandQueue::default();
     let mut commands = Commands::new(&mut queue, world);
