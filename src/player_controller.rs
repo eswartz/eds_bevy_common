@@ -226,9 +226,9 @@ fn collect_player_look(
 
 #[cfg(feature = "input_bei")]
 fn collect_player_input(
-    // mut commands: Commands,
-    // // fire_events: Query<&ActionEvents, (With<Action<Firing>>, With<PlayerAction>)>,
-    // player_q: Single<Entity, With<OurPlayer>>,
+    mut commands: Commands,
+    fire_events: Query<&ActionEvents, (With<Action<Firing>>, With<PlayerAction>)>,
+    player_q: Single<Entity, With<OurPlayer>>,
 
     mut focused: MessageReader<WindowFocused>,
     mut ignore_mouse: Local<bool>,
