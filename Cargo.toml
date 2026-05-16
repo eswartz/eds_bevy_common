@@ -126,8 +126,8 @@ bevy_egui = { version = "0.39", features = ["render", "serde"] }
 bevy-inspector-egui = { version = "0.36", default-features = false, features = ["bevy", "bevy_gizmos", "egui_clipboard" ] } #, "documentation"] } #"highlight_changes"] }
 egui = { version = "0.33", features = ["bytemuck"] }
 
-firewheel = { git = "https://github.com/BillyDM/Firewheel", rev = "f1e8219", optional = true }
-# firewheel = { git = "https://github.com/BillyDM/Firewheel", rev = "f1e8219", optional = true, default-features = false, features = [
+firewheel = { git = "https://github.com/BillyDM/Firewheel", rev = "b8164f85", optional = true }
+# firewheel = { git = "https://github.com/BillyDM/Firewheel", rev = "b8164f85", optional = true, default-features = false, features = [
 #     "bevy",
 #   "spatial_basic_node",
 #   "scheduled_events",
@@ -142,7 +142,7 @@ firewheel = { git = "https://github.com/BillyDM/Firewheel", rev = "f1e8219", opt
 #  ] }
 
 # bevy_seedling = { version = "0.8", default-features = false, optional = true, features = [
-bevy_seedling = { git = "https://github.com/CorvusPrudens/bevy_seedling.git", rev = "bfd2f33ddd81be928a796febf4ffff599999495a", optional = true, default-features = false, features = [
+bevy_seedling = { git = "https://github.com/CorvusPrudens/bevy_seedling.git", optional = true, default-features = false, features = [
     "wav", "ogg", "rand", "reflect", "diagnostics",
     "hrtf",
     "cpal",
@@ -204,7 +204,7 @@ wasm_thread = "0.3"
 wasm-bindgen = { version = "0.2.120" }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-firewheel = { git = "https://github.com/BillyDM/Firewheel", rev = "f1e8219", default-features = false, features = [
+firewheel = { git = "https://github.com/BillyDM/Firewheel", rev = "b8164f85", default-features = false, features = [
   "wasm-bindgen",
 ] }
 
