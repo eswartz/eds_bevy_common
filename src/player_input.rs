@@ -22,7 +22,6 @@ pub enum Speed {
     Fast,
 }
 
-#[allow(unused)]
 impl Speed {
     pub fn mul(&self) -> f32 {
         match self {

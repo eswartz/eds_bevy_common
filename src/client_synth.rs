@@ -182,6 +182,7 @@ fn send_synth_command(
         }
         SynthChannel::Drums(_d) => 9,
     };
+    #[expect(clippy::cast_sign_loss, reason = "we clamp")]
     let to_data = |v: &f32| (v * 127.0).clamp(0.0, 127.0) as u8;
     let to_key = |n: &SynthNote| n.to_midi();
 

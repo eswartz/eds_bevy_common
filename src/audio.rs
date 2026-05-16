@@ -49,8 +49,8 @@ impl Plugin for AudioCommonPlugin {
 
 /// This drives the volume from the user config point of view.
 ///
-/// Our [apply_volumes] system ensures that a corresponding VolumeNode matches
-/// the volume and muted state.
+/// Our [apply_volumes] system manages a corresponding [VolumeNode] that
+/// tracks the `volume` and `muted` state.
 #[derive(Component, Reflect)]
 #[require(VolumeNode{ volume: Volume::SILENT, ..default() })]
 #[reflect(Component)]
@@ -174,7 +174,6 @@ pub fn apply_volumes(
 
 /// Fixme, VolumeNode/VolumeFade should work...
 #[derive(Debug)]
-#[allow(unused)]
 pub struct VolumeNodeLens {
     pub start: VolumeNode,
     pub end: VolumeNode,

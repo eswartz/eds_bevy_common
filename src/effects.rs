@@ -57,7 +57,6 @@ fn aim_for_camera(
 
 
 #[derive(Debug)]
-#[allow(unused)]
 pub struct TransformPositionScaleLens {
     pub start: Transform,
     pub end: Transform,
@@ -71,7 +70,6 @@ impl Lens<Transform> for TransformPositionScaleLens {
 }
 
 #[derive(Debug)]
-#[allow(unused)]
 pub struct TransformPositionRotationLens {
     pub start: Transform,
     pub end: Transform,

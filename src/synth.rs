@@ -64,11 +64,11 @@ impl std::fmt::Debug for SynthNote {
     }
 }
 
-#[allow(unused)]
 impl SynthNote {
     /// Create from a frequency in Hz.
+    #[expect(clippy::cast_sign_loss, reason = "we clamp")]
     pub fn hz(freq: f32) -> Self {
-        Self::Hertz(freq as u16)
+        Self::Hertz(freq.clamp(0., 65535.) as u16)
     }
     /// Create from a MIDI note.
     pub fn midi(note: u8) -> Self {
@@ -80,12 +80,15 @@ impl SynthNote {
     //     Self::Hertz(self.to_hz() as f32 + bend)
     // }
 
+    #[expect(clippy::cast_sign_loss, reason = "we clamp")]
     pub fn to_hz(&self) -> u16 {
         match self {
             SynthNote::Midi(midi) => (440.0 * (2.0f32.powf((*midi as f32 - 69.0) / 12.0))) as u16,
             SynthNote::Hertz(hz) => *hz,
         }
     }
+
+    #[expect(clippy::cast_sign_loss, reason = "we clamp")]
     pub fn to_midi(&self) -> u8 {
         match self {
             SynthNote::Midi(midi) => *midi,
@@ -130,13 +133,14 @@ impl std::fmt::Debug for SynthChannel {
     }
 }
 
-#[allow(unused)]
 impl SynthChannel {
     pub fn drums(v: u8) -> Self {
         Self::Drums(v)
     }
 
-    pub(crate) fn next(&self) -> SynthChannel {
+    /// Advance the receiver to a new numbered channel in the same kind.
+    /// May be useful for testing channel scheduling...
+    pub fn next(&self) -> SynthChannel {
         match self {
             SynthChannel::Voice(v) => SynthChannel::Voice(v.wrapping_add(1)),
             SynthChannel::Drums(d) => SynthChannel::Drums(d.wrapping_add(1)),
@@ -165,7 +169,6 @@ pub enum SynthCommand {
 #[type_path = "game"]
 pub struct SynthMessage(pub Entity, pub SynthCommand, pub Duration);
 
-#[allow(unused)]
 impl SynthMessage {
     pub fn new(entity: Entity, command: SynthCommand) -> Self {
         Self(entity, command, Duration::ZERO)

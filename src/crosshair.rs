@@ -201,7 +201,10 @@ fn update_crosshair(
         return;
     };
     let strength = crosshair_q.1.current_strength;
-    let mut image = image_q.get_mut(image_ent).unwrap();
+    let Ok(mut image) = image_q.get_mut(image_ent) else {
+        error!("no crosshair image");
+        return;
+    };
     let new_color = image.color.with_alpha(strength.clamp(0.0, 1.0));
     if image.color != new_color {
         image.color = new_color;

@@ -103,22 +103,26 @@ fn collect_player_movement(
 ) {
     let mut instant_thrust = Vec3::ZERO;
 
-    let speed = if accel_events.iter().next().unwrap().contains(ActionEvents::START | ActionEvents::FIRE) {
+    let speed = if let Some(event) = accel_events.iter().next()
+    && event.contains(ActionEvents::START | ActionEvents::FIRE) {
         Speed::Fast
-    } else if crouch_events.iter().next().unwrap().contains(ActionEvents::START | ActionEvents::FIRE) {
+    } else if let Some(event) = crouch_events.iter().next()
+    && event.contains(ActionEvents::START | ActionEvents::FIRE) {
         Speed::Slow
     } else {
         Speed::Normal
     };
 
-    let move_axis = **move_flycam.iter().next().unwrap();
-    let down_up_axis = **move_down_up.iter().next().unwrap();
-    let left_right_axis = **move_left_right.iter().next().unwrap();
-    instant_thrust.x = (left_right_axis + move_axis.x) * ctrl_settings.move_scale.x;
-    instant_thrust.y = down_up_axis * ctrl_settings.move_scale.y;
-    instant_thrust.z = move_axis.y * ctrl_settings.move_scale.z;
+    if let Some(move_axis) = move_flycam.iter().next()
+    && let Some(down_up_axis) = move_down_up.iter().next()
+    && let Some(left_right_axis) = move_left_right.iter().next() {
+        instant_thrust.x = (**left_right_axis + move_axis.x) * ctrl_settings.move_scale.x;
+        instant_thrust.y = **down_up_axis * ctrl_settings.move_scale.y;
+        instant_thrust.z = move_axis.y * ctrl_settings.move_scale.z;
+    }
 
-    if jump_events.iter().next().unwrap().contains(ActionEvents::START | ActionEvents::FIRE) {
+    if let Some(event) = jump_events.iter().next()
+    && event.contains(ActionEvents::START | ActionEvents::FIRE) {
         instant_thrust.y += ctrl_settings.move_scale.y;
     }
 
@@ -136,7 +140,8 @@ fn collect_player_movement(
         actual_speed as _,
     );
 
-    if crouch_events.iter().next().unwrap().contains(ActionEvents::START) {
+    if let Some(event) = crouch_events.iter().next()
+    && event.contains(ActionEvents::START) {
         writer.write(PlayerInput::ToggleCrouch(player));
     }
     writer.write(PlayerInput::Move(
@@ -175,7 +180,9 @@ fn collect_player_look(
     let alt_fire = mouse_button_events.pressed(MouseButton::Right);
     let ignore_mouse = gui_state.is_debug_ui_inspector_visible() && !alt_fire;
 
-    let look_axis = **look.single().unwrap();
+    let Ok(look_axis) = look.single() else {
+        return
+    };
 
     let mut instant_body_turn = Vec3::ZERO;
     let mut instant_head_turn = Vec3::ZERO;
@@ -206,10 +213,12 @@ fn collect_player_look(
     // instant_head_turn.z = tilt * settings.turn_scale.z;
 
     // Don't repeat, else it's just a 360 on the slightest lingering touch.
-    if turn_around_events.iter().next().unwrap().contains(ActionEvents::START) {
+    if let Some(event) = turn_around_events.iter().next()
+    && event.contains(ActionEvents::START) {
         writer.write(PlayerInput::TurnAround(*player_q));
         return;
-    } else if reset_events.iter().next().unwrap().contains(ActionEvents::START) {
+    } else if let Some(event) = reset_events.iter().next()
+    && event .contains(ActionEvents::START) {
         writer.write(PlayerInput::Straighten(*player_q));
         return;
     }
@@ -247,11 +256,13 @@ fn collect_player_input(
         return;
     }
 
-    if fire_events.iter().next().unwrap().contains(ActionEvents::START) {
+    if let Some(event) = fire_events.iter().next()
+    && event.contains(ActionEvents::START) {
         debug!("press Fire");
         commands.write_message(PlayerInput::StartFire(*player_q));
     }
-    if fire_events.iter().next().unwrap().contains(ActionEvents::COMPLETE) {
+    if let Some(event) = fire_events.iter().next()
+    && event.contains(ActionEvents::COMPLETE) {
         debug!("release Fire");
         commands.write_message(PlayerInput::StopFire(*player_q));
     }

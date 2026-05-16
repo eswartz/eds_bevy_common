@@ -170,8 +170,8 @@ impl OurCamera {
         dt: f32, fwd: f32, strafe: f32, speed: f32
     ) {
 
-        let sign_or_zero = |v: f32| -> f32 {
-            if v.abs() < 0.0001 { 0.0 } else { v.signum() }
+        let sign_or_zero = |v: f32| -> i32 {
+            if v.abs() < 0.0001 { 0 } else { v.signum() as i32 }
         };
         let move_toward = |ease: EaseFunction, src: f32, dst: f32, time: f32, timer: &mut f32| -> f32 {
             *timer = (*timer + dt).min(time);
@@ -307,8 +307,8 @@ pub fn sync_view_camera_to_player(
     )>,
     settings: Res<PlayerCameraSettings>,
 ) {
-    let camera_xfrm = params.p0().clone();
-    let mut view_camera_q = params.p1();
+    let camera_xfrm = **params.p0();
+    let view_camera_q = &mut **params.p1();
 
     // View camera is always aligned to world camera.
     // **view_camera_q = **camera_xfrm;
@@ -334,22 +334,20 @@ pub fn handle_player_camera_actions(
 ) {
     #[cfg(feature = "input_bei")]
     {
-        if let Some(change_camera) = change_camera.iter().next() {
-            if change_camera.contains(ActionEvents::START) {
-                camera_q.0 = camera_q.0.next();
-            }
+        if let Some(change_camera) = change_camera.iter().next()
+        && change_camera.contains(ActionEvents::START) {
+            camera_q.0 = camera_q.0.next();
         }
-        if let Some(zoom_camera) = zoom_camera.iter().next() {
-            if zoom_camera.length() > 0. {
-                // **fov_delta = (**fov_delta + zoom_camera.y).clamp(-90.0, 90.0);
-                let q = ops::exp(-time.delta_secs() / 10.0);
-                **fov_delta = fov_delta.lerp(**fov_delta + zoom_camera.y, q).clamp(-90.0, 90.0);
-                *zoom_state = FovZoomState::Zooming;
-            } else {
-                if *zoom_state == FovZoomState::Zooming {
-                    // No longer zooming, reset eventually.
-                    *zoom_state = FovZoomState::AtZoom(settings.fov_delta_hold_time)
-                }
+        if let Some(zoom_camera) = zoom_camera.iter().next()
+        && zoom_camera.length() > 0. {
+            // **fov_delta = (**fov_delta + zoom_camera.y).clamp(-90.0, 90.0);
+            let q = ops::exp(-time.delta_secs() / 10.0);
+            **fov_delta = fov_delta.lerp(**fov_delta + zoom_camera.y, q).clamp(-90.0, 90.0);
+            *zoom_state = FovZoomState::Zooming;
+        } else {
+            if *zoom_state == FovZoomState::Zooming {
+                // No longer zooming, reset eventually.
+                *zoom_state = FovZoomState::AtZoom(settings.fov_delta_hold_time)
             }
         }
     }
@@ -433,7 +431,7 @@ fn decay_camera_zoom(
 
     // Else, slowly move back towards 0.
     let q = time.delta().div_duration_f32(settings.fov_delta_decay_time);
-    **fov_delta = **fov_delta * ops::exp(-q);
+    **fov_delta *= ops::exp(-q);
 
     // Back at start?
     if fov_delta.abs() < 0.01 {

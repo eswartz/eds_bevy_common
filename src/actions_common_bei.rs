@@ -47,7 +47,6 @@ pub struct MenuContext;
 #[derive(Component, Reflect, Clone)]
 #[reflect(Component)]
 #[type_path = "game"]
-
 pub struct PlayerAction;
 
 /// Marker for Actions on a menu.

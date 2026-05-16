@@ -24,8 +24,6 @@ pub struct GeometryCollisionHooksCallbacks {
     pub is_liquid: Box<dyn Fn(Entity) -> bool + Sync + Send>,
 }
 
-///
-
 impl GeometryCollisionHooks<'_, '_> {
     fn is_player(&self, body: Option<Entity>) -> bool {
         if let Some(body) = body {

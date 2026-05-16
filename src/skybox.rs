@@ -328,7 +328,11 @@ fn check_load_reflection_probe(
     });
     let diffuse = images.add(diffuse);
 
-    let reflection_image = images.get_mut(image).unwrap();
+    let Some(reflection_image) = images.get_mut(image) else {
+        error!("failed to locate {image:?}");
+        *setup = SkyboxSetup::Finished;
+        return;
+    };
 
     reflection_image.texture_view_descriptor = Some(TextureViewDescriptor {
         dimension: Some(TextureViewDimension::Cube),

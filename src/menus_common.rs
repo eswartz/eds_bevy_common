@@ -211,7 +211,6 @@ pub struct MenuItemBuilder<'w, 's> {
     first_ent_label: Option<(Entity, String)>,
 }
 
-#[allow(unused)]
 impl<'w, 's> MenuItemBuilder<'w, 's> {
     pub fn new(
         mut commands: Commands<'w, 's>,
@@ -539,7 +538,6 @@ impl MenuSlider {
         }
     }
 
-    #[allow(unused)]
     pub fn range(&self) -> f32 {
         *self.ui_range.end() - *self.ui_range.start()
     }
@@ -991,6 +989,7 @@ fn handle_menu_item_decoration(
             (Interaction::Hovered, _) => (MENU_ITEM_FONT_SIZE * scale * 1.1, HOVERED_BUTTON.into()),
             (Interaction::None, _) => (MENU_ITEM_FONT_SIZE * scale, NORMAL_BUTTON.into()),
         };
+        #[expect(clippy::float_cmp, reason = "binary diff checking")]
         if text.font_size != font_size || *color != item_color {
             text.font_size = font_size;
             *color = item_color;
@@ -1039,9 +1038,11 @@ fn handle_menu_action(world: &mut World) {
             handler
         };
 
-        handler.lock().unwrap().handle(world, &event);
+        if let Ok(mut handler) = handler.lock() {
+            handler.handle(world, &event);
 
-        world.insert_resource(RefreshMenu);
+            world.insert_resource(RefreshMenu);
+        }
     }
 }
 
@@ -1214,15 +1215,11 @@ fn handle_menu_enums_actions(
         };
 
         let dir = match event {
-            MenuActionMessage::Slide(_, distance) => {
-                if distance.abs() >= 0.1 {
-                    *slider_time = slider_time.saturating_sub(time.delta());
-                    if slider_time.is_zero() {
-                        *slider_time = Duration::from_secs_f32(1.0 / 2.0);
-                        distance.signum() as isize
-                    } else {
-                        0
-                    }
+            MenuActionMessage::Slide(_, distance) if distance.abs() >= 0.1 => {
+                *slider_time = slider_time.saturating_sub(time.delta());
+                if slider_time.is_zero() {
+                    *slider_time = Duration::from_secs_f32(1.0 / 2.0);
+                    distance.signum() as isize
                 } else {
                     0
                 }

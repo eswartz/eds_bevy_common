@@ -1,4 +1,4 @@
-/// This defines generic markers for use in most contexts.
+//! This defines generic markers for use in most contexts.
 
 use std::time::Duration;
 use bevy::prelude::*;
@@ -71,8 +71,6 @@ pub struct PlayerStart;
 #[type_path = "game"]
 pub struct BackgroundAudio;
 
-///
-
 /// Mark the entity as being "highlighted".
 /// (See the `highlighting` feature.)
 #[derive(Component, Reflect, Debug)]
@@ -88,8 +86,6 @@ pub struct Highlighted;
 #[reflect(Component)]
 #[type_path = "game"]
 pub struct Grabbed;
-
-///
 
 // Map markers (in .glb when using Bevy Skein).
 

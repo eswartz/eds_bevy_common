@@ -44,6 +44,7 @@ impl Default for SplitIntoCubes {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "shouldn't fail unless other stuff is falling over, want to see panic")]
 fn handle_split_into_cubes(
     split_q: Query<(
         Entity,
@@ -65,16 +66,17 @@ fn handle_split_into_cubes(
         ent, split, mesh, mat, xfrm, aabb,
         name_opt, friction_opt, rigid_opt, layers_opt, adn_opt
     ) in split_q.iter() {
-        let mesh = meshes.get(&mesh.0).unwrap().clone();
+        let Some(mesh) = meshes.get(&mesh.0) else { continue };
+        let mesh = mesh.clone();
 
         let full_extents = aabb.half_extents.mul(2.0).to_vec3() * xfrm.scale;
         let (xn, yn, zn) = if split.size == 0. {
             (1, 1, 1)
         } else {
             let split = split.size.max(64.);
-            let zn = (full_extents.z as f32 / split).ceil() as i32;
-            let yn = (full_extents.y as f32 / split).ceil() as i32;
-            let xn = (full_extents.x as f32 / split).ceil() as i32;
+            let zn = (full_extents.z / split).ceil() as i32;
+            let yn = (full_extents.y / split).ceil() as i32;
+            let xn = (full_extents.x / split).ceil() as i32;
             (xn, yn, zn)
         };
 
@@ -116,13 +118,13 @@ fn handle_split_into_cubes(
                         ent_commands.insert(mat.clone());
 
                         if let Some(c) = friction_opt {
-                            ent_commands.insert(c.clone());
+                            ent_commands.insert(*c);
                         }
                         if let Some(c) = rigid_opt {
-                            ent_commands.insert(c.clone());
+                            ent_commands.insert(*c);
                         }
                         if let Some(c) = layers_opt {
-                            ent_commands.insert(c.clone());
+                            ent_commands.insert(*c);
                         }
                         if let Some(c) = adn_opt {
                             ent_commands.insert(c.clone());
@@ -148,14 +150,16 @@ fn handle_split_into_cubes(
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "shouldn't fail unless other stuff is falling over, want to see panic")]
+#[expect(clippy::unwrap_in_result, reason = "shouldn't fail unless other stuff is falling over, want to see panic")]
 fn extract_mesh_cube(mesh: &Mesh, center: Vec3, half_size: Vec3) -> Option<(Mesh, Vec<[u32; 3]>, Vec<Vector>)> {
-    let inds = mesh.indices().unwrap();
+    let inds = mesh.indices()?;
 
-    let full_pos = mesh.attribute(Mesh::ATTRIBUTE_POSITION).unwrap().as_float3().unwrap();
-    let full_normals = mesh.attribute(Mesh::ATTRIBUTE_NORMAL).unwrap().as_float3().unwrap();
-    let full_uvs = match mesh.attribute(Mesh::ATTRIBUTE_UV_0).unwrap() {
+    let full_pos = mesh.attribute(Mesh::ATTRIBUTE_POSITION)?.as_float3().unwrap();
+    let full_normals = mesh.attribute(Mesh::ATTRIBUTE_NORMAL)?.as_float3().unwrap();
+    let full_uvs = match mesh.attribute(Mesh::ATTRIBUTE_UV_0)? {
         VertexAttributeValues::Float32x2(values) => values,
-        _ => panic!(),
+        _ => return None
     };
 
     let transform_pt = |ptarr: [f32; 3]| -> [f32; 3] {
@@ -167,6 +171,7 @@ fn extract_mesh_cube(mesh: &Mesh, center: Vec3, half_size: Vec3) -> Option<(Mesh
     let mut normals = vec![];
     let mut uvs = vec![];
     let mut indices = vec![];
+    #[expect(clippy::indexing_slicing, reason = "shouldn't fail unless other stuff is falling over, want to see panic")]
     for [ind0, ind1, ind2] in inds.iter(). array_chunks::<3>() {
         let pos0 = full_pos[ind0];
         let pos1 = full_pos[ind1];

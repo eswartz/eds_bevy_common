@@ -15,6 +15,7 @@ use bevy_skein::SkeinPlugin;
 use bevy::winit::WinitSettings;
 
 use rand::RngExt;
+use rand::Rng;
 use strum::VariantArray;
 use std::time::Duration;
 
@@ -193,8 +194,10 @@ fn main() -> AppExit {
 fn is_trigger_pressed(
     mouse_buttons: Res<ButtonInput<MouseButton>>,
     gamepads: Query<&Gamepad>,
+    wants_input: Option<Res<bevy_egui::input::EguiWantsInput>>,
 ) -> bool {
-    if mouse_buttons.pressed(MouseButton::Left) {
+    let ignore_mouse = wants_input.is_some_and(|wi| wi.is_pointer_over_area());
+    if mouse_buttons.pressed(MouseButton::Left) && !ignore_mouse {
         return true
     }
     if let Ok(gamepad) = gamepads.single()
@@ -682,7 +685,7 @@ fn on_enter_audio_menu(
     .add_item(
         "Music Volume",
         (
-            make_audio_slider(get_music, set_music, Some(0.5)),
+            make_audio_slider(get_music, set_music, Some(0.9)),
             MenuToggle::new(get_music_muted, set_music_muted),
         ),
         VolumeMenuActions::MusicVolumeSlider,
@@ -1051,12 +1054,7 @@ struct OrigPosition(Vec3);
 pub(crate) fn level_spawn_finished(
     mut commands: Commands,
     mut pause: ResMut<PauseState>,
-    // world: Res<WorldMarkerEntity>,
-    // mut materials: ResMut<Assets<StandardMaterial>>,
-    // mut meshes: ResMut<Assets<Mesh>>,
 ) {
-    // spawn_midi_spheres(commands.reborrow(), &world, &mut materials, &mut meshes);
-
     commands.spawn((
         DirectionalLight {
             illuminance: 5000.0,
@@ -1167,9 +1165,18 @@ struct Lifetime(Duration);
 
 /////////
 
+/// Marker where we want [MidiSynth] to be spawned.
 #[derive(Component, Reflect)]
 #[reflect(Component)]
-pub(crate) struct OurMidiSynth;
+pub(crate) struct OurMidiSynth {
+    id: u64,
+    start_time: Duration,
+}
+
+/// Id for our synth, number used in seeding.
+#[derive(Component, Reflect, Deref, DerefMut, Default)]
+#[reflect(Component)]
+pub(crate) struct OurSynthId(pub u64);
 
 pub(crate) fn ensure_midi_synths(
     mut commands: Commands,
@@ -1214,7 +1221,8 @@ pub(crate) fn spawn_midi_sphere(
     mut last_time: Local<Duration>,
     mut mesh_holder: Local<Option<Handle<Mesh>>>,
 ) {
-    if last_time.abs_diff(time.elapsed()).as_secs_f32() < 1.0 / 10.0 {
+    const SPAWN_RATE: f32 = 4.0;
+    if last_time.abs_diff(time.elapsed()).as_secs_f32() < 1.0 / SPAWN_RATE {
         return
     }
     *last_time = time.elapsed();
@@ -1235,7 +1243,10 @@ pub(crate) fn spawn_midi_sphere(
         OrigPosition(pos),
         Transform::from_translation(pos),
 
-        OurMidiSynth,
+        OurMidiSynth {
+            id: rng.next_u64(),
+            start_time: *last_time,
+        },
         Lifetime(Duration::ZERO),
         CrosshairTargetable,
 
@@ -1269,26 +1280,44 @@ pub(crate) fn move_midi_spheres(
 
 pub(crate) fn trigger_midi_notes(
     mut commands: Commands,
-    synth_q: Query<Entity, (With<OurMidiSynth>, With<MidiSynth>)>,
-    mut counter: Local<u64>,
+    synth_q: Query<(Entity, &OurMidiSynth), With<MidiSynth>>,
 
     time: Res<Time>,
     mut timer: Local<Timer>,
 ) {
     timer.tick(time.delta());
 
-    for ent in synth_q.iter() {
-        let ent_int = ent.index_u32() as u64;
+    for (ent, synth) in synth_q.iter() {
+        let base = 10 + synth.id % (110 - 10);
+        let range = 2 + (synth.id.wrapping_mul(synth.id)) % (24 - 2);
+        let range = if range + base > 127 {
+            127 - base
+        } else {
+            range
+        };
 
-        *counter = counter.wrapping_add(1);
+        let ent_time = timer.elapsed().saturating_sub(synth.start_time);
+        // 8=almost silly
+        const SUBDIVS: f32 = 2.0;
+        let ent_beats = (ent_time.as_secs_f32() * SUBDIVS) as u64;
 
-        let channel = if ent_int % 3 == 0 { SynthChannel::Voice(1) } else { SynthChannel::Drums(1) };
-        let program = (ent_int % 127) as u8;
-        let note = SynthNote::midi(((ent_int.wrapping_add(*counter)) % 91 + 20) as u8);
+        let channel = if (synth.id.wrapping_add(ent_beats)) % 3 == 0 {
+            SynthChannel::Voice(1)
+        } else {
+            SynthChannel::Drums(1)
+        };
+        let program = ((synth.id ^ (ent_beats >> 4)) % 127) as u8;
 
-        let time_tick = (timer.elapsed_secs() * 71.0) as u64;
-        let ent_clock = ent_int.wrapping_mul(time_tick).wrapping_add(*counter) % 31;
-        let should_fire = ent_clock == 0;
+        let seed = (time.elapsed_secs() * 64.) as u64;
+
+        // let note = SynthNote::midi((seed % 91 + 20) as u8);
+        let note = SynthNote::midi(((seed >> 4).wrapping_mul(synth.id) % range + base) as u8);
+
+        let phrase_length = ent_time.as_secs() % 7 + 2;
+        let phase = ent_beats % phrase_length;
+        let last_phase = (ent_beats + phrase_length - 1) % phrase_length;
+
+        let should_fire = phase == 0 && last_phase != phase;
 
         if !should_fire {
             continue
@@ -1299,12 +1328,12 @@ pub(crate) fn trigger_midi_notes(
             Duration::ZERO
         ));
         commands.write_message(SynthMessage(
-            ent, SynthCommand::NoteOn(channel, note, 0.75),
+            ent, SynthCommand::NoteOn(channel, note, 1.0),
             Duration::ZERO
         ));
         commands.write_message(SynthMessage(
             ent, SynthCommand::NoteOff(channel, note),
-            Duration::from_secs_f32(0.125),
+            Duration::from_secs_f32(0.5),
         ));
     }
 }

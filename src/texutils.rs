@@ -11,7 +11,6 @@ use wgpu::TextureViewDescriptor;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
-#[allow(unused)]
 pub enum ImageError {
     #[error("no data in image")]
     NoData,
@@ -25,16 +24,15 @@ pub enum ImageError {
 /// format image strip (see [Self::convert_strip_to_cubemap]).
 #[derive(Debug, Clone, Copy, Reflect, Default)]
 #[reflect(Clone)]
-#[allow(non_camel_case_types)]
 #[type_path = "game"]
 pub enum CubemapMapping {
     /// -X, +X, -Y, +Y, -Z, +Z
-    None,
+    NxPxNyPyNzPz,
     /// +X, -X, +Y (flipped on X and Y), -Y, +Z, -Z
-    From1_0_2f_3r_4_5,
+    PxNxPyFxFyNyPzNz,
     /// +X, -X, +Y (flipped on X and Y), -Y (flipped on X and Y), +Z, -Z
     #[default]
-    From1_0_2f_3f_4_5,
+    PxNxPyFxFyNyFxFyPzNz,
 }
 
 /// Workhorse of the mapper.
@@ -50,10 +48,11 @@ struct CubeTextureMapper<'a> {
 }
 
 impl<'a> CubeTextureMapper<'a> {
+    /// Create with a reference to an Image for further processing.
     pub fn new(image: &'a bevy::image::Image) -> Result<Self, ImageError> {
         let width = image.width() as usize;
         let height = image.height() as usize;
-        let pixel_size = image.texture_descriptor.format.pixel_size().map_err(|e| ImageError::TextureError(e))?;
+        let pixel_size = image.texture_descriptor.format.pixel_size().map_err(ImageError::TextureError)?;
 
         // Images are stacked in a long vertical strip.
         if width * 6 != height {
@@ -69,8 +68,6 @@ impl<'a> CubeTextureMapper<'a> {
         let side_byte_size = side_height * side_row_stride;
         let out_image_data = Vec::<u8>::with_capacity(side_byte_size);
 
-        assert_eq!(side_byte_size * 6, in_image_data.len());
-
         Ok(Self {
             image,
             pixel_size,
@@ -83,18 +80,20 @@ impl<'a> CubeTextureMapper<'a> {
         })
     }
 
-    // Write everything from input to output as-is.
+    /// Write everything from input to output as-is.
     pub fn write_all(&mut self) {
         self.out_image_data.extend_from_slice(&self.in_image_data[..]);
     }
 
-    // Write an entire side (e.g. `side_byte_size * N`) from input to output as-is.
+    /// Write an entire side (e.g. `side_byte_size * N`) from input to output as-is.
+    #[expect(clippy::indexing_slicing, reason = "we want to panic, since caller has bug")]
     pub fn write_side(&mut self, side_offset: usize) {
         self.out_image_data.extend_from_slice(&self.in_image_data[side_offset..side_offset + self.side_byte_size]);
     }
 
     // Write an entire side by transforming (e.g. `side_byte_size * N`) from input to output as-is.
     // The `map` function maps the input (x,y) to the output (x,y).
+    #[expect(clippy::indexing_slicing, reason = "we want to panic, since caller has bug")]
     pub fn write_side_map(&mut self, side_offset: usize, map_x_y: impl Fn(usize, usize) -> (usize, usize)) {
         for o_row in 0..self.side_height {
             for o_col in 0..self.side_width {
@@ -156,10 +155,10 @@ pub fn convert_strip_to_cubemap(image: &bevy::image::Image, mapping: CubemapMapp
     let side_height = mapper.side_height;
 
     match mapping {
-        CubemapMapping::None => {
+        CubemapMapping::NxPxNyPyNzPz => {
             mapper.write_all();
         }
-        CubemapMapping::From1_0_2f_3r_4_5 => {
+        CubemapMapping::PxNxPyFxFyNyPzNz => {
             // +X side.
             let in_plus_x = side_byte_size;
             mapper.write_side(in_plus_x);
@@ -170,13 +169,13 @@ pub fn convert_strip_to_cubemap(image: &bevy::image::Image, mapping: CubemapMapp
 
             // +Y side, but flipped on both axes.
             let in_plus_y = side_byte_size * 2;
-            mapper.write_side_map(in_plus_y, &|col, row| {
+            mapper.write_side_map(in_plus_y, |col, row| {
                 (side_width - col - 1, side_height - row - 1)
             });
 
             // -Y side, but rotated.
             let in_minus_y = side_byte_size * 3;
-            mapper.write_side_map(in_minus_y, &|col, row| {
+            mapper.write_side_map(in_minus_y, |col, row| {
                 (side_height - row - 1, side_width - col - 1)
             });
 
@@ -188,7 +187,7 @@ pub fn convert_strip_to_cubemap(image: &bevy::image::Image, mapping: CubemapMapp
             let in_minus_z = side_byte_size * 5;
             mapper.write_side(in_minus_z);
         }
-        CubemapMapping::From1_0_2f_3f_4_5 => {
+        CubemapMapping::PxNxPyFxFyNyFxFyPzNz => {
             // +X side.
             let in_plus_x = side_byte_size;
             mapper.write_side(in_plus_x);
@@ -199,13 +198,13 @@ pub fn convert_strip_to_cubemap(image: &bevy::image::Image, mapping: CubemapMapp
 
             // +Y side, but flipped on both axes.
             let in_plus_y = side_byte_size * 2;
-            mapper.write_side_map(in_plus_y, &|col, row| {
+            mapper.write_side_map(in_plus_y, |col, row| {
                 (side_width - col - 1, side_height - row - 1)
             });
 
             // -Y side, but flipped on both axes.
             let in_minus_y = side_byte_size * 3;
-            mapper.write_side_map(in_minus_y, &|col, row| {
+            mapper.write_side_map(in_minus_y, |col, row| {
                 (side_width - col - 1, side_height - row - 1)
             });
 

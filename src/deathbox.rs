@@ -37,7 +37,6 @@ impl DeathboxPlugin {
                 move_players: flag,
                 .. self.flags
             },
-            .. self
         }
     }
     pub fn with_despawn_items(self, flag: bool) -> Self {
@@ -46,7 +45,6 @@ impl DeathboxPlugin {
                 remove_spawns: flag,
                 .. self.flags
             },
-            .. self
         }
     }
 }
@@ -106,9 +104,8 @@ fn check_out_of_bounds(
     let can_despawn = |ent| {
         if let Ok((_, after_opt)) = spawned_q.get(ent) {
             return after_opt.is_none_or(|after| after.0.is_zero())
-        } else {
-            false
         }
+        false
     };
     for coll in sensor_q.iter() {
         for ent in coll.iter() {

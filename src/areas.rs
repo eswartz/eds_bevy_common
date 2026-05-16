@@ -19,7 +19,6 @@ use bevy::prelude::*;
 )]
 #[reflect(Default)]
 #[type_path = "game"]
-
 #[cfg_attr(feature = "trenchbroom", derive(FgdType))]
 #[cfg_attr(feature = "trenchbroom", number_key)]
 pub enum AreaContent {

@@ -36,7 +36,6 @@ impl Default for ParallaxDepth {
 
 fn handle_parallax_depth(
     mut meshes_q: Query<(
-        Entity,
         &mut MeshMaterial3d<StandardMaterial>,
         &ParallaxDepth,
     ),
@@ -44,16 +43,16 @@ fn handle_parallax_depth(
     >,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    for (ent, mut mat, parallax_depth) in meshes_q.iter_mut() {
+    for (mut mat, parallax_depth) in meshes_q.iter_mut() {
         let Some(std_mat) = materials.get(&mat.0) else {
             continue;
         };
 
+        #[expect(clippy::float_cmp, reason = "binary diff checking")]
         if std_mat.parallax_depth_scale != parallax_depth.depth_scale
         || std_mat.parallax_mapping_method != parallax_depth.mapping_method
         || std_mat.max_parallax_layer_count != parallax_depth.max_layer_count as f32
         || std_mat.depth_map != std_mat.normal_map_texture {
-            dbg!(ent);
             let mut std_mat = std_mat.clone();
             std_mat.parallax_depth_scale = parallax_depth.depth_scale;
             std_mat.parallax_mapping_method = parallax_depth.mapping_method;

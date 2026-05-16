@@ -253,10 +253,9 @@ fn cycle_targetables(
     }
 
     // Highlight the new item, if new.
-    if let Some(new_item) = crosshair_targets.targets.get(new_index) {
-        if !hilit_q.contains(*new_item) {
-            commands.entity(*new_item).try_insert(Highlighted);
-        }
+    if let Some(new_item) = crosshair_targets.targets.get(new_index)
+    && !hilit_q.contains(*new_item) {
+        commands.entity(*new_item).try_insert(Highlighted);
     }
 }
 
@@ -301,7 +300,7 @@ fn update_highlighting_mode(
                 SamplePlayer::new(
                     (*[&fx.deselect]
                         .choose(&mut rng)
-                        .unwrap())
+                        .expect("we have one"))
                     .clone(),
                 ),
                 PlaybackSettings {
@@ -344,7 +343,7 @@ fn update_highlightable(
             SamplePlayer::new(
                 (*[&fx.select]
                     .choose(&mut rng)
-                    .unwrap())
+                    .expect("we have one"))
                 .clone(),
             ),
             PlaybackSettings {

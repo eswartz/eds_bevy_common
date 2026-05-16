@@ -1,5 +1,6 @@
+//! eswartz: Based on `bevy_mini_fps` (single-file implementation in `lib.rs`).
+
 use bevy::ecs::world::CommandQueue;
-/// eswartz: Based on `bevy_mini_fps` (single-file implementation in `lib.rs`).
 
 /// I had some build problems and also wanted the
 /// Plugin model, so the interface is totally different.
@@ -75,7 +76,7 @@ impl StatsRegistry {
     pub fn add_provider(&mut self, provider: Box<dyn StatsProvider>) {
         self.items.push(provider);
 
-        self.items.sort_by(|a, b| a.priority().cmp(&b.priority()));
+        self.items.sort_by_key(|a| a.priority());
     }
     pub fn reset_providers(&mut self) {
         self.items.clear();
@@ -86,6 +87,9 @@ impl StatsRegistry {
     }
     pub fn providers_mut(&mut self) -> &mut Vec<Box<dyn StatsProvider>> {
         &mut self.items
+    }
+    pub fn is_empty(&self) -> bool {
+        self.items.is_empty()
     }
     pub fn len(&self) -> usize {
         self.items.len()
@@ -119,7 +123,7 @@ impl StatsProvider for FpsProvider {
             // Each successive time is less relevant.
             let mut total = 1;
             for (index, time) in time_it.enumerate() {
-                total_time = total_time + time.as_secs_f32() * index as f32;
+                total_time += time.as_secs_f32() * index as f32;
                 total += index;
             }
             let fps = total as f32 / total_time;
@@ -228,8 +232,7 @@ impl StatsProvider for CpuUsageProvider {
 }
 
 #[derive(Default)]
-pub struct MemoryUsageProvider {
-}
+pub struct MemoryUsageProvider;
 
 impl MemoryUsageProvider {
 }
@@ -252,8 +255,7 @@ impl StatsProvider for MemoryUsageProvider {
 }
 
 #[derive(Default)]
-pub struct PlayerPosProvider {
-}
+pub struct PlayerPosProvider;
 
 impl PlayerPosProvider {
 }
@@ -267,7 +269,7 @@ impl StatsProvider for PlayerPosProvider {
 
     fn format_value(&self, world: &mut World) -> String {
         let mut xfrm_q = world.query_filtered::<&Transform, With<Player>>();
-        for xfrm in xfrm_q.iter(world) {
+        if let Some(xfrm) = xfrm_q.iter(world).next() {
             return format!("[{:.1?},{:.1?},{:.1?}]",
                 xfrm.translation.x,
                 xfrm.translation.y,
@@ -280,8 +282,7 @@ impl StatsProvider for PlayerPosProvider {
 
 
 #[derive(Default)]
-pub struct PlayerAngProvider {
-}
+pub struct PlayerAngProvider;
 
 impl PlayerAngProvider {
 }
@@ -295,7 +296,7 @@ impl StatsProvider for PlayerAngProvider {
 
     fn format_value(&self, world: &mut World) -> String {
         let mut look_q = world.query_filtered::<&PlayerLook, With<Player>>();
-        for look in look_q.iter(world) {
+        if let Some(look) = look_q.iter(world).next() {
             let (y, x, _) = look.rotation.to_euler(EulerRot::default());
             return format!("{:.1?} / {:.1?}", y.to_degrees(), x.to_degrees());
         }
@@ -308,10 +309,10 @@ fn add_default_providers(mut regy: ResMut<StatsRegistry>) {
     regy.add_provider(Box::new(FpsMaxProvider));
     regy.add_provider(Box::new(EntCountProvider));
     regy.add_provider(Box::new(ContactCountProvider));
-    regy.add_provider(Box::new(CpuUsageProvider::default()));
-    regy.add_provider(Box::new(MemoryUsageProvider::default()));
-    regy.add_provider(Box::new(PlayerPosProvider::default()));
-    regy.add_provider(Box::new(PlayerAngProvider::default()));
+    regy.add_provider(Box::new(CpuUsageProvider));
+    regy.add_provider(Box::new(MemoryUsageProvider));
+    regy.add_provider(Box::new(PlayerPosProvider));
+    regy.add_provider(Box::new(PlayerAngProvider));
 }
 
 #[derive(Resource, Debug, Reflect)]
@@ -356,7 +357,6 @@ impl Default for StatsOverlayStyle {
     }
 }
 
-#[allow(clippy::too_many_arguments)]
 fn diagnostic_system(
     world: &mut World,
     mut refresh_timer: Local<f32>,
@@ -453,18 +453,18 @@ fn diagnostic_system(
         if *refresh_timer > 0.05 {
             *refresh_timer = 0.;
 
-            let _ = world.resource_scope::<StatsRegistry, Result>(|world, stats_registry| {
+            world.resource_scope::<StatsRegistry, ()>(|world, stats_registry| {
                 // let Some(stats_registry) = world.get_resource::<StatsRegistry>() else { return };
                 let values = stats_registry.providers().iter().map(|prov| prov.format_value(world)).collect::<Vec<_>>();
 
                 let mut text = world.query::<&mut Text>();
                 for (index, value) in values.into_iter().enumerate() {
+                    #[expect(clippy::indexing_slicing, reason = "if fails, bug in iter")]
                     if let Ok(mut text) = text.get_mut(world, text_ents[index]) {
                         text.0.clear();
                         text.0 = value;
                     }
                 }
-                Ok(())
             });
         }
 

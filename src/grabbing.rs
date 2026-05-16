@@ -302,10 +302,8 @@ fn on_start_grab(
         // Try to grab.
 
         let release = release_q.iter().any(|e| e.contains(ActionEvents::START));
-        if release {
-            if highlighting_mode.is_disabled() {
-                *highlighting_mode = HighlightingMode::Enabled;
-            }
+        if release && highlighting_mode.is_disabled() {
+            *highlighting_mode = HighlightingMode::Enabled;
         }
 
         if let Some(grabbed) = grabbable_q.iter().next() {
@@ -406,7 +404,7 @@ fn process_grab_commands(
                         .with_filter(&|ent| ent == entity)
                         .never_early_exit()
                 );
-                let new_pos = if let Some(hit) = hits.get(0) {
+                let new_pos = if let Some(hit) = hits.first() {
                     hit.1.point
                 } else {
                     cur_pos
@@ -503,11 +501,9 @@ fn process_grab_commands(
 
                     styler.remove_from(ent_commands);
 
-                    //
-                    if cfg!(feature = "highlighting") {
-                        if *mode == HighlightingMode::Busy {
-                            *mode = grabbed.orig_mode;
-                        }
+                    #[cfg(feature = "highlighting")]
+                    if *mode == HighlightingMode::Busy {
+                        *mode = grabbed.orig_mode;
                     }
                 }
             }
@@ -606,15 +602,15 @@ fn move_grabbed_item(
     let size = grabbing_force.force;
     gizmos.axes(xfrm, size);
 
-    let mut inv_xfrm = xfrm.clone();
+    let mut inv_xfrm = xfrm;
     inv_xfrm.rotate_local_x(std::f32::consts::PI);
     gizmos.axes(inv_xfrm, size);
 
-    let mut inv_xfrm = xfrm.clone();
+    let mut inv_xfrm = xfrm;
     inv_xfrm.rotate_local_y(std::f32::consts::PI);
     gizmos.axes(inv_xfrm, size);
 
-    let mut inv_xfrm = xfrm.clone();
+    let mut inv_xfrm = xfrm;
     inv_xfrm.rotate_local_z(std::f32::consts::PI);
     gizmos.axes(inv_xfrm, size);
 }

@@ -18,8 +18,7 @@ impl Plugin for CommonAssetsPlugin {
         // See if we're in dev-land.
         if let Ok(manifest_dir) = std::env::var("CARGO_MANIFEST_DIR") {
             const COMMON_DIR: &str = "eds_bevy_common/assets";
-            let mut comps = Path::new(&manifest_dir).ancestors();
-            while let Some(test) = comps.next() {
+            for test in Path::new(&manifest_dir).ancestors() {
                 let common_assets = Path::new(&test).join(COMMON_DIR);
                 if common_assets.is_dir() {
                     eprintln!("info: using {common_assets:?} for 'common' assets");
@@ -141,7 +140,6 @@ pub struct CommonGuiAssets {
 }
 
 #[derive(Resource, AssetCollection)]
-#[allow(unused)]
 pub struct CommonFxAssets {
     #[asset(path = "common://sounds/164472__deleted_user_2104797__crack-of-branch-3.ogg")]
     pub action: Handle<AudioSample>,
@@ -227,14 +225,12 @@ pub struct CommonFxAssets {
 
 #[cfg(feature = "midi_synth")]
 #[derive(Resource, AssetCollection)]
-#[allow(unused)]
 pub struct CommonSoundFontAssets {
     #[asset(path = "common://soundfonts/TimGM6mb.sf2")]
     pub timgm6mb: Handle<SoundFont>,
 }
 
 #[derive(Resource, AssetCollection)]
-#[allow(unused)]
 pub struct CommonSkyboxAssets {
     #[asset(path = "common://skyboxes/dresden_station_night.exr")]
     pub dresden_station_night: Handle<Image>,

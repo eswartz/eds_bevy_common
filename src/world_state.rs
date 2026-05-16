@@ -1,3 +1,4 @@
+use avian3d::math::Vector;
 use bevy::math::bounding::Aabb3d;
 use bevy::prelude::*;
 use avian3d::prelude::*;
@@ -10,7 +11,7 @@ pub struct WorldStatePlugin;
 impl Plugin for WorldStatePlugin {
     fn build(&self, app: &mut App) {
         app
-            .insert_resource(Gravity((9.8 * Vec3::NEG_Y).into()))
+            .insert_resource(Gravity(9.8 * Vector::NEG_Y))
 
             // Runs basically once after startup.
             .add_systems(OnEnter(GameplayState::AssetsLoaded),
@@ -66,11 +67,10 @@ pub fn setup_world_marker(
     world_marker: Option<Res<WorldMarkerEntity>>,
     child_q: Query<&Children>,
 ) {
-    if let Some(ent) = &world_marker {
-        if let Ok(children) = child_q.get(ent.0) {
-            for kid in children {
-                commands.entity(*kid).despawn();
-            }
+    if let Some(ent) = &world_marker
+    && let Ok(children) = child_q.get(ent.0) {
+        for kid in children {
+            commands.entity(*kid).despawn();
         }
     }
     if world_q.is_empty() {

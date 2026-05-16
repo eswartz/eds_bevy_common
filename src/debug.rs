@@ -12,6 +12,7 @@ use super::gui::GuiState;
 /// This uses bevy-inspector-egui. If you don't add
 /// `EguiPlugin` and/or `DefaultInspectorConfigPlugin` yourself,
 /// this plugin will do so with default settings.
+///
 pub struct DebugPlugin;
 
 impl Plugin for DebugPlugin {
@@ -150,7 +151,9 @@ pub(crate) const ENTITY_FILTER_ID: &str = "my_inspector_entity_filter";
 pub(crate) const SELECTED_ENTITY_FILTER_ID: &str = "selected_inspector_entity_filter";
 
 // pattern for an Entity filter
-static ENT_RX: LazyLock<regex::Regex> = LazyLock::new(|| regex::Regex::new(r"^([0-9]+)v([0-9]+)$").unwrap());
+static ENT_RX: LazyLock<regex::Regex> = LazyLock::new(||
+    regex::Regex::new("^([0-9]+)v([0-9]+)$").expect("valid regex")
+);
 
 pub fn update_egui_inspector_ui(
     world: &mut World,
@@ -297,7 +300,7 @@ fn name_satisfies_filter(
     } else {
         if is_fuzzy {
             let matcher = SkimMatcherV2::default();
-            matcher.fuzzy_match(&name, filter).is_some()
+            matcher.fuzzy_match(name, filter).is_some()
         } else {
             name.to_lowercase().contains(filter)
         }
@@ -330,7 +333,7 @@ pub fn ui_for_filtered_resources(
             )
         })
         .collect();
-    resources.sort_by(|(name_a, ..), (name_b, ..)| name_a.cmp(name_b));
+    resources.sort_by_key(|name| *name);
     for (name, type_id) in resources {
         ui.collapsing(name, |ui| {
             by_type_id::ui_for_resource(world, type_id, ui, name, &type_registry);

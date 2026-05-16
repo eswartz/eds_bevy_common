@@ -58,9 +58,9 @@ pub fn spawn_fps_player(world: &mut World, user_id: Uuid, player_scale: Vec3, in
 
     ]);
 
-    let mode = world.get_resource::<PlayerMode>().unwrap().clone();
+    let mode = world.get_resource::<PlayerMode>();
 
-    let player = world.spawn((
+    world.spawn((
         Name::new("Player"),
         DespawnOnExit(ProgramState::InGame),
         (
@@ -97,12 +97,10 @@ pub fn spawn_fps_player(world: &mut World, user_id: Uuid, player_scale: Vec3, in
             // Avoid flying too much when e.g. colliding with a projectile.
             MaxLinearSpeed(4096.0),
 
-            GravityScale(if mode == PlayerMode::Fps { 1.0 } else { 0.0 }),
+            GravityScale(if mode.is_some_and(|m| *m == PlayerMode::Fps) { 1.0 } else { 0.0 }),
         ),
     ))
-    .id();
-
-    player
+    .id()
 }
 
 /// If needed, add a child collider to the [Player] entity which

@@ -190,6 +190,7 @@ fn update_ui_alpha(
 
         if let Ok(mut comp) = comp_alpha_q.get_mut(ent) {
             // Only change the alpha.
+            #[expect(clippy::float_cmp, reason = "binary diff checking")]
             if comp.alpha != full_alpha {
                 comp.alpha = full_alpha;
 
@@ -419,8 +420,8 @@ pub fn is_debug_ui_enabled(gui_state: Option<Res<GuiState>>) -> bool {
     gui_state.is_some_and(|g| g.enabled)
 }
 
-pub fn is_debug_ui_inspector_visible(gui_state: If<Res<GuiState>>) -> bool {
-    gui_state.is_debug_ui_inspector_visible()
+pub fn is_debug_ui_inspector_visible(gui_state: Option<Res<GuiState>>) -> bool {
+    gui_state.is_some_and(|g| g.is_debug_ui_inspector_visible())
 }
 
 /// Tells whether we're in a mode where the [GameStatusArea] is displayed.
