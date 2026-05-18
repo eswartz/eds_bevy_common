@@ -117,6 +117,8 @@ fn handle_split_into_cubes(
 
                         ent_commands.insert(mat.clone());
 
+                        // GROAN copy all the other components.
+                        // TODO: figure out how to use EntityCloner...
                         if let Some(c) = friction_opt {
                             ent_commands.insert(*c);
                         }
