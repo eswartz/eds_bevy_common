@@ -54,7 +54,6 @@ fn main() -> AppExit {
         .add_plugins(VideoPlugin)
         .add_plugins(WorldStatePlugin)
         .add_plugins(LightsPlugin)
-        .add_plugins(EffectsPlugin)
         .add_plugins(LevelsPlugin)
         .add_plugins(DeathboxPlugin::default())
 
@@ -63,6 +62,8 @@ fn main() -> AppExit {
         .add_plugins(HighlightingPlugin)
         .add_plugins(GrabbingPlugin)
         .insert_resource(HighlightingMode::Disabled)
+
+        .add_plugins(EffectsPlugin)
 
         .add_plugins(AudioCommonPlugin)
         .add_plugins(MenuAudioPlugin)

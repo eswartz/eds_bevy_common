@@ -1,17 +1,13 @@
-//! eswartz: Based on `bevy_mini_fps` (single-file implementation in `lib.rs`).
-
 use bevy::ecs::world::CommandQueue;
-
-/// I had some build problems and also wanted the
-/// Plugin model, so the interface is totally different.
 use bevy::prelude::*;
-
 use bevy::time::common_conditions::repeating_after_delay;
+use avian3d::dynamics::solver::SolverDiagnostics;
+
 use sysinfo;
+
 use std::collections::VecDeque;
 use std::time::Duration;
 
-use avian3d::dynamics::solver::SolverDiagnostics;
 
 use crate::Player;
 use crate::PlayerLook;
@@ -187,7 +183,8 @@ impl StatsProvider for ContactCountProvider {
     }
 }
 
-
+/// Storage for the [sysinfo::System] singleton and
+/// a timer for updating it.
 #[derive(Resource, Default)]
 struct SysInfoBuffer(pub sysinfo::System, pub Timer);
 

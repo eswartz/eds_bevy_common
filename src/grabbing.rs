@@ -545,7 +545,7 @@ fn move_grabbed_item(
 
     // Compute the desired new location, i.e. the current
     // position plus the camera's position + original distance.
-    let cur_pos = item_global_xfrm.translation() + grabbed.orig_offset;
+    let cur_pos = item_global_xfrm.translation() + cam_global_xfrm.rotation() * grabbed.orig_offset;
 
     let new_pos = cam_global_xfrm.translation() + cam_global_xfrm.rotation() * Vec3::NEG_Z * grabbed.distance;
 
@@ -570,26 +570,34 @@ fn move_grabbed_item(
         };
         let vel = vel * grabbing_force.force;
 
+        let mut new_vel = vel.clamp_length_max(grabbing_force.max_speed);
+        if new_vel.x.abs() < MIN_MOVE {
+            new_vel.x = 0.;
+        }
+        if new_vel.y.abs() < MIN_MOVE {
+            new_vel.y = 0.;
+        }
+        if new_vel.z.abs() < MIN_MOVE {
+            new_vel.z = 0.;
+        }
+
         if !**physics_paused && is_rigid && let Some(mut forces) = forces_opt {
             // Convert movement in world space to an effective impulse.
             // We directly set the linear velocity so it will move
             // in sync with the camera movement.
-            let mut new_vel = vel.clamp_length_max(grabbing_force.max_speed);
-            if new_vel.x.abs() < MIN_MOVE {
-                new_vel.x = 0.;
-            }
-            if new_vel.y.abs() < MIN_MOVE {
-                new_vel.y = 0.;
-            }
-            if new_vel.z.abs() < MIN_MOVE {
-                new_vel.z = 0.;
-            }
             *forces.linear_velocity_mut() = new_vel.adjust_precision();
             *forces.angular_velocity_mut() = default();
+            dbg!(1);
         } else {
             // Non-physical, just move.
-            let new_xlat = new_pos + item_xfrm.rotation * -grabbed.orig_offset;
-            item_xfrm.translation = item_xfrm.translation.lerp(new_xlat, time.delta_secs().min(1.0));
+            // let new_xlat = item_xfrm.translation + new_vel * time.delta_secs().min(1.0);
+            // let new_xlat = item_xfrm.translation + new_vel * time.delta_secs().min(1.0);
+            // let new_xlat = item_xfrm.translation + new_pos + item_xfrm.rotation.inverse() * grabbed.orig_offset;
+            // let new_xlat = -item_xfrm.translation + new_pos + item_xfrm.rotation.inverse() * grabbed.orig_offset;
+            // item_xfrm.translation = item_xfrm.translation.lerp(new_xlat, time.delta_secs().min(1.0));
+            // item_xfrm.translation = new_xlat;
+            // item_xfrm.translation += cam_global_xfrm.rotation() * new_vel * time.delta_secs().min(1.0);
+            item_xfrm.translation += new_vel * time.delta_secs().min(1.0);
         }
 
         grabbed.movement += movement;

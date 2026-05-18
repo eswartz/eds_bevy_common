@@ -2,12 +2,12 @@ use bevy::camera::visibility::RenderLayers;
 use bevy::input::mouse::AccumulatedMouseMotion;
 use bevy::prelude::*;
 
-use crate::DespawnOnExitOrReenter;
-use crate::assets::CommonGuiAssets;
+use crate::CommonGuiAssets;
 use crate::RENDER_LAYER_DEFAULT;
 use crate::RENDER_LAYER_VIEW;
 use crate::WorldCamera;
 use crate::debug_gui_wants_direct_input;
+use crate::DespawnOnReset;
 use crate::is_in_menu;
 use crate::is_level_active;
 use crate::is_paused;
@@ -102,7 +102,7 @@ fn init_crosshair(
     // TODO: make this simpler. It looks like hacks.
     commands.spawn((
         Name::new("Crosshair"),
-        DespawnOnExitOrReenter(ProgramState::InGame),
+        DespawnOnReset(ProgramState::InGame),
         Crosshair { current_strength: 0. },
 
         RenderLayers::from_layers(&[RENDER_LAYER_DEFAULT, RENDER_LAYER_VIEW]),

@@ -29,7 +29,14 @@ impl Plugin for PlayerControllerPlugin {
                 )
                 .run_if(not(is_paused))
                 .run_if(not(debug_gui_wants_direct_input))
-            );
+            )
+            .add_systems(
+                FixedPostUpdate,
+                center_mouse
+                .run_if(not(is_paused))
+                .run_if(not(debug_gui_wants_direct_input))
+            )
+        ;
     }
 }
 
@@ -150,12 +157,34 @@ fn collect_player_movement(
     ));
 }
 
+/// Keep the mouse centered, so users won't accidentally
+/// start clicking on stuff outside the window while in first person.
+fn center_mouse(
+    mut primary_window: Query<&mut Window, With<PrimaryWindow>>,
+    settings: Res<PlayerControllerSettings>,
+    gui_state: Res<GuiState>,
+    overlay_state: Res<State<OverlayState>>,
+) {
+    let Ok(mut window) = primary_window.single_mut() else {
+        return;
+    };
+    if settings.center_mouse
+    && window.focused
+    && !gui_state.show_cursor()
+    && !overlay_state.is_menu() {
+        // Keep mouse cursor set window center when while invisible,
+        // so look movements will not go outside the window.
+        let center = Vec2::new(window.width() / 2.0, window.height() / 2.0);
+        window.set_cursor_position(Some(center));
+    }
+}
+
 /// Handles looking around.
 ///
 /// We gather relevant inputs and send events indicating our intent.
 #[cfg(feature = "input_bei")]
 fn collect_player_look(
-    mut primary_window: Query<&mut Window, With<PrimaryWindow>>,
+    primary_window: Query<&Window, With<PrimaryWindow>>,
 
     look: Query<&Action<Look>, (With<Action<Look>>, With<PlayerAction>)>,
     turn_around_events: Query<&ActionEvents, (With<Action<TurnAround>>, With<PlayerAction>)>,
@@ -166,10 +195,9 @@ fn collect_player_look(
     settings: Res<PlayerControllerSettings>,
     player_q: Single<Entity, With<OurPlayer>>,
     gui_state: Res<GuiState>,
-    overlay_state: Res<State<OverlayState>>,
     mut writer: MessageWriter<PlayerInput>,
 ) {
-    let Ok(mut window) = primary_window.single_mut() else {
+    let Ok(window) = primary_window.single() else {
         return;
     };
     if !window.focused {
@@ -195,13 +223,6 @@ fn collect_player_look(
 
         instant_head_turn.x = (if settings.invert_turn_y { 1.0 } else { -1.0 })
             * (settings.turn_scale.y * look_axis.y).to_radians();
-
-        if settings.center_mouse && !gui_state.show_cursor() && !overlay_state.is_menu() {
-            // Keep mouse cursor set window center when while invisible,
-            // so look movements will not go outside the window.
-            let center = Vec2::new(window.width() / 2.0, window.height() / 2.0);
-            window.set_cursor_position(Some(center));
-        }
     }
 
     // let mut tilt = action_state.value(&UserAction::Tilt);

@@ -1,8 +1,6 @@
 use avian3d::prelude::Physics;
 use avian3d::prelude::PhysicsTime as _;
-use bevy::ecs::entity_disabling::Disabled;
 use bevy::prelude::*;
-use bevy::state::state::StateTransitionSystems;
 use bevy_tweening::TweenAnim;
 
 use crate::*;
@@ -22,14 +20,20 @@ impl Plugin for LifecyclePlugin {
                 check_despawners.run_if(not(is_paused)),
                 check_configure_before_playing,
             ))
+
             .add_systems(
-                StateTransition,
-                (
-                    despawn_entities_on_state_change::<ProgramState>.in_set(StateTransitionSystems::EnterSchedules),
-                    despawn_entities_on_state_change::<LevelState>.in_set(StateTransitionSystems::EnterSchedules),
-                    despawn_entities_on_state_change::<GameplayState>.in_set(StateTransitionSystems::EnterSchedules),
-                    despawn_entities_on_state_change::<OverlayState>.in_set(StateTransitionSystems::EnterSchedules),
-                )
+                OnEnter(ProgramState::InGame),
+                |mut time: ResMut<Time<Physics>>| {
+                    info!("resume");
+                    time.unpause();
+                }
+            )
+            .add_systems(
+                OnEnter(GameplayState::Setup),
+                |mut time: ResMut<Time<Physics>>| {
+                    info!("pause");
+                    time.pause();
+                }
             )
         ;
     }
@@ -50,27 +54,6 @@ fn check_despawners(
             commands.entity(ent).try_despawn();
         } else {
             despawn.0 = despawn.0.saturating_sub(dt);
-        }
-    }
-}
-
-/// Despawns entities marked with [`DespawnOnExitOrReenter<S>`] when their state no
-/// longer matches the world state.
-///
-/// If the entity has already been despawned no warning will be emitted.
-fn despawn_entities_on_state_change<S: States>(
-    mut commands: Commands,
-    mut transitions: MessageReader<StateTransitionEvent<S>>,
-    query: Query<(Entity, &DespawnOnExitOrReenter<S>), Allow<Disabled>>,
-) {
-    for transition in transitions.read() {
-        let Some(entered) = &transition.entered else {
-            continue;
-        };
-        for (entity, binding) in &query {
-            if binding.0 == *entered {
-                commands.entity(entity).try_despawn();
-            }
         }
     }
 }
@@ -151,6 +134,7 @@ fn reset_pause_on_enter_launch_menu(
     pause_state.set_menu_paused(false);
     pause_state.set_user_paused(false);
 }
+
 
 fn check_configure_before_playing(
     mut commands: Commands,

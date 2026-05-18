@@ -19,13 +19,13 @@ use bevy_asset_loader::prelude::*;
 use bevy_seedling::prelude::MainBus;
 
 use crate::CurrentLevel;
-use crate::DespawnOnExitOrReenter;
 use crate::GameplayState;
 use crate::LevelState;
 use crate::StatsOverlayVisible;
 use crate::TextShadowColorLens;
-use crate::assets::CommonGuiAssets;
+use crate::CommonGuiAssets;
 use crate::RENDER_LAYER_UI;
+use crate::DespawnOnReset;
 
 use super::audio::UserVolume;
 use super::lifecycle::PauseState;
@@ -36,8 +36,10 @@ pub struct GuiPlugin;
 
 impl Plugin for GuiPlugin {
     fn build(&self, app: &mut App) {
-        app
-        .insert_resource(GuiState::default())
+        if !app.is_plugin_added::<bevy_tweening::TweeningPlugin>() {
+            app.add_plugins(bevy_tweening::TweeningPlugin);
+        }
+        app.insert_resource(GuiState::default())
         .init_resource::<GrabState>()
         .add_message::<GrabCursor>()
         .init_resource::<PhysicsPaused>()
@@ -97,7 +99,9 @@ impl Plugin for GuiPlugin {
         .add_systems(OnEnter(LevelState::LevelLoaded),
             show_instructions,
         )
-
+        .add_systems(OnExit(OverlayState::Hidden),
+            hide_instructions,
+        )
         .add_systems(OnExit(LevelState::Playing),
             hide_instructions,
         )
@@ -579,9 +583,16 @@ fn setup_gui_nodes(
     let font = ui_font.map_or(default(), |f| f.0.clone());
     let icon_size = 32.0;
 
+    // By design, doesn't detect Reenter.
+    // let despawn = (
+    //     DespawnOnExit(ProgramState::InGame),
+    //     DespawnOnEnter(ProgramState::InGame),
+    // );
+    let despawn = DespawnOnReset(ProgramState::InGame);
+
     // Info
     commands.spawn((
-        DespawnOnExitOrReenter(ProgramState::InGame),
+        despawn.clone(),
         InfoArea,
         Text::new(""),
         TextFont {
@@ -599,7 +610,7 @@ fn setup_gui_nodes(
 
     // Instructions
     commands.spawn((
-        DespawnOnExitOrReenter(ProgramState::InGame),
+        despawn.clone(),
         InstructionsArea,
         Visibility::Hidden,
         Text::new(
@@ -622,7 +633,7 @@ fn setup_gui_nodes(
 
     // Score
     commands.spawn((
-        DespawnOnExitOrReenter(ProgramState::InGame),
+        despawn.clone(),
         ScoreArea,
         Text::default(),
         TextFont {
@@ -645,7 +656,7 @@ fn setup_gui_nodes(
 
     // Game Status (win/lose)
     commands.spawn((
-        DespawnOnExitOrReenter(ProgramState::InGame),
+        despawn.clone(),
         Node {
             width: Val::Percent(100.),
             height: Val::Percent(100.),
@@ -656,9 +667,8 @@ fn setup_gui_nodes(
         },
         BackgroundColor(Color::NONE),
         RenderLayers::from_layers(&[RENDER_LAYER_UI]),
-    ))
-    .with_children(|builder| {
-        builder.spawn((
+
+        children![
             GameStatusArea,
             Text::new(
                 "", // e.g. "You win!"
@@ -674,13 +684,12 @@ fn setup_gui_nodes(
                 color: Color::linear_rgba(0., 0., 0., 0.5),
             },
             TextLayout::new(Justify::Center, LineBreak::WordBoundary),
-        ));
-    })
-    ;
+        ],
+    ));
 
     // In-hand status
     commands.spawn((
-        DespawnOnExitOrReenter(ProgramState::InGame),
+        despawn.clone(),
         HandStatusArea,
         UiNodeAlpha(0.0),
         Name::new("InHandStatus"),
@@ -706,7 +715,7 @@ fn setup_gui_nodes(
     // Mute icon
     right_x += icon_size;
     commands.spawn((
-        DespawnOnExitOrReenter(ProgramState::InGame),
+        DespawnOnReset(ProgramState::InGame),
         MuteArea,
         TextFont {
             font: assets.emoji_icon_font.clone(),
@@ -727,7 +736,7 @@ fn setup_gui_nodes(
     // User Pause icon, to the left
     right_x += icon_size;
     commands.spawn((
-        DespawnOnExitOrReenter(ProgramState::InGame),
+        DespawnOnReset(ProgramState::InGame),
         UserPausedArea,
         TextFont {
             font: assets.emoji_icon_font.clone(),
@@ -749,7 +758,7 @@ fn setup_gui_nodes(
     right_x += icon_size;
     commands.spawn((
         Name::new("RunningArea"),
-        DespawnOnExitOrReenter(ProgramState::InGame),
+        DespawnOnReset(ProgramState::InGame),
         ScriptsRunningArea,
         TextFont {
             font: assets.hack_font.clone(),
@@ -769,7 +778,7 @@ fn setup_gui_nodes(
     ));
     commands.spawn((
         Name::new("RunningCrossArea"),
-        DespawnOnExitOrReenter(ProgramState::InGame),
+        DespawnOnReset(ProgramState::InGame),
         ScriptsRunningCrossArea,
         TextFont {
             font: assets.emoji_icon_font.clone(),
@@ -791,7 +800,7 @@ fn setup_gui_nodes(
     // "Movement Pause" or "Freeze" icon, to the left
     right_x += icon_size;
     commands.spawn((
-        DespawnOnExitOrReenter(ProgramState::InGame),
+        DespawnOnReset(ProgramState::InGame),
         PhysicsRunningArea,
         TextFont {
             font: assets.emoji_icon_font.clone(),
@@ -810,7 +819,7 @@ fn setup_gui_nodes(
         ZIndex(-1), // under
     ));
     commands.spawn((
-        DespawnOnExitOrReenter(ProgramState::InGame),
+        DespawnOnReset(ProgramState::InGame),
         PhysicsRunningCrossArea,
         TextFont {
             font: assets.emoji_icon_font.clone(),
@@ -922,7 +931,7 @@ fn show_instructions(
         .insert(Visibility::Inherited)  // show
         .with_children(|builder| {
             text_ent = builder.spawn((
-                DespawnOnExit(GameplayState::Playing),
+                DespawnOnReset(GameplayState::Playing),
                 Text::new(if let Some(text) = text {
                     text.0.clone()
                 } else {
@@ -967,7 +976,7 @@ fn show_instructions(
     .with_repeat(2, bevy_tweening::RepeatStrategy::MirroredRepeat);
 
     commands.entity(text_ent).try_insert((
-        DespawnOnExit(GameplayState::Playing),
+        DespawnOnReset(GameplayState::Playing),
         TweenAnim::new(color_tween).with_destroy_on_completed(true),
 
         // Add another TweenAnim.

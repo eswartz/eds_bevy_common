@@ -17,6 +17,8 @@ use serde::{Deserialize, Serialize};
 use crate::PauseState;
 
 use crate::midi_synth::{asset::{SoundFont, SoundFontLoader}, synth::{MidiMessage, MidiRenderMessage, firewheel_nodes::{MidiSynthPlayerNode, SynthDecoder}}};
+use crate::SfxNode;
+use crate::MusicNode;
 
 /// The plugin.
 #[derive(Default, Clone, Copy)]
@@ -60,6 +62,19 @@ pub struct MidiSynthParams {
 
     /// Reverb level, 0 = none.
     pub reverb: f32,
+
+    /// Is this synth intended to "live" in the world (true) or be
+    /// everywhere (false)?
+    pub is_world_positioned: bool,
+}
+
+impl MidiSynthParams {
+    pub fn is_world_positioned(self, is_world_positioned: bool) -> Self {
+        Self {
+            is_world_positioned,
+            .. self
+        }
+    }
 }
 
 impl Default for MidiSynthParams {
@@ -68,6 +83,7 @@ impl Default for MidiSynthParams {
             channel_count: 2,
             sample_rate: 48000,
             reverb: 0.0,
+            is_world_positioned: false,
         }
     }
 }
@@ -86,7 +102,7 @@ pub(crate) enum SynthState {
 /// A world-positioned midi synth.
 #[derive(Component)]
 pub struct MidiSynth {
-    pub(crate) params: MidiSynthParams,
+    params: MidiSynthParams,
     entity: Entity,
     synth_state: SynthState,
     thread_handle: Option<thread::JoinHandle<()>>,
@@ -171,6 +187,10 @@ impl MidiSynth {
     pub fn is_ready(&self) -> bool {
         matches!(self.synth_state, SynthState::Loaded { .. })
     }
+
+    pub fn params(&self) -> &MidiSynthParams {
+        &self.params
+    }
 }
 
 // #[derive(Serialize, Deserialize)]
@@ -188,21 +208,26 @@ struct SynthThreadParams {
 // impl web_thread::Post for SynthThreadParams {}
 
 impl MidiSynth {
+    /// Start the synthesizer.
+    ///
+    /// Once complete, if has added relevant internal entities
+    /// to `entity`.
     fn start(
         &mut self,
         synthesizer: Arc<Mutex<Synthesizer>>,
         mut commands: Commands,
         entity: Entity,
+        is_world_positioned: bool,
     ) -> anyhow::Result<SynthThread> {
         // Shouldn't happen, but in case we start twice...
         self.stop();
 
         let thread_quit = self.thread_quit.clone();
         let muted = self.muted.clone();
-        let thread_params = self.params;
+        let midi_synth_params = self.params;
 
         let decoder = SynthDecoder::new(
-            &thread_params, self.entity, self.render_sender.clone(),
+            &midi_synth_params, self.entity, self.render_sender.clone(),
             self.sample_receiver.clone(),
             thread_quit.clone(),
             muted.clone(),
@@ -211,12 +236,12 @@ impl MidiSynth {
             self.panning_r.clone(),
         );
 
-        // let render_sender = self.render_sender.clone();
+        // This shuffles data from the synth thread to the
         let render_receiver = self.render_receiver.clone();
         let sample_sender = self.sample_sender.clone();
 
         let params = SynthThreadParams {
-            params: thread_params,
+            params: midi_synth_params,
             thread_quit,
             muted,
             synthesizer,
@@ -230,22 +255,17 @@ impl MidiSynth {
         #[cfg(feature = "firewheel")]
         {
             use bevy_seedling::edge::Connect as _;
-            use crate::MusicBus;
 
             use crate::midi_synth::synth::firewheel_nodes::MidiSynthPlayerNodeConfig;
-            let fwid = commands.entity(entity).insert((
-                // ChildOf(entity),
-                // Name::new("MidiSynth player"),
+            commands.entity(entity).insert((
                 MidiSynthPlayerNode,
                 MidiSynthPlayerNodeConfig(Arc::new(decoder)),
-            )).id();
-            // let id = commands.spawn((
-            //     ChildOf(entity),
-            //     Name::new("MidiSynth player"),
-            //     MidiSynthPlayerNode,
-            //     MidiSynthPlayerNodeConfig(Arc::new(decoder)),
-            // )).id();
-            commands.entity(fwid).connect(MusicBus);
+            ));
+            if is_world_positioned {
+                commands.entity(entity).connect(SfxNode);
+            } else {
+                commands.entity(entity).connect(MusicNode);
+            }
         }
 
         Ok(SynthThread{ thread_quit: self.thread_quit.clone() })
@@ -269,7 +289,20 @@ impl Drop for MidiSynth {
     }
 }
 
-/// There is one thread per active synthesizer.
+/// This is the thread body that produces synthesis.
+///
+/// It is active as long as some [MidiSynth] is sending out data
+/// via [MidiRenderMessage::RenderFrame] and not idling from
+/// [MidiRenderMessage::Idle].
+///
+/// While "idling", though, the thread
+/// does generate silence-level output in order to preserve
+/// continuous data (until I learn how to wire into Seedling more to smooth that),
+/// so a new thread *does* impose mixing overhead on the audio graph,
+/// which may be mitigated with silence detection.
+///
+/// Thus, the thread is moderately lightweight, but may induce
+/// extra latency due to the sleep.
 fn synth_thread(
     SynthThreadParams {
         params,
@@ -293,6 +326,7 @@ fn synth_thread(
         }
 
         let message = if cfg!(target_arch = "wasm32") {
+            // HACK: trying to figure out why no sound sounds and hangs
             let Ok(message) = render_receiver.try_recv() else {
                 thread::sleep(Duration::from_millis(10));
                 continue;
@@ -398,7 +432,8 @@ fn ensure_synths(
 
         let synthesizer = Arc::new(Mutex::new(Synthesizer::new(&sound_font.content, &synth_settings).unwrap()));
 
-        match synth.start(synthesizer.clone(), commands.reborrow(), ent) {
+        let is_world_positioned = synth.params.is_world_positioned;
+        match synth.start(synthesizer.clone(), commands.reborrow(), ent, is_world_positioned) {
             Ok(thread) => {
                 let exist = synths.0.insert(ent, thread);
                 if let Some(exist) = exist {

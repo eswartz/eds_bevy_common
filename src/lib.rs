@@ -1,48 +1,58 @@
 #![feature(iter_array_chunks)]
 
+pub mod app;
+pub mod states_sets;
+pub mod conditions;
+pub mod markers;
+pub mod layers;
+pub mod areas;
+
+pub mod product;
+pub mod levels;
+pub mod despawn_on_reset;
+
+pub mod player_spawning;
+pub mod collision_hooks;
+
+pub mod deathbox;
+
 pub mod base_dir;
+pub mod texutils;
+pub mod model_utils;
+
 #[cfg(feature = "input_bei")]
 pub mod actions_common_bei;
 pub mod actions_common;
 pub mod audio;
-pub mod debug;
+pub mod debug_egui;
 pub mod gui;
 pub mod lifecycle;
-pub mod markers;
-pub mod layers;
 pub mod menus_common;
-pub mod product;
-pub mod states_sets;
-pub mod texutils;
+pub mod stats;
 pub mod video;
 pub mod world_state;
-pub mod skybox;
+
 pub mod player_camera;
 pub mod player_client;
 pub mod player_controller;
 pub mod player_move_look;
 pub mod player_input;
-pub mod conditions;
+
+pub mod assets;
 pub mod crosshair;
 pub mod effects;
-pub mod assets;
-pub mod levels;
-pub mod player_spawning;
-pub mod collision_hooks;
-pub mod areas;
-pub mod deathbox;
-pub mod stats;
+pub mod lights;
+pub mod skybox;
 pub mod split_into_cubes;
 pub mod detail_normal;
 pub mod parallax_depth;
-pub mod menu_audio;
+
 #[cfg(feature = "highlighting")]
 pub mod highlighting;
 #[cfg(feature = "grabbing")]
 pub mod grabbing;
-pub mod model_utils;
-pub mod lights;
-pub mod app;
+
+pub mod menu_audio;
 
 #[cfg(feature = "midi_synth")]
 pub mod synth;
@@ -51,12 +61,15 @@ pub mod client_synth;
 #[cfg(feature = "midi_synth")]
 pub mod midi_synth;
 
+// FIX THIS SOON
+
 pub use base_dir::*;
 #[cfg(feature = "input_bei")]
 pub use actions_common_bei::*;
 pub use actions_common::*;
 pub use audio::*;
-pub use debug::*;
+pub use despawn_on_reset::*;
+pub use debug_egui::*;
 pub use gui::*;
 pub use lifecycle::*;
 pub use markers::*;

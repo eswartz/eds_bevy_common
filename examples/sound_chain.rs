@@ -78,7 +78,6 @@ fn main() -> AppExit {
         .add_plugins(VideoPlugin)
         .add_plugins(WorldStatePlugin)
         .add_plugins(LightsPlugin)
-        .add_plugins(EffectsPlugin)
         .add_plugins(LevelsPlugin)
         .add_plugins(DeathboxPlugin::default())
 
@@ -162,7 +161,6 @@ fn main() -> AppExit {
                 .run_if(not(is_in_menu))
                 .run_if(in_state(ProgramState::InGame)),
         )
-
     ;
 
     #[cfg(feature = "input_bei")]
@@ -396,8 +394,6 @@ fn on_enter_main_menu(
     current_level: Option<Res<CurrentLevel>>,
 ) {
     // Re-initialize state (on entry and on game exit).
-
-    // Do not clear CurrentLevel. `Play` goes there and acts as Reset...
 
     commands.spawn((
         DespawnOnExit(OverlayState::MainMenu),
@@ -912,6 +908,8 @@ struct MyGamePlugin;
 impl Plugin for MyGamePlugin {
     fn build(&self, app: &mut App) {
         app
+            .insert_resource(NoteRate(2.0))
+
             .add_systems(
                 OnExit(ProgramState::New),
                 ensure_levels
@@ -1185,7 +1183,7 @@ pub(crate) fn ensure_midi_synths(
     synth_q: Query<Entity, (With<OurMidiSynth>, Without<MidiSynth>)>,
     mut synth_map: ResMut<SynthProxyMap>,
 ) -> Result<()> {
-    let params = MidiSynthParams::default();
+    let params = MidiSynthParams::default().is_world_positioned(true);
 
     for ent in synth_q.iter() {
         let (sample_sender, sample_receiver) = crossbeam_channel::unbounded();
@@ -1199,7 +1197,6 @@ pub(crate) fn ensure_midi_synths(
         )?;
         commands.entity(ent).insert((
             synth,
-            Sfx,
         ));
 
         synth_map.register_synth(ent);
@@ -1277,6 +1274,12 @@ pub(crate) fn move_midi_spheres(
         lifetime.0 += time.delta();
     }
 }
+
+/// The rate at which notes change.
+#[derive(Resource, Reflect, Deref, DerefMut)]
+#[reflect(Resource)]
+#[type_path = "game"]
+pub struct NoteRate(pub f32);
 
 pub(crate) fn trigger_midi_notes(
     mut commands: Commands,

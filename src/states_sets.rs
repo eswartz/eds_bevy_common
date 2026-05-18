@@ -101,7 +101,7 @@ pub enum GameplayState {
     /// Assets for the mode are loaded; continue to the appropriate state.
     /// This only runs once per process.
     AssetsLoaded,
-    /// This state prompts loading the next level.
+    /// This state prompts loading the [CurrentLevel] level.
     /// This state is re-entered between levels.
     Setup,
     /// Game in progress.

@@ -66,11 +66,23 @@ pub struct UserVolume {
 #[type_path = "game"]
 pub struct Sfx;
 
+/// Node label for the in-game sound effects.
+#[derive(NodeLabel, Reflect, PartialEq, Eq, Debug, Hash, Clone)]
+#[reflect(Component)]
+#[type_path = "game"]
+pub struct SfxNode;
+
 /// Pool for UI sound effects (menus, etc), not spatial.
 #[derive(PoolLabel, Reflect, PartialEq, Eq, Debug, Hash, Clone)]
 #[reflect(Component)]
 #[type_path = "game"]
 pub struct UiSfx;
+
+/// Node label for the UI sound effects.
+#[derive(NodeLabel, Reflect, PartialEq, Eq, Debug, Hash, Clone)]
+#[reflect(Component)]
+#[type_path = "game"]
+pub struct UiSfxNode;
 
 /// Pool for the music, not spatial.
 #[derive(PoolLabel, Reflect, PartialEq, Eq, Debug, Hash, Clone)]
@@ -82,7 +94,7 @@ pub struct Music;
 #[derive(NodeLabel, Reflect, PartialEq, Eq, Debug, Hash, Clone)]
 #[reflect(Component)]
 #[type_path = "game"]
-pub struct MusicBus;
+pub struct MusicNode;
 
 /// Marker for the background audio, if any.
 #[derive(Component, Reflect)]
@@ -121,10 +133,11 @@ pub fn initialize_audio(master: Single<Entity, With<MainBus>>, mut commands: Com
         // Otherwise use the dynamic pool...?
         PoolSize(0 ..= 2),
 
-        MusicBus,
+        // Marker for the node for music.
+        MusicNode,
 
         // Use for e.g. fading *on top of* the [VolumeNode] (fade-out, fade-in) on this node.
-        // The [UserVolume] above is for the sound channel volume.
+        // The [UserVolume] above is the base sound channel volume.
         sample_effects![
             VolumeNode::default(),
         ],
@@ -142,6 +155,9 @@ pub fn initialize_audio(master: Single<Entity, With<MainBus>>, mut commands: Com
         // This pool is for spatial samples.
         PoolSize(0 ..= 256),
 
+        // Marker for the node for spatial effects.
+        SfxNode,
+
         sample_effects![(
             SpatialBasicNode {
                 panning_threshold: 0.9,
@@ -158,6 +174,10 @@ pub fn initialize_audio(master: Single<Entity, With<MainBus>>, mut commands: Com
             muted: false,
         },
         PoolSize(0 ..= 8),
+
+        // Marker for the node for UI effects.
+        UiSfxNode,
+
     ));
 }
 

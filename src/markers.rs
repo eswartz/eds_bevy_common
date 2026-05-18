@@ -13,23 +13,6 @@ pub struct Saveable;
 /// Mark an entity to be culled after the given time has passed.
 /// (The value 0.0 will *not* despawn immediately but instead means "ignore".
 /// This is for the benefit of default-initialized components.)
-#[derive(Component, Clone, Reflect, Debug)]
-#[reflect(Component, Clone)]
-#[type_path = "game"]
-pub struct DespawnOnExitOrReenter<S: States>(pub S);
-
-impl<S> Default for DespawnOnExitOrReenter<S>
-where
-    S: States + Default,
-{
-    fn default() -> Self {
-        Self(S::default())
-    }
-}
-
-/// Mark an entity to be culled after the given time has passed.
-/// (The value 0.0 will *not* despawn immediately but instead means "ignore".
-/// This is for the benefit of default-initialized components.)
 #[derive(Component, Clone, Reflect, Debug, Default)]
 #[reflect(Component, Clone, Default)]
 #[type_path = "game"]

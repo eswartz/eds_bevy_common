@@ -1,11 +1,10 @@
-use avian3d::prelude::Physics;
-use avian3d::prelude::PhysicsTime as _;
 use bevy::camera::visibility::RenderLayers;
 use bevy::color::palettes::tailwind;
 use bevy::ecs::message::MessageUpdateSystems;
 use bevy::prelude::*;
 use bevy_asset_loader::prelude::*;
 
+use crate::despawn_on_reset::DespawnOnResetPlugin;
 use crate::*;
 
 /// This provides common app-level handling.
@@ -19,12 +18,13 @@ impl Plugin for AppPlugin {
         app
         .insert_state(ProgramState::default())
         .insert_state(GameplayState::default())
+        .insert_state(LevelState::default())
         .insert_state(OverlayState::default())
 
-        .init_state::<ProgramState>()
-        .init_state::<GameplayState>()
-        .init_state::<LevelState>()
-        //////
+        .add_plugins(DespawnOnResetPlugin::<ProgramState>::default())
+        .add_plugins(DespawnOnResetPlugin::<GameplayState>::default())
+        .add_plugins(DespawnOnResetPlugin::<LevelState>::default())
+        .add_plugins(DespawnOnResetPlugin::<OverlayState>::default())
 
         // This needs to be added at the app level, though
         // you can configure it later.
@@ -65,12 +65,16 @@ impl Plugin for AppPlugin {
         )
         .add_systems(
             OnEnter(ProgramState::InGame),
-            (on_exit_launch_menu.run_if(is_in_menu),
-                on_enter_in_game).chain(),
+            (
+                on_exit_launch_menu.run_if(is_in_menu),
+                // on_enter_in_game,
+            ).chain(),
         )
         .add_systems(
             OnEnter(GameplayState::Playing),
-            show_3d_camera,
+            (
+                show_3d_camera,
+            )
         )
         .add_systems(
             OnExit(GameplayState::Playing),
@@ -100,6 +104,13 @@ impl Plugin for AppPlugin {
 #[derive(Debug, Resource)]
 pub struct ExitRequest;
 
+// It seems WindowClosed, WindowClosing, WindowDestroyed events don't make it for the primary window...?
+pub fn check_windows_closed(windows: Query<&Window>, mut commands: Commands) {
+    if windows.is_empty() {
+        commands.insert_resource(ExitRequest);
+    }
+}
+
 /// This acknowledges an `ExitRequest` and pings the App to exit.
 pub fn check_app_exit(
     mut commands: Commands,
@@ -112,13 +123,6 @@ pub fn check_app_exit(
 
     commands.remove_resource::<ExitRequest>();
     app_exit.write(AppExit::Success);
-}
-
-// It seems WindowClosed, WindowClosing, WindowDestroyed events don't make it for the primary window...?
-pub fn check_windows_closed(windows: Query<&Window>, mut commands: Commands) {
-    if windows.is_empty() {
-        commands.insert_resource(ExitRequest);
-    }
 }
 
 pub fn on_enter_initializing(mut commands: Commands, camera_q: Query<&Camera, With<Camera2d>>) {
@@ -148,9 +152,19 @@ pub fn on_exit_launch_menu(mut commands: Commands) {
     commands.set_state(OverlayState::Hidden);
 }
 
-pub fn on_enter_in_game(mut time: ResMut<Time<Physics>>) {
-    time.unpause();
-}
+// pub fn on_enter_in_game(/* mut time: ResMut<Time<Physics>> */) {
+//     // time.unpause();
+// }
+
+// pub fn on_enter_setup(mut time: ResMut<Time<Physics>>) {
+//     info!("pause");
+//     time.pause();
+// }
+
+// pub fn on_enter_playing(mut time: ResMut<Time<Physics>>) {
+//     info!("resume");
+//     time.unpause();
+// }
 
 #[derive(Component)]
 pub struct ErrorScreen;

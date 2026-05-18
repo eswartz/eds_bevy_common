@@ -1,17 +1,19 @@
 
 use bevy::prelude::*;
 use bevy_tweening::Lens;
-use bevy_tweening::TweeningPlugin;
 
 use crate::WorldCamera;
 
-
+/// Various simple ad-hoc effects spawned by
+/// components defined in this module.
 pub struct EffectsPlugin;
 
 impl Plugin for EffectsPlugin {
     fn build(&self, app: &mut App) {
+        if !app.is_plugin_added::<bevy_tweening::TweeningPlugin>() {
+            app.add_plugins(bevy_tweening::TweeningPlugin);
+        }
         app
-            .add_plugins(TweeningPlugin)
             .add_systems(PostUpdate, shrink_and_disappear)
             .add_systems(PostUpdate, aim_for_camera)
         ;
