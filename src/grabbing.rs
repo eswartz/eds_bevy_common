@@ -587,7 +587,6 @@ fn move_grabbed_item(
             // in sync with the camera movement.
             *forces.linear_velocity_mut() = new_vel.adjust_precision();
             *forces.angular_velocity_mut() = default();
-            dbg!(1);
         } else {
             // Non-physical, just move.
             // let new_xlat = item_xfrm.translation + new_vel * time.delta_secs().min(1.0);
