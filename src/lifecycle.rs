@@ -24,14 +24,12 @@ impl Plugin for LifecyclePlugin {
             .add_systems(
                 OnEnter(ProgramState::InGame),
                 |mut time: ResMut<Time<Physics>>| {
-                    info!("resume");
                     time.unpause();
                 }
             )
             .add_systems(
                 OnEnter(GameplayState::Setup),
                 |mut time: ResMut<Time<Physics>>| {
-                    info!("pause");
                     time.pause();
                 }
             )

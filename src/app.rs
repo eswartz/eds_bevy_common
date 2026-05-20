@@ -152,20 +152,6 @@ pub fn on_exit_launch_menu(mut commands: Commands) {
     commands.set_state(OverlayState::Hidden);
 }
 
-// pub fn on_enter_in_game(/* mut time: ResMut<Time<Physics>> */) {
-//     // time.unpause();
-// }
-
-// pub fn on_enter_setup(mut time: ResMut<Time<Physics>>) {
-//     info!("pause");
-//     time.pause();
-// }
-
-// pub fn on_enter_playing(mut time: ResMut<Time<Physics>>) {
-//     info!("resume");
-//     time.unpause();
-// }
-
 #[derive(Component)]
 pub struct ErrorScreen;
 

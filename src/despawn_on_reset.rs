@@ -33,14 +33,12 @@ fn despawn_entities_on_state_set<S: States>(
             // We're (again) at the entry state, so we have reset.
             for (entity, binding) in &query {
                 if binding.0 == *entered {
-                    dbg!((entity, binding));
                     commands.entity(entity).try_despawn();
                 }
             }
         } else {
             // State is gone.
             for (entity, _binding) in &query {
-                dbg!(entity);
                 commands.entity(entity).try_despawn();
             }
         }
