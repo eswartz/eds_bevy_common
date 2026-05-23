@@ -18,14 +18,7 @@ use bevy::window::WindowFocused;
 use bevy_asset_loader::prelude::*;
 use bevy_seedling::prelude::MainBus;
 
-use crate::CurrentLevel;
-use crate::GameplayState;
-use crate::LevelState;
-use crate::StatsOverlayVisible;
-use crate::TextShadowColorLens;
-use crate::CommonGuiAssets;
-use crate::RENDER_LAYER_UI;
-use crate::DespawnOnReset;
+use crate::*;
 
 use super::audio::UserVolume;
 use super::lifecycle::PauseState;
@@ -83,27 +76,31 @@ impl Plugin for GuiPlugin {
         .add_systems(OnExit(OverlayState::Loading),
             on_loading_finished)
 
-        .add_systems(
-            OnTransition{ exited: GameplayState::Playing, entered: GameplayState::Setup },
-            (
-                hide_instructions,
-            )
-        )
-        .add_systems(OnTransition{ exited: ProgramState::InGame, entered: ProgramState::LaunchMenu },
-            (
-                reset_instructions,
-            )
-            .
-            chain()
-        )
-        .add_systems(OnEnter(LevelState::LevelLoaded),
-            show_instructions,
-        )
+        // .add_systems(
+        //     OnTransition{ exited: GameplayState::Playing, entered: GameplayState::Setup },
+        //     (
+        //         hide_instructions,
+        //         reset_instructions,
+        //     )
+        // )
+        // .add_systems(OnTransition{ exited: ProgramState::InGame, entered: ProgramState::LaunchMenu },
+        //     (
+        //         reset_instructions,
+        //     )
+        //     .
+        //     chain()
+        // )
         .add_systems(OnExit(OverlayState::Hidden),
             hide_instructions,
         )
+        .add_systems(OnEnter(LevelState::Playing),
+            show_instructions,
+        )
         .add_systems(OnExit(LevelState::Playing),
-            hide_instructions,
+            (
+                hide_instructions,
+                reset_instructions,
+            )
         )
         .add_systems(
             Update,
@@ -888,7 +885,8 @@ fn update_physics_pause_ui(
 }
 
 /// Set the instruction text for level.
-#[derive(Resource, Reflect)]
+/// It is consumed and displayed in [LevelState::LevelLoaded].
+#[derive(Resource, Reflect, Deref)]
 #[reflect(Resource)]
 #[type_path = "game"]
 pub struct InstructionText(pub String);
@@ -901,9 +899,9 @@ pub struct ShowedInstructions{ level_id: String }
 
 fn show_instructions(
     mut commands: Commands,
+    text: If<Res<InstructionText>>,
     level: Option<Res<CurrentLevel>>,
     showed: Option<Res<ShowedInstructions>>,
-    text: Option<Res<InstructionText>>,
     fonts: Res<CommonGuiAssets>,
     instructions_q: Single<Entity, With<InstructionsArea>>,
 ) {
@@ -913,16 +911,24 @@ fn show_instructions(
     use bevy_tweening::TweenAnim;
     use bevy_tweening::lens::TextColorLens;
 
-    if showed.is_some() || text.is_none() {
+    // Ignore blank instructions.
+    if text.0.is_empty() {
+        return
+    }
+
+    // Show only if we don't remember showing the instructions for this level.
+    let level_id = if let Some(level) = level {
+        level.id.clone()
+    } else {
+        String::new()
+    };
+
+    if showed.is_some_and(|s| s.level_id == level_id) {
         return;
     }
 
     commands.insert_resource(ShowedInstructions{
-        level_id: if let Some(level) = level {
-            level.id.clone()
-        } else {
-            String::new()
-        },
+        level_id,
     });
 
     let mut text_ent = Entity::PLACEHOLDER;
@@ -931,12 +937,8 @@ fn show_instructions(
         .insert(Visibility::Inherited)  // show
         .with_children(|builder| {
             text_ent = builder.spawn((
-                DespawnOnReset(GameplayState::Playing),
-                Text::new(if let Some(text) = text {
-                    text.0.clone()
-                } else {
-                    String::new()
-                }),
+                DespawnOnReset(LevelState::Playing),
+                Text::new(text.0.clone()),
                 TextLayout::new(Justify::Center, LineBreak::WordBoundary),
                 TextFont {
                     font: fonts.std_ui.clone(),
@@ -1003,6 +1005,8 @@ pub fn hide_instructions(
     }
 }
 
-pub fn reset_instructions(mut commands: Commands) {
-    commands.remove_resource::<ShowedInstructions>();
+pub fn reset_instructions(
+    mut commands: Commands,
+) {
+    commands.remove_resource::<InstructionText>();
 }
