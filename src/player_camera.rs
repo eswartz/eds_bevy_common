@@ -340,8 +340,7 @@ pub fn handle_player_camera_actions(
         }
         if let Some(zoom_camera) = zoom_camera.iter().next()
         && zoom_camera.length() > 0. {
-            // **fov_delta = (**fov_delta + zoom_camera.y).clamp(-90.0, 90.0);
-            let q = ops::exp(-time.delta_secs() / 10.0);
+            let q = ops::exp(-time.delta_secs());
             **fov_delta = fov_delta.lerp(**fov_delta + zoom_camera.y, q).clamp(-90.0, 90.0);
             *zoom_state = FovZoomState::Zooming;
         } else {
