@@ -11,6 +11,7 @@ categories = ["game"]
 # If you are using `webp` in glTF files via `bevy/webp`,
 # then please copy this section into your project's `.cargo/config.toml`'s
 # section so all clients will see the same patches.
+# Explicitly reference these crates as well so the overrides will hold.
 # (Without such edits, your project will have a separate copy of bevy
 # and you'll get a lot of errors.)
 #########
@@ -20,6 +21,9 @@ categories = ["game"]
 # Support webp.
 # See above to fix error: feature `reqs` includes `gltf/EXT_texture_webp`, but `gltf` is not a dependency
 gltf = { git = "https://github.com/gltf-rs/gltf.git", branch = "main" }
+
+# Fetch a non-crashing version for use by Wine. (See https://gitlab.com/gilrs-project/gilrs/-/work_items/167)
+gilrs = { git = "https://gitlab.com/gilrs-project/gilrs.git", branch = "master" }
 
 #########
 
@@ -101,6 +105,12 @@ bevy = { version = "0.18.0", default-features = false, features = [
     # "basis-universal",
     # "trace_tracy",
 ] }
+
+###
+# Overridden below; need some record to override.
+gltf = { version = "*" }
+gilrs = { version = "*" }
+###
 
 log = { version = "0.4", features = [
     "max_level_debug",
