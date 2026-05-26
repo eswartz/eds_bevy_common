@@ -1,6 +1,5 @@
 use bevy::ecs::world::CommandQueue;
 use bevy::prelude::*;
-use bevy::time::common_conditions::repeating_after_delay;
 use avian3d::dynamics::solver::SolverDiagnostics;
 
 use sysinfo;
@@ -12,6 +11,7 @@ use std::time::Duration;
 use crate::Player;
 use crate::PlayerLook;
 use crate::ProgramState;
+use crate::repeating_with_delay;
 
 pub struct StatsOverlayPlugin;
 
@@ -40,7 +40,7 @@ impl Plugin for StatsOverlayPlugin {
             .add_systems(
                 Update,
                 (
-                    refresh_sys_info.run_if(repeating_after_delay(Duration::from_secs_f32(1.0 / 15.0))),
+                    refresh_sys_info.run_if(repeating_with_delay(Duration::from_secs_f32(1.0 / 15.0))),
                     refresh_fps_info,
                     diagnostic_system,
                 )

@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use bevy::prelude::*;
 use bevy::window::WindowFocused;
 use crate::*;
@@ -55,4 +57,13 @@ pub fn added_player_start(q: Query<&Transform, Added<PlayerStart>>) -> bool {
 /// Tell if we saw a [WindowFocused] event.
 pub fn window_changed_focus(reader: MessageReader<WindowFocused>) -> bool {
     !reader.is_empty()
+}
+
+/// A condition that yields `true` every `duration`.
+pub fn repeating_with_delay(duration: Duration) -> impl FnMut(Res<Time>) -> bool + Clone {
+    let mut timer = Timer::new(duration, TimerMode::Repeating);
+    move |time: Res<Time>| {
+        timer.tick(time.delta());
+        timer.is_finished()
+    }
 }

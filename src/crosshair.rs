@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use bevy::camera::visibility::RenderLayers;
 use bevy::input::mouse::AccumulatedMouseMotion;
 use bevy::prelude::*;
@@ -11,6 +13,7 @@ use crate::DespawnOnReset;
 use crate::is_in_menu;
 use crate::is_level_active;
 use crate::is_paused;
+use crate::repeating_with_delay;
 
 use super::states_sets::OverlayState;
 use super::states_sets::ProgramState;
@@ -41,7 +44,8 @@ impl Plugin for CrosshairPlugin {
                 check_crosshair_activity_mouse,
                 check_crosshair_activity_gamepad,
                 update_crosshair,
-                update_crosshair_targets,
+                // This is very CPU-intensive.
+                update_crosshair_targets.run_if(repeating_with_delay(Duration::from_secs_f32(1.0 / 10.0))),
             )
             .run_if(resource_exists_and_equals(CrosshairMode::AimFromCenter))
             .run_if(not(is_paused))
