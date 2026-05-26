@@ -301,7 +301,6 @@ fn on_start_grab(
         commands.write_message(GrabbingCommand::ReleaseItems);
     } else {
         // Try to grab.
-
         let release = release_q.iter().any(|e| e.contains(ActionEvents::START));
         if release && highlighting_mode.is_disabled() {
             *highlighting_mode = HighlightingMode::Enabled;
