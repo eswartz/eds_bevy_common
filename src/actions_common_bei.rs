@@ -148,7 +148,7 @@ pub mod actions {
     #[action_output(f32)]
     pub struct MoveLeftRight;
 
-    /// Change camera to be closer/further from some object.
+    /// Change camera see closer/further.
     #[derive(InputAction)]
     #[action_output(Vec2)]
     pub struct Zoom;
@@ -465,22 +465,22 @@ pub fn assign_stock_player_actions(
                 )),
         )),
     ));
-    commands.spawn((
-        include.clone(),
-        Action::<actions::Zoom>::new(),
-        DeadZone::default(),
-        Bindings::spawn((
-            Spawn((Binding::mouse_wheel(),
-                Negate::y(),
-                Scale::new(Vec3::splat(10.0))
-            )),
-            Axial::right_stick()
-                .with((
-                    Scale::new(Vec3::splat(100.0)),
-                    SmoothNudge::default(),
-                )),
-        )),
-    ));
+    // commands.spawn((
+    //     include.clone(),
+    //     Action::<actions::Zoom>::new(),
+    //     DeadZone::default(),
+    //     Bindings::spawn((
+    //         Spawn((Binding::mouse_wheel(),
+    //             Negate::y(),
+    //             Scale::new(Vec3::splat(10.0))
+    //         )),
+    //         Axial::right_stick()
+    //             .with((
+    //                 Scale::new(Vec3::splat(100.0)),
+    //                 SmoothNudge::default(),
+    //             )),
+    //     )),
+    // ));
     commands.spawn((
         include.clone(),
         Action::<actions::Accelerate>::new(),
@@ -588,12 +588,4 @@ pub fn assign_stock_player_actions(
             Bidirectional::new(GamepadButton::RightTrigger, GamepadButton::LeftTrigger),
         )),
     ));
-    commands.spawn((
-        include.clone(),
-        Action::<actions::PausePhysics>::new(),
-        bindings![
-            KeyCode::ScrollLock,
-        ],
-    ));
-
 }

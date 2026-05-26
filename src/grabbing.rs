@@ -6,6 +6,7 @@ use avian3d::math::AdjustPrecision;
 use avian3d::math::Scalar;
 #[cfg(feature = "input_bei")]
 use bevy::color::palettes::tailwind;
+use bevy_mod_outline::ComputedOutline;
 use bevy_mod_outline::InheritOutline;
 use bevy_mod_outline::OutlineStencil;
 
@@ -143,7 +144,7 @@ impl GrabbedItemStyle {
         }
     }
     pub fn remove_from<'a>(&self, mut ent_commands: EntityCommands<'a>) {
-        ent_commands.try_remove::<(OutlineVolume, OutlineMode)>();
+        ent_commands.try_remove::<(OutlineVolume, OutlineMode, ComputedOutline)>();
         if self.stencil.is_some() {
             ent_commands.try_remove::<OutlineStencil>();
         }
