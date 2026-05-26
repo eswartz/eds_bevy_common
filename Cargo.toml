@@ -107,7 +107,7 @@ bevy = { version = "0.18.0", default-features = false, features = [
 ] }
 
 ###
-# Overridden below; need some record to override.
+# Overridden above; need some record to override.
 gltf = { version = "*" }
 gilrs = { version = "*" }
 ###
@@ -174,7 +174,7 @@ regex = "1.12"
 strum = { version = "0.27.2", features = ["derive", "strum_macros"] }
 strum_macros = "0.27.2"
 
-bevy_enhanced_input = { version = "0.24", features = ["reflect", "state", "serialize"], optional = true }
+bevy_enhanced_input = { version = "0.25", features = ["reflect", "state", "serialize"], optional = true }
 
 bevy_asset_loader = { version = "0.25.0", features = [
     "2d",
