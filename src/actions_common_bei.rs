@@ -1,4 +1,5 @@
 use crate::*;
+use bevy::input::mouse::MouseScrollUnit;
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 use bevy::window::WindowMode;
@@ -583,9 +584,22 @@ pub fn assign_stock_player_actions(
         Action::<actions::CycleHighlightedItem>::new(),
         Scale::splat(0.25),
         Bindings::spawn((
-            Spawn((Binding::mouse_wheel(), SwizzleAxis::YYY)),
+            Spawn((
+                Binding::mouse_wheel(),
+                SwizzleAxis::YYY,
+                default_mouse_wheel_scale(1.0),
+            )),
             Bidirectional::new(KeyCode::ArrowUp, KeyCode::ArrowDown),
             Bidirectional::new(GamepadButton::RightTrigger, GamepadButton::LeftTrigger),
         )),
     ));
+}
+
+/// Workaround for different use of [MouseScrollUnit] on different OSes.
+pub fn default_mouse_wheel_scale(factor: f32) -> Scale {
+    if cfg!(target_os = "macos") {
+        Scale::splat(factor / MouseScrollUnit::SCROLL_UNIT_CONVERSION_FACTOR as f32)
+    } else {
+        Scale::splat(factor)
+    }
 }
