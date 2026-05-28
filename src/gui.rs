@@ -475,11 +475,11 @@ fn check_grab_focus_state(
     overlay_state: Res<State<OverlayState>>,
     gui_state: ResMut<GuiState>,
     mut grab_state: ResMut<GrabState>,
-    window_cursor_options: Single<(&mut Window, &mut CursorOptions), With<PrimaryWindow>>,
+    window_cursor_options: Single<&mut CursorOptions , With<PrimaryWindow>>,
 
     mut awaiting: Local<Option<bool>>,
 ) {
-    let (mut window, mut cursor_options) = window_cursor_options.into_inner();
+    let mut cursor_options = window_cursor_options.into_inner();
 
     let mut desired_grab: Option<bool> = None;
 
@@ -508,9 +508,6 @@ fn check_grab_focus_state(
             *awaiting = Some(true);
             cursor_options.grab_mode = GRABBED_MODE;
             cursor_options.visible = false;
-
-            let center = Vec2::new(window.width() / 2.0, window.height() / 2.0);
-            window.set_cursor_position(Some(center));
 
             grab_state.was_grabbed = true;
         } else {
