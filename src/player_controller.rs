@@ -168,10 +168,13 @@ fn center_mouse(
     let Ok(mut window) = primary_window.single_mut() else {
         return;
     };
+
     if settings.center_mouse
     && window.focused
     && !gui_state.show_cursor()
-    && !overlay_state.is_menu() {
+    && !overlay_state.is_menu()
+    && window.cursor_position().is_some()
+    {
         // Keep mouse cursor set window center when while invisible,
         // so look movements will not go outside the window.
         let center = Vec2::new(window.width() / 2.0, window.height() / 2.0);

@@ -1,6 +1,8 @@
 use crate::*;
 use bevy::input::mouse::MouseScrollUnit;
 use bevy::prelude::*;
+use bevy::window::CursorGrabMode;
+use bevy::window::CursorOptions;
 use bevy::window::PrimaryWindow;
 use bevy::window::WindowMode;
 use bevy_enhanced_input::prelude::*;
@@ -26,6 +28,9 @@ impl Plugin for ActionPlugin {
             .add_observer(handle_full_screen)
             .add_observer(handle_mute)
 
+            .add_systems(PostUpdate,
+                    mask_and_unmask_inputs
+            )
             ;
     }
 }
@@ -601,5 +606,35 @@ pub fn default_mouse_wheel_scale(factor: f32) -> Scale {
         Scale::splat(factor / MouseScrollUnit::SCROLL_UNIT_CONVERSION_FACTOR as f32)
     } else {
         Scale::splat(factor)
+    }
+}
+
+/// Disable mouse input when a window is not focused, in an attempt
+/// to avoid having such inputs be passed when the window is re-focused
+/// (e.g. with the mouse).
+fn mask_and_unmask_inputs(
+    window_cursor_options: Single<(&Window, &CursorOptions), With<PrimaryWindow>>,
+    mut sources: ResMut<ActionSources>,
+    mut count: Local<i32>,
+) {
+    let (window, cursor) = window_cursor_options.into_inner();
+    if !window.focused || cursor.grab_mode == CursorGrabMode::None {
+        if sources.mouse_buttons {
+            sources.mouse_buttons = false;
+            sources.mouse_motion = false;
+            sources.mouse_wheel = false;
+            *count = 0;
+        }
+    } else {
+        if !sources.mouse_buttons {
+            if *count > 2 {
+                sources.mouse_buttons = true;
+                sources.mouse_motion = true;
+                sources.mouse_wheel = true;
+            } else {
+                // Wait for debounce.
+                *count += 1;
+            }
+        }
     }
 }
