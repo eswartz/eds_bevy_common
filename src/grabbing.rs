@@ -73,7 +73,9 @@ impl Plugin for GrabbingPlugin {
                         .run_if(not(is_grabbing_item))
                         ,
                     process_grab_commands,
-                    move_grabbed_item.run_if(is_grabbing_item),
+                    move_grabbed_item
+                        .run_if(is_grabbing_item)
+                        .run_if(not(debug_gui_wants_input)),
                 )
                 .chain()
                 .after(PhysicsSystems::Writeback)
@@ -322,8 +324,6 @@ fn on_end_grab_drop(
     // Let go.
     if grabbed_opt.is_some() {
         commands.write_message(GrabbingCommand::ReleaseItems);
-    } else {
-        commands.write_message(GrabbingCommand::CancelGrabItems);
     }
     commands.insert_resource(HighlightingMode::Disabled);
 }
@@ -332,14 +332,11 @@ fn on_end_grab_drop(
 fn on_end_grab_fire(
     _event: On<Complete<actions::ReleaseGrab>>,
     mut commands: Commands,
-    // grabbable_q: Query<Entity, With<Grabbable>>,
     grabbed_opt: Option<Res<GrabbedItem>>,
 ) {
     // Let go.
     if grabbed_opt.is_some() {
         commands.write_message(GrabbingCommand::ReleaseItems);
-    } else {
-        commands.write_message(GrabbingCommand::CancelGrabItems);
     }
 }
 
@@ -471,7 +468,11 @@ fn process_grab_commands(
 
                     if let Some(rigid) = grabbed.orig_rigid_opt {
                         is_rigid = true;
-                        ent_commands.try_insert(rigid);
+                        if let Ok((_, _, rigid_opt, _, _, _)) = phys_info_q.get(grabbed.entity)
+                        && rigid_opt != Some(&rigid) {
+                            // Don't mutate the RigidBody to avoid a "hop"
+                            ent_commands.try_insert(rigid);
+                        }
                     } else {
                         is_rigid = false;
                     }
@@ -553,6 +554,8 @@ fn move_grabbed_item(
     let offset = new_pos - cur_pos;
 
     let movement = offset.length();
+
+    // Only move the item when the user has also moved a bit.
     if movement > MIN_MOVE {
         let vel = offset;
         let is_rigid;
@@ -588,13 +591,6 @@ fn move_grabbed_item(
             *forces.angular_velocity_mut() = default();
         } else {
             // Non-physical, just move.
-            // let new_xlat = item_xfrm.translation + new_vel * time.delta_secs().min(1.0);
-            // let new_xlat = item_xfrm.translation + new_vel * time.delta_secs().min(1.0);
-            // let new_xlat = item_xfrm.translation + new_pos + item_xfrm.rotation.inverse() * grabbed.orig_offset;
-            // let new_xlat = -item_xfrm.translation + new_pos + item_xfrm.rotation.inverse() * grabbed.orig_offset;
-            // item_xfrm.translation = item_xfrm.translation.lerp(new_xlat, time.delta_secs().min(1.0));
-            // item_xfrm.translation = new_xlat;
-            // item_xfrm.translation += cam_global_xfrm.rotation() * new_vel * time.delta_secs().min(1.0);
             item_xfrm.translation += new_vel * time.delta_secs().min(1.0);
         }
 
