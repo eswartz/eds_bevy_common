@@ -45,7 +45,7 @@ impl Plugin for CrosshairPlugin {
                 check_crosshair_activity_gamepad,
                 update_crosshair,
                 // This is very CPU-intensive :(
-                update_crosshair_targets.run_if(repeating_with_delay(Duration::from_secs_f32(1.0 / 2.0))),
+                update_crosshair_targets.run_if(repeating_with_delay(Duration::from_secs_f32(1.0 / 8.0))),
             )
             .run_if(resource_exists_and_equals(CrosshairMode::AimFromCenter))
             .run_if(not(is_paused))
