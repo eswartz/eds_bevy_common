@@ -392,9 +392,8 @@ fn process_grab_commands(
                     continue
                 };
 
-                // We can have clicked anywhere on the grabbed object,
-                // but later compute grab distance based on the center
-                // coordinate. Remember the offset.
+                // See where we're looking -- likely at some random point
+                // on the object's surface.
                 let cam_pos = cam_global_xfrm.translation();
                 let cam_dir = cam_global_xfrm.rotation() * Dir3::NEG_Z;
                 let cur_pos = item_global_xfrm.translation();
@@ -402,18 +401,18 @@ fn process_grab_commands(
                     Ray3d::new(cam_pos, cam_dir),
                     &MeshRayCastSettings::default()
                         .with_filter(&|ent| ent == entity)
-                        .never_early_exit()
+                        .always_early_exit()
                 );
-                let new_pos = if let Some(hit) = hits.first() {
+                let surface_pos = if let Some(hit) = hits.first() {
                     hit.1.point
                 } else {
                     cur_pos
                 };
-                let distance = cam_pos.distance(new_pos);
+                let distance = cam_pos.distance(surface_pos);
 
                 commands.insert_resource(GrabbedItem{
                     entity,
-                    orig_offset: new_pos - cur_pos,
+                    orig_offset: surface_pos - cur_pos,
                     #[cfg(feature = "highlighting")]
                     orig_mode: mode.original_or_enabled(),
                     distance,
@@ -545,7 +544,7 @@ fn move_grabbed_item(
 
     // Compute the desired new location, i.e. the current
     // position plus the camera's position + original distance.
-    let cur_pos = item_global_xfrm.translation() + cam_global_xfrm.rotation() * grabbed.orig_offset;
+    let cur_pos = item_global_xfrm.translation() + grabbed.orig_offset;
 
     let new_pos = cam_global_xfrm.translation() + cam_global_xfrm.rotation() * Vec3::NEG_Z * grabbed.distance;
 
