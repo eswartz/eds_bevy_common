@@ -49,15 +49,36 @@ impl Plugin for StatsOverlayPlugin {
     }
 }
 
+/// This is provided by [StatsProvider::fetch_value] and
+/// provides the text and importance flag for a value.
+/// (Importance currently means "error")
+#[derive(Debug, Default, Clone, PartialEq)]
+pub struct StatsValue {
+    /// Display text.
+    pub label: String,
+    /// If true, value needs attention in UI.
+    pub important: bool,
+}
+
+impl StatsValue {
+    pub fn new(label: impl Into<String>) -> Self {
+        let text = label.into();
+        Self { label: text, important: false }
+    }
+    pub fn with_importance(self, important: bool) -> Self {
+        Self {
+            important,
+            ..self
+        }
+    }
+}
+
 /// Implement this to add data to the stats display.
 pub trait StatsProvider: Send + Sync + 'static {
     /// Get the displayed label.
     fn get_label(&self) -> String;
-    /// Compute the value string.
-    fn format_value(&self, world: &mut World) -> String;
-    /// Tell if the stat is important (needs highlighting).
-    /// This is only checked once and is used to construct the UI.
-    fn is_important(&self) -> bool { false }
+    /// Compute the value string and importance.
+    fn fetch_value(&self, world: &mut World) -> StatsValue;
     /// Override sort order.
     fn priority(&self) -> i32 { 0 }
 }
@@ -108,12 +129,12 @@ impl StatsProvider for FpsProvider {
     }
     fn priority(&self) -> i32 { -10 }
 
-    fn format_value(&self, world: &mut World) -> String {
+    fn fetch_value(&self, world: &mut World) -> StatsValue {
         if let Some(time_buffer) = world.get_resource::<DeltaBuffer>() {
             // fps = time_buffer.0.len() as f32 / time_buffer.0.iter().sum::<f32>();
             let mut time_it = time_buffer.0.iter();
             let Some(time) = time_it.next() else {
-                return "???".to_string();
+                return StatsValue::new("???");
             };
             let mut total_time = time.as_secs_f32();
             // Each successive time is less relevant.
@@ -123,9 +144,9 @@ impl StatsProvider for FpsProvider {
                 total += index;
             }
             let fps = total as f32 / total_time;
-            format!("{:.0}", if fps.is_infinite() { 0.0 } else { fps })
+            StatsValue::new(format!("{:.0}", if fps.is_infinite() { 0.0 } else { fps }))
         } else {
-            "???".to_string()
+            StatsValue::new("???")
         }
     }
 }
@@ -138,14 +159,14 @@ impl StatsProvider for FpsMaxProvider {
     }
     fn priority(&self) -> i32 { -9 }
 
-    fn format_value(&self, world: &mut World) -> String {
+    fn fetch_value(&self, world: &mut World) -> StatsValue {
         if let Some(time_buffer) = world.get_resource::<DeltaBuffer>() {
             let max_ft = time_buffer.0.iter().max_by(|a, b|
                 a.partial_cmp(b).unwrap_or(::core::cmp::Ordering::Equal)
                 ).unwrap_or(&Duration::ZERO);
-            format!("{:.2?}", max_ft)
+            StatsValue::new(format!("{:.2?}", max_ft))
         } else {
-            "???".to_string()
+            StatsValue::new("???")
         }
     }
 }
@@ -159,9 +180,9 @@ impl StatsProvider for EntCountProvider {
 
     fn priority(&self) -> i32 { -8 }
 
-    fn format_value(&self, world: &mut World) -> String {
+    fn fetch_value(&self, world: &mut World) -> StatsValue {
         let count = world.entities().count_spawned() as usize;
-        format!("{count}")
+        StatsValue::new(format!("{count}"))
     }
 }
 
@@ -174,11 +195,11 @@ impl StatsProvider for ContactCountProvider {
 
     fn priority(&self) -> i32 { -7 }
 
-    fn format_value(&self, world: &mut World) -> String {
+    fn fetch_value(&self, world: &mut World) -> StatsValue {
         if let Some(solver_diags) = world.get_resource::<SolverDiagnostics>() {
-            format!("{}", solver_diags.contact_constraint_count)
+            StatsValue::new(format!("{}", solver_diags.contact_constraint_count))
         } else {
-            "???".to_string()
+            StatsValue::new("???")
         }
     }
 }
@@ -219,11 +240,11 @@ impl StatsProvider for CpuUsageProvider {
 
     fn priority(&self) -> i32 { -6 }
 
-    fn format_value(&self, world: &mut World) -> String {
+    fn fetch_value(&self, world: &mut World) -> StatsValue {
          if let Some(info) = world.get_resource::<SysInfoBuffer>() {
-            format!("{}%", info.0.global_cpu_usage() as i32)
+            StatsValue::new(format!("{}%", info.0.global_cpu_usage() as i32))
          } else {
-            String::new()
+            StatsValue::default()
          }
     }
 }
@@ -241,12 +262,12 @@ impl StatsProvider for MemoryUsageProvider {
 
     fn priority(&self) -> i32 { -5 }
 
-    fn format_value(&self, world: &mut World) -> String {
+    fn fetch_value(&self, world: &mut World) -> StatsValue {
         if let Some(sys_info) = world.get_resource::<SysInfoBuffer>() {
             let pct = (sys_info.0.used_memory() * 100).checked_div(sys_info.0.total_memory()).unwrap_or(0);
-            format!("{}%", pct)
+            StatsValue::new(format!("{}%", pct))
          } else {
-            String::new()
+            StatsValue::default()
          }
     }
 }
@@ -264,16 +285,17 @@ impl StatsProvider for PlayerPosProvider {
 
     fn priority(&self) -> i32 { -4 }
 
-    fn format_value(&self, world: &mut World) -> String {
+    fn fetch_value(&self, world: &mut World) -> StatsValue {
         let mut xfrm_q = world.query_filtered::<&Transform, With<Player>>();
         if let Some(xfrm) = xfrm_q.iter(world).next() {
-            return format!("[{:.1?},{:.1?},{:.1?}]",
+            StatsValue::new(format!("[{:.1?},{:.1?},{:.1?}]",
                 xfrm.translation.x,
                 xfrm.translation.y,
                 xfrm.translation.z,
-            );
+            ))
+        } else {
+            default()
         }
-        String::new()
     }
 }
 
@@ -291,13 +313,14 @@ impl StatsProvider for PlayerAngProvider {
 
     fn priority(&self) -> i32 { -4 }
 
-    fn format_value(&self, world: &mut World) -> String {
+    fn fetch_value(&self, world: &mut World) -> StatsValue {
         let mut look_q = world.query_filtered::<&PlayerLook, With<Player>>();
         if let Some(look) = look_q.iter(world).next() {
             let (y, x, _) = look.rotation.to_euler(EulerRot::default());
-            return format!("{:.1?} / {:.1?}", y.to_degrees(), x.to_degrees());
+            StatsValue::new(format!("{:.1?} / {:.1?}", y.to_degrees(), x.to_degrees()))
+        } else {
+            default()
         }
-        String::new()
     }
 }
 
@@ -354,6 +377,9 @@ impl Default for StatsOverlayStyle {
     }
 }
 
+const PLAIN_COLOR: Color = Color::Srgba(bevy::color::palettes::tailwind::GRAY_50);
+const IMPORTANT_COLOR: Color = Color::Srgba(bevy::color::palettes::tailwind::RED_500);
+
 fn diagnostic_system(
     world: &mut World,
     mut refresh_timer: Local<f32>,
@@ -375,9 +401,6 @@ fn diagnostic_system(
         }
         let text_ents = cached.get_or_init(|| {
             // Generate the UI once.
-
-            let plain_color = Color::Srgba(bevy::color::palettes::tailwind::GRAY_50);
-            let important_color = Color::Srgba(bevy::color::palettes::tailwind::RED_500);
 
             let mut result  = Vec::with_capacity(stats_registry.len());
             let font = TextFont {
@@ -433,11 +456,10 @@ fn diagnostic_system(
                     stats_registry
                         .providers()
                         .iter()
-                        .for_each(|provider| result.push(c.spawn((
+                        .for_each(|_provider| result.push(c.spawn((
                             Node::default(),
                             font.clone(),
                             Text::default(),
-                            TextColor(if provider.is_important() { important_color } else { plain_color }),
                         )).id()
                     ));
                 });
@@ -452,14 +474,19 @@ fn diagnostic_system(
 
             world.resource_scope::<StatsRegistry, ()>(|world, stats_registry| {
                 // let Some(stats_registry) = world.get_resource::<StatsRegistry>() else { return };
-                let values = stats_registry.providers().iter().map(|prov| prov.format_value(world)).collect::<Vec<_>>();
+                let values = stats_registry
+                    .providers()
+                    .iter()
+                    .map(|prov| prov.fetch_value(world))
+                    .collect::<Vec<_>>();
 
-                let mut text = world.query::<&mut Text>();
+                let mut text_color = world.query::<(&mut Text, &mut TextColor)>();
                 for (index, value) in values.into_iter().enumerate() {
                     #[expect(clippy::indexing_slicing, reason = "if fails, bug in iter")]
-                    if let Ok(mut text) = text.get_mut(world, text_ents[index]) {
-                        text.0.clear();
-                        text.0 = value;
+                    if let Ok((mut text, mut color)) = text_color.get_mut(world, text_ents[index]) {
+                        text.clear();
+                        **text = value.label;
+                        **color = if value.important { IMPORTANT_COLOR } else { PLAIN_COLOR };
                     }
                 }
             });
