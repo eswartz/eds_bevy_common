@@ -6,3 +6,5 @@ to virtual point based on distance from camera.
 
 * swap icons for Physics and Scripting? Or use something other than "person"
 which seems like "movement as in physics".
+
+* make menu screens cap to a lower FPS.

@@ -475,7 +475,7 @@ fn check_grab_focus_state(
     overlay_state: Res<State<OverlayState>>,
     gui_state: ResMut<GuiState>,
     mut grab_state: ResMut<GrabState>,
-    window_cursor_options: Single<&mut CursorOptions , With<PrimaryWindow>>,
+    window_cursor_options: Single<&mut CursorOptions, With<PrimaryWindow>>,
 
     mut awaiting: Local<Option<bool>>,
 ) {

@@ -89,7 +89,7 @@ fn handle_split_into_cubes(
         let root = ent;
         let mut count = 0;
 
-        let aabb_min = aabb.min().to_vec3();
+        let aabb_min = aabb.min().to_vec3().ceil();
         for zi in 0..zn {
             let z0 = aabb_min.z + zs * zi as f32;
             for yi in 0..yn {
@@ -97,13 +97,14 @@ fn handle_split_into_cubes(
                 for xi in 0..xn {
                     let x0 = aabb_min.x + xs * xi as f32;
 
-                    let cube_center = Vec3::new(x0, y0, z0) + cube_half_size;
+                    let cube_center = (Vec3::new(x0, y0, z0) + cube_half_size).ceil();
 
                     if let Some((partial_mesh, indices, vertices)) = extract_mesh_cube(&mesh, cube_center, cube_half_size) {
                         let mut ent_commands = commands.spawn((
                             ChildOf(root),
                             Mesh3d(meshes.add(partial_mesh)),
 
+                            Transform::from_translation(cube_center),
                             Name::new(if let Some(name) = name_opt {
                                 format!("{name} split {xi}.{yi}.{zi}")
                             } else {
@@ -166,15 +167,15 @@ fn extract_mesh_cube(mesh: &Mesh, center: Vec3, half_size: Vec3) -> Option<(Mesh
 
     let transform_pt = |ptarr: [f32; 3]| -> [f32; 3] {
         // Vec3::from_array(ptarr)
-        ptarr
+        [ptarr[0] - center.x, ptarr[1] - center.y, ptarr[2] - center.z]
     };
 
-    let mut pos = vec![];
-    let mut normals = vec![];
-    let mut uvs = vec![];
-    let mut indices = vec![];
+    let mut pos = Vec::with_capacity(full_pos.len());
+    let mut normals = Vec::with_capacity(full_pos.len());
+    let mut uvs = Vec::with_capacity(full_pos.len());
+    let mut indices = Vec::with_capacity(full_pos.len());
     #[expect(clippy::indexing_slicing, reason = "shouldn't fail unless other stuff is falling over, want to see panic")]
-    for [ind0, ind1, ind2] in inds.iter(). array_chunks::<3>() {
+    for [ind0, ind1, ind2] in inds.iter().array_chunks::<3>() {
         let pos0 = full_pos[ind0];
         let pos1 = full_pos[ind1];
         let pos2 = full_pos[ind2];
@@ -210,8 +211,6 @@ fn extract_mesh_cube(mesh: &Mesh, center: Vec3, half_size: Vec3) -> Option<(Mesh
     if let Err(err) = mesh.generate_tangents() {
         warn!("failed to generate tangents: {err}");
     }
-
-    // Some(mesh)
 
     let positions = pos.into_iter().map(Vec3::from_array).collect::<Vec<_>>();
     Some((mesh, indices, positions))
