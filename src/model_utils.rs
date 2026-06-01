@@ -170,7 +170,7 @@ pub fn mesh_triangle_indices(mesh: &Mesh) -> Result<Vec<[u32; 3]>, MeshTriangles
 /// Map each of the six orthogonal planes of the mesh to the
 /// given UV ranges per side (nominally 0-1,0-1).
 /// Unmentioned sides get the nomimal mapping.
-pub fn unwrap_uvs_planar(mesh: &mut Mesh, side_corners: HashMap<SideClass, Rect>) {
+pub fn unwrap_uvs_planar(mesh: &mut Mesh, scale: Vec3, side_corners: HashMap<SideClass, Rect>) {
     {
         let Some(pv) = mesh.attribute(Mesh::ATTRIBUTE_POSITION) else { return };
         let Some(_) = pv.as_float3() else { return };
@@ -186,7 +186,7 @@ pub fn unwrap_uvs_planar(mesh: &mut Mesh, side_corners: HashMap<SideClass, Rect>
     let uv_box = generate_uv_box(pts, &tris);
 
     let mut uvs = vec![Vec2::ZERO; uv_box.num_uvs()];
-    uv_box.assign_sides_to_faces_with(&mut uvs, |side| *side_corners.get(&side).unwrap_or(&full(side)));
+    uv_box.assign_sides_to_faces_with(&mut uvs, scale, |side| *side_corners.get(&side).unwrap_or(&full(side)));
 
     let indices = Indices::U32((0u32..pos_values.len() as u32).collect::<Vec<_>>());
 
@@ -300,27 +300,33 @@ fn full(_: SideClass) -> Rect {
 impl UvBox {
     /// Assign each side of the receiver to fill the provided UV coordinate space.
     ///  get_uv_range accepts a PlaneClass and a negative (true) / positive (false) flag.
-    pub fn assign_sides_to_faces_with(&self, uvs: &mut [Vec2], get_uv_range: impl Fn (SideClass) -> Rect) {
-        self.assign_side_to_face(&self.nx, SideClass::NegX, &get_uv_range, uvs);
-        self.assign_side_to_face(&self.px, SideClass::PosX, &get_uv_range, uvs);
-        self.assign_side_to_face(&self.ny, SideClass::NegY, &get_uv_range, uvs);
-        self.assign_side_to_face(&self.py, SideClass::PosY, &get_uv_range, uvs);
-        self.assign_side_to_face(&self.nz, SideClass::NegZ, &get_uv_range, uvs);
-        self.assign_side_to_face(&self.pz, SideClass::PosZ, &get_uv_range, uvs);
+    pub fn assign_sides_to_faces_with(&self, uvs: &mut [Vec2], scale: Vec3, get_uv_range: impl Fn (SideClass) -> Rect) {
+        self.assign_side_to_face(&self.nx, SideClass::NegX, scale.yz(), &get_uv_range, uvs);
+        self.assign_side_to_face(&self.px, SideClass::PosX, scale.yz(), &get_uv_range, uvs);
+        self.assign_side_to_face(&self.ny, SideClass::NegY, scale.xz(), &get_uv_range, uvs);
+        self.assign_side_to_face(&self.py, SideClass::PosY, scale.xz(), &get_uv_range, uvs);
+        self.assign_side_to_face(&self.nz, SideClass::NegZ, scale.xy(), &get_uv_range, uvs);
+        self.assign_side_to_face(&self.pz, SideClass::PosZ, scale.xy(), &get_uv_range, uvs);
     }
 
     /// Assign each side of the receiver to fill the full UV coordinate space.
-    pub fn assign_sides_to_faces(&self, uvs: &mut [Vec2]) {
-        self.assign_side_to_face(&self.nx, SideClass::NegX, &full, uvs);
-        self.assign_side_to_face(&self.px, SideClass::PosX, &full, uvs);
-        self.assign_side_to_face(&self.ny, SideClass::NegY, &full, uvs);
-        self.assign_side_to_face(&self.py, SideClass::PosY, &full, uvs);
-        self.assign_side_to_face(&self.nz, SideClass::NegZ, &full, uvs);
-        self.assign_side_to_face(&self.pz, SideClass::PosZ, &full, uvs);
+    pub fn assign_sides_to_faces(&self, uvs: &mut [Vec2], scale: Vec3) {
+        self.assign_side_to_face(&self.nx, SideClass::NegX, scale.yz(), &full, uvs);
+        self.assign_side_to_face(&self.px, SideClass::PosX, scale.yz(), &full, uvs);
+        self.assign_side_to_face(&self.ny, SideClass::NegY, scale.xz(), &full, uvs);
+        self.assign_side_to_face(&self.py, SideClass::PosY, scale.xz(), &full, uvs);
+        self.assign_side_to_face(&self.nz, SideClass::NegZ, scale.xy(), &full, uvs);
+        self.assign_side_to_face(&self.pz, SideClass::PosZ, scale.xy(), &full, uvs);
     }
 
     #[expect(clippy::indexing_slicing, reason = "we know the size")]
-    fn assign_side_to_face(&self, side_indices: &[usize], class: SideClass, get_uv_range: &dyn Fn(SideClass) -> Rect, uvs: &mut [Vec2]) {
+    fn assign_side_to_face(&self,
+        side_indices: &[usize],
+        class: SideClass,
+        scale: Vec2,
+        get_uv_range: impl Fn(SideClass) -> Rect,
+        uvs: &mut [Vec2],
+    ) {
         debug_assert_eq!(uvs.len(), self.projections.len() * 3);
 
         let mut min_x = f32::INFINITY;
@@ -338,8 +344,8 @@ impl UvBox {
         // dbg!(Vec2::new(min_x, max_x), Vec2::new(min_y, max_y));
 
         let rect = get_uv_range(class);
-        let scale_x = rect.width() / (max_x - min_x);
-        let scale_y = rect.height() / (max_y - min_y);
+        let scale_x = rect.width() / (max_x - min_x) * scale.x;
+        let scale_y = rect.height() / (max_y - min_y) * scale.y;
         // dbg!(scale_x, scale_y, min_x, max_x, min_y, max_y);
 
         let remap = |v: Vec2| -> Vec2 {
@@ -618,7 +624,7 @@ pub fn update_uv_maps(mesh: &mut Mesh, (orig_uv0, orig_uv1): (SideSpans, SideSpa
     Ok(())
 }
 
-pub fn create_uvmapped_mesh(shape: impl Into<Mesh>) -> Mesh {
+pub fn create_uvmapped_mesh_scaled(shape: impl Into<Mesh>, scale: Vec3) -> Mesh {
     let mut mesh: Mesh = shape.into();
 
     let aabb = get_mesh_aabb(&mesh, &Transform::IDENTITY);
@@ -664,18 +670,25 @@ pub fn create_uvmapped_mesh(shape: impl Into<Mesh>) -> Mesh {
     // let x_span = Rect::new(0.0, 0.0, 1.0, 1.0);
     // let y_span = Rect::new(0.0, 0.0, 1.0, 1.0);
     // let z_span = Rect::new(0.0, 0.0, 1.0, 1.0);
-    unwrap_uvs_planar(&mut mesh, HashMap::from([
-        (SideClass::NegX, nx_span),
-        (SideClass::PosX, px_span),
-        (SideClass::NegY, ny_span),
-        (SideClass::PosY, py_span),
-        (SideClass::NegZ, nz_span),
-        (SideClass::PosZ, pz_span),
-    ]));
+    unwrap_uvs_planar(&mut mesh,
+        scale,
+        HashMap::from([
+            (SideClass::NegX, nx_span),
+            (SideClass::PosX, px_span),
+            (SideClass::NegY, ny_span),
+            (SideClass::PosY, py_span),
+            (SideClass::NegZ, nz_span),
+            (SideClass::PosZ, pz_span),
+        ])
+    );
 
     mesh.compute_smooth_normals();
     #[expect(clippy::let_underscore_must_use, reason = "rare")]
     let _ = mesh.generate_tangents();
 
     mesh
+}
+
+pub fn create_uvmapped_mesh(shape: impl Into<Mesh>) -> Mesh {
+    create_uvmapped_mesh_scaled(shape, Vec3::ONE)
 }
