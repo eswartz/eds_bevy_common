@@ -103,12 +103,12 @@ impl Plugin for GuiPlugin {
             )
         )
         .add_systems(
-            Update,
+            FixedUpdate,
             check_grab_focus_state.run_if(in_state(ProgramState::InGame))
         )
 
         .add_systems(
-            Update,
+            FixedUpdate,
             update_gui_state.run_if(resource_changed::<GuiState>),
         )
         .add_systems(

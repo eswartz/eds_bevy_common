@@ -14,11 +14,11 @@ impl Plugin for DetailNormalPlugin {
             ExtendedMaterial<StandardMaterial, DetailNormalExtension>,
         >::default())
             .add_systems(
-                Update,
+                PreUpdate,
                 handle_assign_detail_normals.run_if(in_state(ProgramState::InGame)),
             )
             .add_systems(
-                Update,
+                PreUpdate,
                 sync_extended_material.run_if(in_state(ProgramState::InGame)),
             );
     }

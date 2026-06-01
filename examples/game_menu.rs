@@ -974,7 +974,7 @@ impl Plugin for MyGamePlugin {
             )
 
             .add_systems(
-                Update,
+                FixedUpdate,
                 spawn_player_on_start
                     .run_if(added_player_start)
                     .run_if(in_state(GameplayState::Playing))
@@ -989,7 +989,7 @@ impl Plugin for MyGamePlugin {
                 lost_level
             )
             .add_systems(
-                Update,
+                FixedUpdate,
                 check_end_level
                     .run_if(resource_exists::<AutoEndLevelTimer>)
             )

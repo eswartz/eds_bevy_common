@@ -75,7 +75,7 @@ impl Plugin for DeathboxPlugin {
                 .run_if(in_state(ProgramState::InGame)),
             )
             .add_systems(
-                Update,
+                FixedUpdate,
                 (
                     handle_out_of_bounds,
                 )
