@@ -33,13 +33,13 @@ impl Plugin for CrosshairPlugin {
             term_crosshair
         )
         .add_systems(
-            Update,
+            PreUpdate,
             check_crosshair_visibility
             .run_if(resource_exists_and_equals(CrosshairMode::AimFromCenter))
             .run_if(resource_changed::<State<OverlayState>>)
         )
         .add_systems(
-            FixedUpdate,
+            Update,
             (
                 check_crosshair_activity_mouse,
                 check_crosshair_activity_gamepad,
