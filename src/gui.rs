@@ -8,6 +8,7 @@ use avian3d::prelude::PhysicsTime;
 use bevy::asset::AssetPath;
 use bevy::camera::visibility::RenderLayers;
 use bevy::color::palettes::tailwind;
+use bevy::input::mouse::MouseButtonInput;
 use bevy::platform::collections::HashMap;
 use bevy::prelude::*;
 use bevy::reflect::Typed;
@@ -361,7 +362,7 @@ pub fn setup_loading_screen(
 impl Default for GrabState {
     fn default() -> Self {
         Self {
-            was_grabbed: false,
+            grabbed: false,
             options: CursorOptions{
                 visible: false,
                 grab_mode: GRABBED_MODE,
@@ -371,9 +372,13 @@ impl Default for GrabState {
     }
 }
 
-const GRABBED_MODE: CursorGrabMode = CursorGrabMode::Locked;
+pub const GRABBED_MODE: CursorGrabMode = CursorGrabMode::Locked;
 
-/// Indicate the desire to change the cursor grab state (false = not grabbed).
+/// Indicate the desire to change the cursor grab state
+/// (false = not grabbed, true = grabbed in the "best way").
+///
+/// Do not modify the state of [CursorOptions] yourself,
+/// to avoid overlapping responsibilities.
 #[derive(Message, Debug)]
 pub struct GrabCursor(pub bool);
 
@@ -431,7 +436,7 @@ pub(crate) struct StatusVisible(pub bool);
 
 /// State held while a grab operation is occurring.
 #[derive(Resource)]
-pub(crate) struct GrabState{ was_grabbed: bool, options: CursorOptions }
+pub(crate) struct GrabState{ grabbed: bool, options: CursorOptions }
 
 fn update_gui_state(
     state: Res<GuiState>,
@@ -469,9 +474,12 @@ fn ungrab_cursor_for_overlay(
     commands.write_message(GrabCursor(gui_state.show_cursor()));
 }
 
+/// This is the logic managing [GrabCursor] and [WindowFocused] messages
+/// so that [CursorOptions] is updated in a centralized way.
 fn check_grab_focus_state(
     mut grab: MessageReader<GrabCursor>,
     mut focused: MessageReader<WindowFocused>,
+    mouse_buttons: Res<ButtonInput<MouseButton>>,
     overlay_state: Res<State<OverlayState>>,
     gui_state: ResMut<GuiState>,
     mut grab_state: ResMut<GrabState>,
@@ -481,46 +489,73 @@ fn check_grab_focus_state(
 ) {
     let mut cursor_options = window_cursor_options.into_inner();
 
+    // Helper to determine if we want to grab or ungrab the mouse.
+    let grab_on_mode_switch = || {
+        if mouse_buttons.get_pressed().next().is_some() {
+            // When pressing a button outside UI, take focus.
+            overlay_state.is_hidden()
+        } else {
+            // Else, take focus if there's no need to see the mouse.
+            overlay_state.is_hidden() && !gui_state.enabled
+        }
+    };
+
     let mut desired_grab: Option<bool> = None;
 
-    if let Some(event) = focused.read().last() {
-        if !event.focused {
+    // Just check the last [WindowFocused] event (current state).
+    if let Some(message) = focused.read().last() {
+        if !message.focused {
             desired_grab = Some(false);
         } else {
-            desired_grab = Some((**overlay_state).is_hidden() && !gui_state.enabled);
+            desired_grab = Some(grab_on_mode_switch());
         }
     }
 
-    if let Some(event) = grab.read().last() {
-        desired_grab = Some(event.0);
+    // Obey the last [GrabCursor] message (current desired state)
+    if let Some(message) = grab.read().last() {
+        desired_grab = Some(message.0);
     }
 
-    if desired_grab.is_none() && awaiting.is_some() {
-        if cursor_options.grab_mode == CursorGrabMode::None {
-            desired_grab = Some(true);
-        } else {
-            *awaiting = None;
-        }
-    }
-
-    if let Some(grab) = desired_grab {
-        if grab {
-            *awaiting = Some(true);
-            cursor_options.grab_mode = GRABBED_MODE;
-            cursor_options.visible = false;
-
-            grab_state.was_grabbed = true;
-        } else {
-            *awaiting = None;
-            if grab_state.was_grabbed {
-                grab_state.was_grabbed = false;
-                grab_state.options = cursor_options.clone();
+    // If there's been no request this frame,
+    // are we coming back to await a previous grab event completion?
+    // (If so, re-request until it takes.)
+    if desired_grab.is_none()
+    && let Some(awaited_grabbed) = awaiting.take() {
+        let current_grabbed = cursor_options.grab_mode != CursorGrabMode::None;
+        if awaited_grabbed != current_grabbed {
+            // Double-check that we're allowed to before trying again.
+            if awaited_grabbed && !grab_on_mode_switch() {
+                // Ignore.
+            } else {
+                // We still want switch modes, so keep poking.
+                desired_grab = Some(awaited_grabbed);
             }
-
-            // Release mouse, if captured
-            cursor_options.grab_mode = CursorGrabMode::None;
-            cursor_options.visible = true;
         }
+    }
+
+    let Some(grab) = desired_grab else { return };
+
+    if grab {
+        // Take that cursor!
+        cursor_options.grab_mode = GRABBED_MODE;
+        cursor_options.visible = false;
+        // We need to wait for it to take effect in the OS.
+        *awaiting = Some(true);
+
+        grab_state.grabbed = true;
+    } else {
+        //
+        if grab_state.grabbed {
+            grab_state.grabbed = false;
+            // Restore the [CursorOptions].
+            grab_state.options = cursor_options.clone();
+        }
+        //*awaiting = None;
+        *awaiting = Some(false);
+
+        // Release mouse, if captured.
+        cursor_options.grab_mode = CursorGrabMode::None;
+        cursor_options.visible = true;
     }
 }
 

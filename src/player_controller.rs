@@ -1,6 +1,8 @@
 use bevy::prelude::*;
 use avian3d::prelude::*;
 use avian3d::math::*;
+use bevy::window::CursorGrabMode;
+use bevy::window::CursorOptions;
 use bevy::window::PrimaryWindow;
 use bevy::window::WindowFocused;
 
@@ -160,17 +162,18 @@ fn collect_player_movement(
 /// Keep the mouse centered, so users won't accidentally
 /// start clicking on stuff outside the window while in first person.
 fn center_mouse(
-    mut primary_window: Query<&mut Window, With<PrimaryWindow>>,
+    mut primary_window: Query<(&mut Window, &CursorOptions), With<PrimaryWindow>>,
     settings: Res<PlayerControllerSettings>,
     gui_state: Res<GuiState>,
     overlay_state: Res<State<OverlayState>>,
 ) {
-    let Ok(mut window) = primary_window.single_mut() else {
+    let Ok((mut window, cursor)) = primary_window.single_mut() else {
         return;
     };
 
     if settings.center_mouse
     && window.focused
+    && cursor.grab_mode != GRABBED_MODE
     && !gui_state.show_cursor()
     && !overlay_state.is_menu()
     && window.cursor_position().is_some()

@@ -1,7 +1,6 @@
 use crate::*;
 use bevy::input::mouse::MouseScrollUnit;
 use bevy::prelude::*;
-use bevy::window::CursorGrabMode;
 use bevy::window::CursorOptions;
 use bevy::window::PrimaryWindow;
 use bevy::window::WindowMode;
@@ -609,16 +608,16 @@ pub fn default_mouse_wheel_scale(factor: f32) -> Scale {
     }
 }
 
-/// Disable mouse input when a window is not focused, in an attempt
-/// to avoid having such inputs be passed when the window is re-focused
-/// (e.g. with the mouse).
+/// Disable BEI handling of mouse input when a window is not focused.
+/// (This is to avoid having such inputs be passed when the window is re-focused
+/// by the mouse on window managers with "activate and pass click" enabled.)
 fn mask_and_unmask_inputs(
     window_cursor_options: Single<(&Window, &CursorOptions), With<PrimaryWindow>>,
     mut sources: ResMut<ActionSources>,
     mut count: Local<i32>,
 ) {
-    let (window, cursor) = window_cursor_options.into_inner();
-    if !window.focused || cursor.grab_mode == CursorGrabMode::None {
+    let (window, _cursor) = window_cursor_options.into_inner();
+    if !window.focused {
         if sources.mouse_buttons {
             sources.mouse_buttons = false;
             sources.mouse_motion = false;
