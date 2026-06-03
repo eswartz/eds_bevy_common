@@ -8,7 +8,6 @@ use avian3d::prelude::PhysicsTime;
 use bevy::asset::AssetPath;
 use bevy::camera::visibility::RenderLayers;
 use bevy::color::palettes::tailwind;
-use bevy::input::mouse::MouseButtonInput;
 use bevy::platform::collections::HashMap;
 use bevy::prelude::*;
 use bevy::reflect::Typed;

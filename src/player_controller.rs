@@ -1,7 +1,6 @@
 use bevy::prelude::*;
 use avian3d::prelude::*;
 use avian3d::math::*;
-use bevy::window::CursorGrabMode;
 use bevy::window::CursorOptions;
 use bevy::window::PrimaryWindow;
 use bevy::window::WindowFocused;

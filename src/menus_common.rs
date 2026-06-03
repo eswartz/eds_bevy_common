@@ -434,9 +434,9 @@ pub struct MenuEnum {
     /// System that applies the given value to the model.
     pub set: SystemId<In<usize>, ()>,
     /// How many items are there? Given the return, [0..count()) are valid.
-    pub count: Arc<dyn Fn() -> usize + 'static + Send + Sync>,
+    pub count: Arc<dyn Fn() -> usize + Send + Sync + 'static>,
     /// Get the string for the value.
-    pub display: Arc<dyn Fn(usize) -> String + 'static + Send + Sync>,
+    pub display: Arc<dyn Fn(usize) -> String + Send + Sync + 'static>,
 }
 
 impl MenuEnum {
@@ -447,8 +447,8 @@ impl MenuEnum {
     pub fn new(
         get: SystemId<In<Entity>>,
         set: SystemId<In<usize>, ()>,
-        count: impl Fn() -> usize + 'static + Send + Sync,
-        display: impl Fn(usize) -> String + 'static + Send + Sync,
+        count: impl Fn() -> usize + Send + Sync + 'static,
+        display: impl Fn(usize) -> String + Send + Sync + 'static,
     ) -> Self {
         Self {
             current: None,
@@ -493,11 +493,11 @@ pub struct MenuSlider {
     /// System that applies the given value to the model.
     pub set: SystemId<In<f32>, ()>,
     /// Get the default model value.
-    pub default_fn: Arc<dyn Fn() -> Option<f32> + 'static + Send + Sync>,
+    pub default_fn: Arc<dyn Fn() -> Option<f32> + Send + Sync + 'static>,
     /// Convert the model value to UI.
-    pub to_ui_fn: Arc<dyn Fn(f32) -> f32 + 'static + Send + Sync>,
+    pub to_ui_fn: Arc<dyn Fn(f32) -> f32 + Send + Sync + 'static>,
     /// Convert the UI value to model.
-    pub from_ui_fn: Arc<dyn Fn(f32) -> f32 + 'static + Send + Sync>,
+    pub from_ui_fn: Arc<dyn Fn(f32) -> f32 + Send + Sync + 'static>,
     /// The UI range for the value. User values will be clamped to this.
     pub ui_range: RangeInclusive<f32>,
     /// The UI step basis. This affects how the value is minimally incremented.
@@ -520,9 +520,9 @@ impl MenuSlider {
     pub fn new(
         get: SystemId<In<Entity>>,
         set: SystemId<In<f32>, ()>,
-        default: impl Fn() -> Option<f32> + 'static + Send + Sync,
-        to_ui: impl Fn(f32) -> f32 + 'static + Send + Sync,
-        from_ui: impl Fn(f32) -> f32 + 'static + Send + Sync,
+        default: impl Fn() -> Option<f32> + Send + Sync + 'static,
+        to_ui: impl Fn(f32) -> f32 + Send + Sync + 'static,
+        from_ui: impl Fn(f32) -> f32 + Send + Sync + 'static,
         ui_range: RangeInclusive<f32>,
         ui_step_base: f32,
     ) -> Self {
@@ -1242,8 +1242,9 @@ fn handle_menu_enums_actions(
 
         let new = ((current as isize) + dir).rem_euclid(count as isize) as usize;
 
+        // Set it.
         commands.run_system_with(enums.set, new);
-        // Refresh from internal value.
+        // Refresh from internal value once it happens.
         commands.run_system_with(enums.get, entity);
     }
 }
