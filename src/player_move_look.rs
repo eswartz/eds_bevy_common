@@ -682,7 +682,7 @@ pub fn process_player_input_movement_for_cheats(
         let (mut forces, mut movement, look, mut transform) = match res {
             Ok(fields) => fields,
             Err(e) => {
-                warn!("invalid player entity {}: {:?}", input.player_entity(), e);
+                warn!("invalid player entity {}: {e}", input.player_entity());
                 continue;
             }
         };
