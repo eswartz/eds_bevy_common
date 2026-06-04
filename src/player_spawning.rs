@@ -77,7 +77,7 @@ pub fn spawn_fps_player(world: &mut World, user_id: Uuid, player_scale: Vec3, in
             (
                 Mass(75.),
                 CenterOfMass(player_scale / 2.),
-                Restitution::new(0.0),
+                Restitution::new(0.25),
                 Friction::ZERO.with_dynamic_coefficient(0.0).with_static_coefficient(0.5),
             ),
 
