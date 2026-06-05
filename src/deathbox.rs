@@ -95,7 +95,6 @@ pub enum HitDeathboxMessage {
 }
 
 fn check_out_of_bounds(
-    parent_q: Query<&ChildOf>,
     sensor_q: Query<&CollidingEntities, With<DeathboxCollider>>,
     player_q: Query<&Player>,
     spawned_q: Query<(&Spawned, Option<&DespawnAfter>)>,
@@ -116,17 +115,6 @@ fn check_out_of_bounds(
             if can_despawn(*ent) {
                 writer.write(HitDeathboxMessage::Spawned(*ent));
                 continue;
-            }
-
-            for parent in parent_q.iter_ancestors(*ent) {
-                if player_q.contains(parent) {
-                    writer.write(HitDeathboxMessage::Player(parent));
-                    break;
-                }
-                if can_despawn(parent) {
-                    writer.write(HitDeathboxMessage::Spawned(parent));
-                    break;
-                }
             }
         }
     }
