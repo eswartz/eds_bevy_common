@@ -757,7 +757,7 @@ fn setup_gui_nodes(
             right: Val::Px(right_x),
             .. default()
         },
-        Text::new("\u{1F508}"),
+        Text::new("\u{1F508}"), // speaker
         Visibility::Hidden,
     ));
 
@@ -778,7 +778,7 @@ fn setup_gui_nodes(
             right: Val::Px(right_x),
             .. default()
         },
-        Text::new("\u{1F6AB}"),
+        Text::new("\u{1F6AB}"),  // circle with slash
         Visibility::Inherited,
     ));
 
@@ -800,7 +800,7 @@ fn setup_gui_nodes(
             right: Val::Px(right_x),
             .. default()
         },
-        Text::new("\u{1F3C3}"), // truck
+        Text::new("\u{23f1}\u{fe0f}"), // stopwatch
         Visibility::Hidden, // by default
         ZIndex(-1), // under
     ));
@@ -820,7 +820,7 @@ fn setup_gui_nodes(
             right: Val::Px(right_x), // on top
             .. default()
         },
-        Text::new("\u{1F5D9}"),
+        Text::new("\u{1F5D9}"), // cross X
         Visibility::Hidden, // by default
         ZIndex(1),
     ));
@@ -842,7 +842,7 @@ fn setup_gui_nodes(
             right: Val::Px(right_x),
             .. default()
         },
-        Text::new("\u{23f1}\u{fe0f}"),
+        Text::new("\u{1F3C3}"), // runner
         Visibility::Inherited,
         ZIndex(-1), // under
     ));
@@ -861,7 +861,7 @@ fn setup_gui_nodes(
             right: Val::Px(right_x),
             .. default()
         },
-        Text::new("\u{1F5D9}"),
+        Text::new("\u{1F5D9}"), // cross X
         Visibility::Hidden,
         ZIndex(0),
     ));
