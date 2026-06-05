@@ -11,7 +11,6 @@ impl Plugin for LevelsPlugin {
         app
             .insert_resource(LevelList(default()))
             .insert_resource(LevelIndex(0))
-            .insert_resource(NextLevelIndex(0))
             ;
     }
 }
@@ -51,14 +50,14 @@ pub fn is_in_level(id: &str) -> impl Fn(Option<Res<CurrentLevel>>) -> bool {
 pub struct CurrentLevel(pub LevelInfo);
 
 /// The level index into [LevelList].
-#[derive(Resource, Default, Reflect)]
+#[derive(Resource, Debug, Default, Reflect)]
 #[reflect(Resource, Default)]
 #[type_path = "game"]
 pub struct LevelIndex(pub usize);
 
 /// The next level index into [LevelList],
 /// invoked upon handling [crate::LevelState::Advance].
-#[derive(Resource, Default, Reflect)]
+#[derive(Resource, Debug, Default, Reflect)]
 #[reflect(Resource, Default)]
 #[type_path = "game"]
 pub struct NextLevelIndex(pub usize);
