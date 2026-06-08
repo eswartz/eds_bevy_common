@@ -113,12 +113,14 @@ pub struct LayerConfig {
 impl LayerConfig {
     pub fn to_collision_layers(&self) -> CollisionLayers {
         let memberships = LayerMask(self.layer.to_bits());
-        let mut filters = LayerMask::ALL;
+        let mut filters: LayerMask = GameLayer::all_bits().into();
         for ign in &self.ignores {
             filters &= !ign.to_bits();
         }
 
-        CollisionLayers { memberships, filters }
+        dbg!(
+            CollisionLayers { memberships, filters }
+        )
     }
 }
 
@@ -144,33 +146,38 @@ fn apply_colliders(
     mut commands: Commands,
     ensure_collider_q: Query<(Entity, &EnsureCollider)>,
     changed_collider_q: Query<Entity, Changed<EnsureCollider>>,
-    // collider_q: Query<Entity, With<Collider>>,
+    //collider_q: Query<Entity, Or<(With<Collider>, With<ColliderConstructor>, With<ColliderConstructorHierarchy>, With<ColliderMarker>)>>,
     vhacd: Res<BaseVhacdParameters>,
-    mesh_q: Query<&Mesh3d>,
+    // mesh_q: Query<&Mesh3d>,
     child_q: Query<&Children>,
     // xfrm_q: Query<&Transform>,
     // collider_q: Query<&EnsureCollider>,
     // mut meshes: ResMut<Assets<Mesh>>,
 ) {
     for (ent, spawn) in ensure_collider_q.iter() {
-        if changed_collider_q.contains(ent) || vhacd.is_changed() {
+        if changed_collider_q.contains(ent) || vhacd.is_changed()
+        // || (mesh_q.contains(ent) && !collider_q.contains(ent))
+        {
             apply_collider(
                 commands.entity(ent),
                 &vhacd,
                 spawn.kind,
                 &spawn.layer_config,
-                &mesh_q,
+                // &mesh_q,
             );
         }
 
         for kid in child_q.iter_descendants(ent) {
-            if changed_collider_q.contains(ent) || vhacd.is_changed() {
+            if changed_collider_q.contains(kid)
+            || vhacd.is_changed()
+            // || (mesh_q.contains(ent) && !collider_q.contains(kid))
+            {
                 apply_collider(
                     commands.entity(kid),
                     &vhacd,
                     spawn.kind,
                     &spawn.layer_config,
-                    &mesh_q,
+                    // &mesh_q,
                 );
             }
         }
@@ -182,51 +189,54 @@ fn apply_collider(
     vhacd: &BaseVhacdParameters,
     kind: ColliderKind,
     layer_config: &LayerConfig,
-    mesh_q: &Query<&Mesh3d>,
+    // mesh_q: &Query<&Mesh3d>,
 ) {
     // use avian3d::math::Vector;
     // use bevy::asset::RenderAssetUsages;
 
-    let ent = ent_commands.id();
+    // let ent = ent_commands.id();
 
     match kind {
         ColliderKind::TriMesh{ downscale } => {
-            if !mesh_q.contains(ent) {
-                return
-            }
-
             if downscale >= 1.0 {
-                ent_commands.insert(ColliderConstructor::TrimeshFromMeshWithConfig(
-                    TrimeshFlags::FIX_INTERNAL_EDGES
+                // ent_commands.insert(ColliderConstructor::TrimeshFromMeshWithConfig(
+                ent_commands.insert(ColliderConstructorHierarchy::new(
+                    ColliderConstructor::TrimeshFromMeshWithConfig(
+                        TrimeshFlags::FIX_INTERNAL_EDGES
+                    )
                 ));
             } else {
                 let resolution = (vhacd.resolution as f32 * downscale).ceil() as u32;
                 let max_convex_hulls = (vhacd.max_convex_hulls as f32 * downscale).ceil() as u32;
-                ent_commands.insert(ColliderConstructor::ConvexDecompositionFromMeshWithConfig(
-                    VhacdParameters {
-                        concavity: vhacd.concavity,
-                        alpha: vhacd.alpha,
-                        beta: vhacd.beta,
-                        resolution: resolution.max(16),
-                        plane_downsampling: vhacd.plane_downsampling.max(1),
-                        convex_hull_downsampling: vhacd.convex_hull_downsampling.max(1),
-                        fill_mode: vhacd.fill_mode.clone(),
-                        convex_hull_approximation: vhacd.convex_hull_approximation,
-                        max_convex_hulls: max_convex_hulls.max(16),
-                    }
+                ent_commands.insert(ColliderConstructorHierarchy::new(
+                    ColliderConstructor::ConvexDecompositionFromMeshWithConfig(
+                        VhacdParameters {
+                            concavity: vhacd.concavity,
+                            alpha: vhacd.alpha,
+                            beta: vhacd.beta,
+                            resolution: resolution.max(16),
+                            plane_downsampling: vhacd.plane_downsampling.max(1),
+                            convex_hull_downsampling: vhacd.convex_hull_downsampling.max(1),
+                            fill_mode: vhacd.fill_mode.clone(),
+                            convex_hull_approximation: vhacd.convex_hull_approximation,
+                            max_convex_hulls: max_convex_hulls.max(16),
+                        }
+                    ),
                 ));
             }
         }
         ColliderKind::VoxelizeMesh { voxel_size } => {
-            if !mesh_q.contains(ent) { return }
-            ent_commands.insert(ColliderConstructor::VoxelizedTrimeshFromMesh {
-                voxel_size,
-                fill_mode: FillMode::FloodFill { detect_cavities: true },
-            });
+            ent_commands.insert(ColliderConstructorHierarchy::new(
+                ColliderConstructor::VoxelizedTrimeshFromMesh {
+                    voxel_size,
+                    fill_mode: FillMode::FloodFill { detect_cavities: true },
+                }
+            ));
         }
         ColliderKind::ConvexHull => {
-            if !mesh_q.contains(ent) { return }
-            ent_commands.insert(ColliderConstructor::ConvexHullFromMesh);
+            ent_commands.insert(ColliderConstructorHierarchy::new(
+                ColliderConstructor::ConvexHullFromMesh
+            ));
         }
     }
 

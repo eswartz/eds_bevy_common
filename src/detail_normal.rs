@@ -17,10 +17,7 @@ impl Plugin for DetailNormalPlugin {
                 PreUpdate,
                 handle_assign_detail_normals.run_if(in_state(ProgramState::InGame)),
             )
-            .add_systems(
-                PreUpdate,
-                sync_extended_material.run_if(in_state(ProgramState::InGame)),
-            );
+        ;
     }
 }
 
@@ -102,20 +99,35 @@ fn handle_assign_detail_normals(
     meshes_q: Query<
         (
             Entity,
-            &MeshMaterial3d<StandardMaterial>,
             &AssignDetailNormal,
+            Option<&MeshMaterial3d<StandardMaterial>>,
+            Option<&CustomMaterialNormalExtension>,
         ),
-        Without<SplitIntoCubes>,
+        Or<(
+            Without<SplitIntoCubes>,
+            Changed<AssignDetailNormal>,
+            Changed<CustomMaterialNormalExtension>,
+        )>
     >,
     materials: Res<Assets<StandardMaterial>>,
     mut ext_materials: ResMut<Assets<ExtendedMaterial<StandardMaterial, DetailNormalExtension>>>,
     assets: Res<AssetServer>,
 ) {
-    for (ent, mat, dec) in meshes_q.iter() {
-        let Some(std_mat) = materials.get(&mat.0) else {
-            continue;
+    for (ent, dec, mat_opt, cust_opt) in meshes_q.iter() {
+        let std_mat = match cust_opt {
+            Some(cust) => {
+                cust.std.clone()
+            }
+            None => {
+                let Some(mat) = mat_opt else {
+                    continue;
+                };
+                let Some(std) = materials.get(&mat.0) else {
+                    continue;
+                };
+                std.clone()
+            }
         };
-        let std_mat: StandardMaterial = std_mat.clone();
 
         let extension = dec.make_extension(&assets);
         let ext_mat = ExtendedMaterial {
@@ -125,16 +137,14 @@ fn handle_assign_detail_normals(
 
         let new_handle = ext_materials.add(ext_mat);
 
-        commands
-            .entity(ent)
-            .remove::<MeshMaterial3d<StandardMaterial>>();
-        commands.entity(ent).insert((
+        let mut ent_commands = commands.entity(ent);
+        ent_commands.remove::<MeshMaterial3d<StandardMaterial>>();
+        ent_commands.insert((
             MeshMaterial3d(new_handle.clone()),
             // for egui inspector
             CustomMaterialNormalExtension {
-                std: mat.clone(),
+                std: std_mat,
                 ext: extension,
-                // base: new_handle,
             },
         ));
     }
@@ -143,66 +153,6 @@ fn handle_assign_detail_normals(
 // This is only used for egui inspector.
 #[derive(Component, Reflect, Clone)]
 struct CustomMaterialNormalExtension {
-    std: MeshMaterial3d<StandardMaterial>,
+    std: StandardMaterial,
     ext: DetailNormalExtension,
-    // #[reflect(ignore)]
-    // base: Handle<ExtendedMaterial<StandardMaterial, DetailNormalExtension>>,
 }
-
-/// When modifying materials via [CustomMaterialNormalExtension],
-/// update the original handle.
-fn sync_extended_material() {}
-// fn sync_extended_material(
-//     mut commands: Commands,
-//     custom_q: Query<&CustomMaterialNormalExtension, (With<CustomMaterialNormalExtension>, Changed<CustomMaterialNormalExtension>)>,
-//     // mut ext_q: Query<(&mut Mesh3d, &mut MeshMaterial3d<ExtendedMaterial<StandardMaterial, DetailNormalExtension>>)>,
-//     mut mesh_q: Query<(Entity, &mut Mesh3d, &MeshMaterial3d<ExtendedMaterial<StandardMaterial, DetailNormalExtension>>)>,
-//     mut std_materials: ResMut<Assets<StandardMaterial>>,
-//     mut ext_materials: ResMut<Assets<ExtendedMaterial<StandardMaterial, DetailNormalExtension>>>,
-//     mut meshes: ResMut<Assets<Mesh>>,
-// ) {
-//     for custom_ext in custom_q.iter() {
-//         if let Some(custom) = ext_materials.get_mut(&custom_ext.base) {
-//             let ext_mat = ExtendedMaterial {
-//                 base: custom.base.clone(),
-//                 extension: custom.extension.clone(),
-//             };
-//             // custom.set = ext_mat;
-
-//             // commands.write_message(AssetEvent::Modified{ id: custom_ext.base.id() });
-//             // let new_mat = ext_materials.add(ext_mat);
-
-//             for (ent, mut mesh_h, mat) in mesh_q.iter_mut() {
-//             //     // if let Some(mesh) = meshes.get(&mesh_h.0) {
-//             //     // ??? how to force reload???
-//             //         // commands.entity(ent).insert(mesh_h.clone());
-//             //         mesh_h.set_changed();
-//             //         // commands.entity(ent).remove::<MeshMaterial3d<ExtendedMaterial<StandardMaterial, DetailNormalExtension>>>();
-//             commands.entity(ent).insert(MeshMaterial3d(std_materials.add(custom.base.clone())));
-//             //         commands.entity(ent).insert(MeshMaterial3d(new_mat.clone()));
-//             //         // commands.entity(ent).insert(CustomMaterialNormalExtension {
-//             //         //     base: new_mat.clone(),
-//             //         //     .. custom_ext.clone()
-//             //         // });
-//             //     // }
-//             }
-
-//             info!("updated material");
-//         } else {
-//             warn!("could not find {:?}", &custom_ext.base);
-//         }
-//         // if let Some(custom) = ext_materials.get(&custom_ext.base) {
-//         //     let ext_mat = ExtendedMaterial {
-//         //         base: custom.base.clone(),
-//         //         extension: custom.extension.clone(),
-//         //     };
-//         //     let new_handle = ext_materials.add(ext_mat);
-//         //     for mut ext in ext_q.iter_mut() {
-//         //         ext.0 = new_handle.clone();
-//         //     }
-//         //     info!("updated material on {}", ext_q.count());
-//         // } else {
-//         //     warn!("could not find {:?}", &custom_ext.base);
-//         // }
-//     }
-// }

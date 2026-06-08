@@ -100,6 +100,14 @@ pub fn spawn_fps_player(world: &mut World, user_id: Uuid, player_scale: Vec3, in
             GravityScale(if mode.is_some_and(|m| *m == PlayerMode::Fps) { 1.0 } else { 0.0 }),
         ),
 
+        children![
+            Name::new("LIGHT"),
+            PointLight {
+                intensity: 100_000.0,
+                radius: 10.0,
+                .. PointLight::default()
+            },
+        ],
     ))
     .id()
 }
