@@ -46,6 +46,7 @@ pub mod skybox;
 pub mod split_into_cubes;
 pub mod detail_normal;
 pub mod parallax_depth;
+pub mod materials;
 
 #[cfg(feature = "highlighting")]
 pub mod highlighting;
@@ -104,6 +105,7 @@ pub use parallax_depth::*;
 pub use menu_audio::*;
 pub use model_utils::*;
 pub use lights::*;
+pub use materials::*;
 pub use app::*;
 
 #[cfg(feature = "midi_synth")]

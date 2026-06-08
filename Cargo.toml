@@ -37,11 +37,13 @@ highlighting = ["dep:bevy_mod_outline"]
 grabbing = ["dep:bevy_mod_outline"]
 
 firewheel = ["dep:bevy_seedling", "dep:firewheel"]
-
 webgpu = ["bevy/webgpu"]
-
 solari = ["bevy/bevy_solari"]
 
+pbr_transmission_textures = ["bevy/pbr_transmission_textures"]
+pbr_specular_textures = ["bevy/pbr_specular_textures"]
+pbr_multi_layer_material_textures = ["bevy/pbr_multi_layer_material_textures"]
+pbr_anisotropy_texture = ["bevy/pbr_anisotropy_texture"]
 
 dev = [
     # Improve compile times for dev builds by linking Bevy as a dynamic library.
