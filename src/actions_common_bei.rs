@@ -321,7 +321,7 @@ pub fn assign_stock_common_actions(
             ..default()
         },
         // Avoid spurious invocation when slow and switching focus.
-        Hold::new(0.1),
+        Hold::new(0.05),
         bindings![
             KeyCode::F11,
             KeyCode::Enter.with_mod_keys(ModKeys::ALT),

@@ -1,7 +1,11 @@
 /// Common render and physics layers.
 use avian3d::prelude::PhysicsLayer;
+use bevy::prelude::*;
 
 #[derive(PhysicsLayer, Clone, Copy, Debug, Default)]
+#[derive(Reflect)]
+#[reflect(Default)]
+#[type_path = "game"]
 pub enum GameLayer {
     #[default]
     /// Layer 0 - the default layer that objects are assigned to

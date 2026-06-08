@@ -61,6 +61,8 @@ pub mod client_synth;
 #[cfg(feature = "midi_synth")]
 pub mod midi_synth;
 
+pub mod colliders;
+
 // FIX THIS SOON
 
 pub use base_dir::*;

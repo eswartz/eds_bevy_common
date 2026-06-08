@@ -679,13 +679,7 @@ pub fn process_player_input_movement_for_cheats(
     for input in inputs.read() {
         let res = player_q.get_mut(input.player_entity());
 
-        let (mut forces, mut movement, look, mut transform) = match res {
-            Ok(fields) => fields,
-            Err(e) => {
-                warn!("invalid player entity {}: {e}", input.player_entity());
-                continue;
-            }
-        };
+        let Ok((mut forces, mut movement, look, mut transform)) = res else { continue };
 
         let mut vel = forces.linear_velocity();
 
@@ -784,13 +778,7 @@ pub fn process_player_input_movement_for_fps(
     for input in inputs.read() {
         let res = player_q.get_mut(input.player_entity());
 
-        let (mut forces, /* cheats, */ mut movement, mut look, mut transform) = match res {
-            Ok(fields) => fields,
-            Err(e) => {
-                warn!("invalid player entity {}: {:?}", input.player_entity(), e);
-                continue;
-            }
-        };
+        let Ok((mut forces, mut movement, mut look, mut transform)) = res else { continue };
 
         let mut vel = forces.linear_velocity();
         let mut jump_impulse = Vector::ZERO;
@@ -988,13 +976,7 @@ pub fn process_player_input_movement_for_space(
     for input in inputs.read() {
         let res = player_q.get_mut(input.player_entity());
 
-        let (mut forces, /* cheats, */ mut movement, mut look, mut transform) = match res {
-            Ok(fields) => fields,
-            Err(e) => {
-                warn!("invalid player entity {}: {:?}", input.player_entity(), e);
-                continue;
-            }
-        };
+        let Ok((mut forces, mut movement, mut look, mut transform)) = res else { continue };
 
         let mut vel = forces.linear_velocity();
 
@@ -1100,13 +1082,7 @@ pub fn process_player_input_non_movement(
     for input in inputs.read() {
         let res = player_q.get_mut(input.player_entity());
 
-        let (mut movement, mut look, mut transform) = match res {
-            Ok(fields) => fields,
-            Err(e) => {
-                warn!("invalid player entity {}: {:?}", input.player_entity(), e);
-                continue;
-            }
-        };
+        let Ok((mut movement, mut look, mut transform)) = res else { continue };
 
         match input {
             PlayerInput::HeadTurn(_, turn) => {

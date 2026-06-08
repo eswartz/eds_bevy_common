@@ -14,6 +14,7 @@ use bevy::pbr::ScreenSpaceAmbientOcclusion;
 use bevy::pbr::ScreenSpaceAmbientOcclusionQualityLevel;
 
 use crate::GameplayState;
+use crate::LevelState;
 use crate::WorldCamera;
 
 pub struct VideoPlugin;
@@ -27,17 +28,23 @@ impl Plugin for VideoPlugin {
                     apply_camera_settings,
                 )
             )
+            .add_systems(OnEnter(LevelState::Configuring),
+                (
+                    apply_effect_settings,
+                    apply_camera_settings,
+                )
+            )
             .add_systems(PreUpdate,
                 (
                     apply_effect_settings.run_if(resource_changed::<VideoSettings>),
-                    apply_camera_settings,
+                    apply_camera_settings.run_if(resource_changed::<VideoSettings>.or(resource_changed::<FovDelta>)),
                 )
             )
         ;
     }
 }
 
-#[derive(Resource, Clone, Copy, PartialEq, Reflect)]
+#[derive(Resource, Debug, Clone, Copy, PartialEq, Reflect)]
 #[reflect(Default, Clone, Resource)]
 #[type_path = "game"]
 pub struct VideoSettings {
@@ -62,7 +69,7 @@ impl Default for VideoSettings {
     }
 }
 
-#[derive(Resource, Default, Clone, Copy, PartialEq, Reflect, Deref, DerefMut)]
+#[derive(Resource, Debug, Default, Clone, Copy, PartialEq, Reflect, Deref, DerefMut)]
 #[reflect(Default, Clone, Resource)]
 #[type_path = "game"]
 pub struct FovDelta(pub f32);
@@ -94,7 +101,6 @@ pub enum Antialiasing {
     Off,
     #[cfg_attr(all(not(target_arch = "wasm32"), not(feature = "solari")), default)]
     TSAA,
-    // MSAA,    // can't use with OrderIndependentTransparency, so don't even offer it
 }
 
 #[derive(
@@ -225,10 +231,6 @@ fn apply_camera_settings(
     video_settings: Res<VideoSettings>,
     fov_delta: Res<FovDelta>,
 ) {
-    if !video_settings.is_changed() && !fov_delta.is_changed() {
-        return;
-    }
-
     let Ok(mut proj) = camera_q.single_mut() else {
         return
     };
@@ -244,7 +246,7 @@ fn apply_effect_settings(
     mut camera_q: Query<(Entity, &mut Camera3d)>, // all cameras
     video_settings: Res<VideoSettings>,
 ) {
-    debug!("Setting up effects");
+    info!("Setting up effects {video_settings:?}");
     for (camera_ent, mut cam3d) in camera_q.iter_mut() {
         let mut ent_commands = commands.entity(camera_ent);
 
@@ -281,7 +283,7 @@ fn apply_effect_settings(
             }
             // Antialiasing::MSAA => {
             //     ent_commands.remove::<(Msaa, ScreenSpaceAmbientOcclusion, TemporalAntiAliasing)>();
-            //     // ent_commands.insert(Msaa::Sample4);
+            //     ent_commands.insert(Msaa::Sample4);
             // }
         }
 
