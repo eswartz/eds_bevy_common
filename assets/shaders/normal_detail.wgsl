@@ -3,6 +3,7 @@
     pbr_functions::alpha_discard,
     pbr_fragment::pbr_input_from_standard_material,
     decal::clustered::apply_decals,
+    pbr_functions::prepare_world_normal,
 }
 
 #ifdef PREPASS_PIPELINE
@@ -76,11 +77,32 @@ fn fragment(
     in.uv = forward_decal_info.uv;
 #endif
 
+    // modify normal
+    let normal_color = textureSample(
+        detail_normal_texture,
+        detail_normal_sampler,
+        in.uv * detail_material.scale,
+    );
+
+    var normal = in.world_normal;
+    if detail_material.blend != 0. {
+        let n1 = normal + vec3(0.5);
+        let n2 = normal_color.xyz * detail_material.blend + vec3(0.5);
+        normal = n1 * n2;
+        normal = prepare_world_normal(
+            normal - vec3(0.5),
+            true,
+            is_front,
+        );
+    }
+
     // generate a PbrInput struct from the StandardMaterial bindings
     var pbr_input = pbr_input_from_standard_material(in, is_front);
 
     // alpha discard
     pbr_input.material.base_color = alpha_discard(pbr_input.material, pbr_input.material.base_color);
+
+    pbr_input.N = normal;
 
     // clustered decals
     apply_decals(&pbr_input);
@@ -91,25 +113,6 @@ fn fragment(
 #else
     // in forward mode, we calculate the lit color immediately, and then apply some post-lighting effects here.
     // in deferred mode the lit color and these effects will be calculated in the deferred lighting shader
-
-#ifdef NORMAL_PREPASS_OR_DEFERRED_PREPASS
-    // modify normal
-    let normal_color = textureSample(
-        detail_normal_texture,
-        detail_normal_sampler,
-        in.uv * detail_material.scale,
-    );
-
-    let n1 = in.normal;
-    var n2 = vec3(0.);
-    if detail_material.blend != 0. {
-        n2 = normalize(normal_color.xyz * detail_material.blend);
-    }
-    let r = normalize(n1 + n2);
-    // let r = n1; //normalize(n1);
-    // pbr_input.N = pbr_input.normal * r;
-    //pbr_input.N = vec3(1, 0, 1);
-#endif
 
     var out: FragmentOutput;
     if (pbr_input.material.flags & STANDARD_MATERIAL_FLAGS_UNLIT_BIT) == 0u {

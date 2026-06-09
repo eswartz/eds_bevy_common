@@ -103,11 +103,13 @@ fn handle_assign_detail_normals(
             Option<&MeshMaterial3d<StandardMaterial>>,
             Option<&CustomMaterialNormalExtension>,
         ),
-        Or<(
+        (
             Without<SplitIntoCubes>,
-            Changed<AssignDetailNormal>,
-            Changed<CustomMaterialNormalExtension>,
-        )>
+            Or<(
+                Changed<AssignDetailNormal>,
+                Changed<CustomMaterialNormalExtension>,
+            )>,
+        )
     >,
     materials: Res<Assets<StandardMaterial>>,
     mut ext_materials: ResMut<Assets<ExtendedMaterial<StandardMaterial, DetailNormalExtension>>>,

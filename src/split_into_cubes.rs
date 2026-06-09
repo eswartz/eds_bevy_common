@@ -143,13 +143,15 @@ fn handle_split_into_cubes(
 
         // Remove the original large object.
         let mut ent_commands = commands.entity(ent);
-        ent_commands.remove::<Mesh3d>();
-        ent_commands.remove::<MeshMaterial3d<StandardMaterial>>();
-        ent_commands.remove::<RigidBody>();
-        ent_commands.remove::<ColliderConstructor>();
-        ent_commands.remove::<SplitIntoCubes>();
-
-        ent_commands.remove::<ConfigureBeforePlaying>();
+        ent_commands.remove::<(
+            Mesh3d,
+            MeshMaterial3d<StandardMaterial>,
+            RigidBody,
+            CollisionLayers,
+            ColliderConstructor,
+            SplitIntoCubes,
+            ConfigureBeforePlaying,
+        )>();
     }
 }
 

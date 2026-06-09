@@ -117,10 +117,7 @@ impl LayerConfig {
         for ign in &self.ignores {
             filters &= !ign.to_bits();
         }
-
-        dbg!(
-            CollisionLayers { memberships, filters }
-        )
+        CollisionLayers { memberships, filters }
     }
 }
 
