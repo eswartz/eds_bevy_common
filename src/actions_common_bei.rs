@@ -189,6 +189,11 @@ pub mod actions {
     #[derive(InputAction)]
     #[action_output(bool)]
     pub struct PausePhysics;
+
+    /// Toggle the player flashlight.
+    #[derive(InputAction)]
+    #[action_output(bool)]
+    pub struct ToggleFlashlight;
 }
 
 fn toggle_context(
@@ -597,6 +602,17 @@ pub fn assign_stock_player_actions(
             Bidirectional::new(GamepadButton::RightTrigger, GamepadButton::LeftTrigger),
         )),
     ));
+
+    commands.spawn((
+        include.clone(),
+        Action::<actions::ToggleFlashlight>::new(),
+        bindings![
+            KeyCode::KeyL,
+            GamepadButton::North,
+        ],
+    ));
+
+
 }
 
 /// Workaround for different use of [MouseScrollUnit] on different OSes.

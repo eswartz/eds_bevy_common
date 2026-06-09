@@ -28,6 +28,11 @@ impl Plugin for MaterialsPlugin {
                     handle_spawn_shape,
                     handle_spawn_texture,
                     handle_spawn_material,
+                )
+            )
+            .add_systems(
+                PostUpdate,
+                (
                     refresh_materials,
                 )
             )

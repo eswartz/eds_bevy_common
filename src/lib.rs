@@ -63,6 +63,7 @@ pub mod client_synth;
 pub mod midi_synth;
 
 pub mod colliders;
+pub mod flashlight;
 
 // FIX THIS SOON
 
@@ -106,6 +107,7 @@ pub use menu_audio::*;
 pub use model_utils::*;
 pub use lights::*;
 pub use materials::*;
+pub use flashlight::*;
 pub use app::*;
 
 #[cfg(feature = "midi_synth")]
