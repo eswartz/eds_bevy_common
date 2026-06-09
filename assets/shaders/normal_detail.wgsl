@@ -4,7 +4,11 @@
     pbr_fragment::pbr_input_from_standard_material,
     decal::clustered::apply_decals,
     pbr_functions::prepare_world_normal,
+    pbr_functions::apply_normal_mapping,
 }
+
+#import bevy_render::bindless::{bindless_samplers_filtering, bindless_textures_2d}
+
 
 #ifdef PREPASS_PIPELINE
 #import bevy_pbr::{
@@ -77,32 +81,26 @@ fn fragment(
     in.uv = forward_decal_info.uv;
 #endif
 
-    // modify normal
-    let normal_color = textureSample(
-        detail_normal_texture,
-        detail_normal_sampler,
-        in.uv * detail_material.scale,
-    );
-
-    var normal = in.world_normal;
-    if detail_material.blend != 0. {
-        let n1 = normal + vec3(0.5);
-        let n2 = normal_color.xyz * detail_material.blend + vec3(0.5);
-        normal = n1 * n2;
-        normal = prepare_world_normal(
-            normal - vec3(0.5),
-            true,
-            is_front,
-        );
-    }
-
     // generate a PbrInput struct from the StandardMaterial bindings
     var pbr_input = pbr_input_from_standard_material(in, is_front);
 
     // alpha discard
     pbr_input.material.base_color = alpha_discard(pbr_input.material, pbr_input.material.base_color);
 
-    pbr_input.N = normal;
+    var normal = pbr_input.N;
+    if detail_material.blend != 0. {
+        // modify normal
+        let normal_color = textureSample(
+            detail_normal_texture,
+            detail_normal_sampler,
+            in.uv * detail_material.scale,
+        );
+
+        let n1 = normal;
+        let n2 = normal_color.xyz * detail_material.blend;
+        normal = normalize(n1 + n2);
+        pbr_input.N = normal;
+    }
 
     // clustered decals
     apply_decals(&pbr_input);
