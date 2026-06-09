@@ -629,11 +629,13 @@ pub fn default_mouse_wheel_scale(factor: f32) -> Scale {
 /// by the mouse on window managers with "activate and pass click" enabled.)
 fn mask_and_unmask_inputs(
     window_cursor_options: Single<(&Window, &CursorOptions), With<PrimaryWindow>>,
+    wants_input_opt: Option<Res<bevy_egui::input::EguiWantsInput>>,
     mut sources: ResMut<ActionSources>,
     mut count: Local<i32>,
 ) {
     let (window, _cursor) = window_cursor_options.into_inner();
-    if !window.focused {
+    let mouse_busy = !window.focused || wants_input_opt.is_none_or(|inp| inp.wants_any_pointer_input());
+    if mouse_busy {
         if sources.mouse_buttons {
             sources.mouse_buttons = false;
             sources.mouse_motion = false;
