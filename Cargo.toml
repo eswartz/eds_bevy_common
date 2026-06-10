@@ -28,7 +28,7 @@ gilrs = { git = "https://gitlab.com/gilrs-project/gilrs.git", branch = "master" 
 #########
 
 [features]
-default = ["input_bei", "highlighting", "grabbing", "firewheel"]
+default = ["input_bei", "highlighting", "grabbing", "firewheel", "experimental_pbr_pcss"]
 
 trenchbroom = ["bevy_trenchbroom"]
 input_bei = ["dep:bevy_enhanced_input"]
@@ -40,6 +40,7 @@ firewheel = ["dep:bevy_seedling", "dep:firewheel"]
 webgpu = ["bevy/webgpu"]
 solari = ["bevy/bevy_solari"]
 
+experimental_pbr_pcss = ["bevy/experimental_pbr_pcss"]
 pbr_transmission_textures = ["bevy/pbr_transmission_textures"]
 pbr_specular_textures = ["bevy/pbr_specular_textures"]
 pbr_multi_layer_material_textures = ["bevy/pbr_multi_layer_material_textures"]

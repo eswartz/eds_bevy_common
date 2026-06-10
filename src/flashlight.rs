@@ -26,12 +26,14 @@ impl Default for Flashlight {
         Self {
             enabled: false,
             spot: SpotLight {
-                intensity: 500_000.0,
+                intensity: 100_000.0,
                 range: 50.0,
                 color: Color::LinearRgba(Color::WHITE.to_linear() * 10.0f32),
                 outer_angle: 0.75,
                 inner_angle: 0.5,
                 shadows_enabled: true,
+                #[cfg(feature = "experimental_pbr_pcss")]
+                soft_shadows_enabled: true,
                 .. default()
             }
         }
