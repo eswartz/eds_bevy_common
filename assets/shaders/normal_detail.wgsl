@@ -97,8 +97,8 @@ fn fragment(
         );
 
         let n1 = normal;
-        let n2 = normal_color.xyz * detail_material.blend;
-        normal = normalize(n1 + n2);
+        let n2 = normal_color.rrr * detail_material.blend;
+        normal = normalize((n1 + vec3(0.5) * (n2 + vec3(0.5))) - vec3(0.5));
         pbr_input.N = normal;
     }
 
