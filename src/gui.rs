@@ -304,10 +304,17 @@ fn ensure_font_assets(
     world: &mut World,
 ) {
     world.init_collection::<CommonGuiAssets>();
-    // if world.get_resource::<UiFont>().is_none() {
-    //     let default_ui_font = world.get_resource::<CommonAssets>().unwrap().recursive_bold_font.clone();
-    //     world.insert_resource(UiFont(default_ui_font));
-    // }
+
+    // Force font data to load, since it seems to take an indeterminate amount of time (0.18.1)
+    let assets = world.resource::<CommonGuiAssets>();
+    world.spawn((
+        DespawnOnEnter(GameplayState::Playing),
+        TextFont {
+            font: assets.emoji_icon_font.clone(),
+            .. default()
+        },
+        Text::new("\u{1F508}\u{1F6AB}\u{23f1}\u{fe0f}"), // various emoji used below
+    ));
 }
 
 #[derive(Component)]
@@ -773,6 +780,7 @@ fn setup_gui_nodes(
 
     // Mute icon
     right_x += icon_size;
+
     commands.spawn((
         DespawnOnReset(ProgramState::InGame),
         GuiAreaMarker::MuteArea,
