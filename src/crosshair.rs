@@ -221,7 +221,7 @@ fn update_crosshair(
 /// which changes this value as the raycast hits change.
 ///
 /// The index is owned by the game, though it retains the same Entity reference if possible.
-#[derive(Resource, Reflect, Debug, PartialEq, Default)]
+#[derive(Resource, Reflect, Debug, Clone, PartialEq, Default)]
 #[reflect(Resource, Default)]
 #[type_path = "game"]
 pub struct CrosshairTargets {

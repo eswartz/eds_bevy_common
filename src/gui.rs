@@ -8,6 +8,7 @@ use avian3d::prelude::PhysicsTime;
 use bevy::asset::AssetPath;
 use bevy::camera::visibility::RenderLayers;
 use bevy::color::palettes::tailwind;
+use bevy::ecs::system::SystemParam;
 use bevy::platform::collections::HashMap;
 use bevy::prelude::*;
 use bevy::reflect::Typed;
@@ -134,6 +135,9 @@ impl Plugin for GuiPlugin {
 /// Control the UI alpha of the immediate node.
 /// The value is multiplied by any others down the tree.
 #[derive(Component, Reflect)]
+#[component(storage = "SparseSet")]
+#[reflect(Component)]
+#[type_path = "game"]
 pub struct UiNodeAlpha(pub f32);
 
 impl Default for UiNodeAlpha {
@@ -144,6 +148,9 @@ impl Default for UiNodeAlpha {
 
 /// Computed alpha from parents and self.
 #[derive(Component, Reflect)]
+#[component(storage = "SparseSet")]
+#[reflect(Component)]
+#[type_path = "game"]
 pub struct UiNodeComputedAlpha {
     pub(crate) alpha: f32,
     pub(crate) orig_values: HashMap<TypeId, f32>,
@@ -358,6 +365,16 @@ pub fn setup_loading_screen(
     .id()
 }
 
+/// Indicate the desire to change the cursor grab state
+/// (false = not grabbed, true = grabbed in the "best way").
+///
+/// Do not modify the state of [CursorOptions] yourself,
+/// to avoid overlapping responsibilities.
+#[derive(Message, Debug)]
+pub struct GrabCursor(pub bool);
+
+pub const GRABBED_MODE: CursorGrabMode = CursorGrabMode::Locked;
+
 impl Default for GrabState {
     fn default() -> Self {
         Self {
@@ -370,16 +387,6 @@ impl Default for GrabState {
         }
     }
 }
-
-pub const GRABBED_MODE: CursorGrabMode = CursorGrabMode::Locked;
-
-/// Indicate the desire to change the cursor grab state
-/// (false = not grabbed, true = grabbed in the "best way").
-///
-/// Do not modify the state of [CursorOptions] yourself,
-/// to avoid overlapping responsibilities.
-#[derive(Message, Debug)]
-pub struct GrabCursor(pub bool);
 
 /// Flags
 #[derive(Resource, Debug, Clone, PartialEq, Reflect)]
@@ -558,50 +565,76 @@ fn check_grab_focus_state(
     }
 }
 
-/// The information area of the GUI (smaller font, bottom left corner)
-#[derive(Component)]
-pub struct InfoArea;
+#[derive(Component, Clone, Copy, PartialEq, Hash, Reflect)]
+#[reflect(Component, Clone)]
+#[type_path = "game"]
+#[non_exhaustive]
+pub enum GuiAreaMarker {
+    /// The information area of the GUI (smaller font, bottom left corner)
+    InfoArea,
 
-/// The information area of the GUI (smaller font, bottom)
-#[derive(Component)]
-pub struct InstructionsArea;
+    /// The information area of the GUI (smaller font, bottom)
+    InstructionsArea,
 
-/// Where the status of the held item is.
-#[derive(Component)]
-pub struct HandStatusArea;
+    /// Where the status of the held item is.
+    HandStatusArea,
 
-/// The game status area of the GUI (large)
-#[derive(Component)]
-pub struct GameStatusArea;
+    /// The game status area of the GUI (large)
+    GameStatusArea,
 
-/// Where the score (if any) is presented (small, upper-right)
-#[derive(Component)]
-pub struct ScoreArea;
+    /// Where the score (if any) is presented (small, upper-right)
+    ScoreArea,
 
-/// Mark the Mute state icon.
-#[derive(Component)]
-pub struct MuteArea;
+    /// Mark the Mute state icon.
+    MuteArea,
 
-/// Mark the User Pause state icon.
-#[derive(Component)]
-pub struct UserPausedArea;
+    /// Mark the User Pause state icon.
+    UserPausedArea,
 
-/// Mark the Pause Scripts state icon.
-///
-/// NOTE: this is not wired up to anything by default. It's entirely hidden.
-#[derive(Component)]
-pub struct ScriptsRunningArea;
-#[derive(Component)]
-pub struct ScriptsRunningCrossArea;
+    /// Mark the Pause Scripts state icon.
+    ScriptsRunningArea,
+    /// Mark the crossed-out icon (on top of [ScriptsRunningArea] and visible only when paused).
+    ScriptsRunningCrossArea,
 
-/// Mark the Freeze state icon.
-///
-/// NOTE: this is not wired up to anything by default. It's entirely hidden.
-#[derive(Component)]
-pub struct PhysicsRunningArea;
-#[derive(Component)]
-pub struct PhysicsRunningCrossArea;
+    /// Mark the Physics Running state icon.
+    PhysicsRunningArea,
+    /// Mark the crossed-out icon (on top of [PhysicsRunningArea] and visible only when physics paused).
+    PhysicsRunningCrossArea,
 
+}
+
+#[derive(SystemParam)]
+pub struct GuiAreaMarkerLocator<'w, 's> {
+    marker_q: Query<'w, 's, (Entity, &'static GuiAreaMarker)>,
+}
+
+impl<'w, 's> GuiAreaMarkerLocator<'w, 's> {
+    pub fn find_first_marker(&self, marker: GuiAreaMarker) -> Option<Entity> {
+        for (entity, &a_marker) in self.marker_q.iter() {
+            if a_marker == marker {
+                return Some(entity)
+            }
+        }
+        None
+    }
+    pub fn with_first<R>(&self, marker: GuiAreaMarker, mut cb: impl FnMut(Entity) -> R) -> Option<R> {
+        for (entity, &a_marker) in self.marker_q.iter() {
+            if a_marker == marker {
+                return Some(cb(entity));
+            }
+        }
+        None
+    }
+    pub fn with_marker<R>(&self, marker: GuiAreaMarker, mut cb: impl FnMut(Entity) -> R) -> Option<R> {
+        let mut ret = None::<R>;
+        for (entity, &a_marker) in self.marker_q.iter() {
+            if a_marker == marker {
+                ret.replace(cb(entity));
+            }
+        }
+        ret
+    }
+}
 
 fn setup_gui_nodes(
     mut commands: Commands,
@@ -621,7 +654,7 @@ fn setup_gui_nodes(
     // Info
     commands.spawn((
         despawn.clone(),
-        InfoArea,
+        GuiAreaMarker::InfoArea,
         Text::new(""),
         TextFont {
             font: font.clone(),
@@ -639,7 +672,7 @@ fn setup_gui_nodes(
     // Instructions
     commands.spawn((
         despawn.clone(),
-        InstructionsArea,
+        GuiAreaMarker::InstructionsArea,
         Visibility::Hidden,
         Text::new(
             "",
@@ -662,7 +695,7 @@ fn setup_gui_nodes(
     // Score
     commands.spawn((
         despawn.clone(),
-        ScoreArea,
+        GuiAreaMarker::ScoreArea,
         Text::default(),
         TextFont {
             font: font.clone(),
@@ -697,7 +730,7 @@ fn setup_gui_nodes(
         RenderLayers::from_layers(&[RENDER_LAYER_UI]),
 
         children![
-            GameStatusArea,
+            GuiAreaMarker::GameStatusArea,
             Text::new(
                 "", // e.g. "You win!"
             ),
@@ -718,7 +751,7 @@ fn setup_gui_nodes(
     // In-hand status
     commands.spawn((
         despawn.clone(),
-        HandStatusArea,
+        GuiAreaMarker::HandStatusArea,
         UiNodeAlpha(0.0),
         Name::new("InHandStatus"),
         Node {
@@ -744,7 +777,7 @@ fn setup_gui_nodes(
     right_x += icon_size;
     commands.spawn((
         DespawnOnReset(ProgramState::InGame),
-        MuteArea,
+        GuiAreaMarker::MuteArea,
         TextFont {
             font: assets.emoji_icon_font.clone(),
             font_size: icon_size,
@@ -765,7 +798,7 @@ fn setup_gui_nodes(
     right_x += icon_size;
     commands.spawn((
         DespawnOnReset(ProgramState::InGame),
-        UserPausedArea,
+        GuiAreaMarker::UserPausedArea,
         TextFont {
             font: assets.emoji_icon_font.clone(),
             font_size: icon_size,
@@ -787,7 +820,7 @@ fn setup_gui_nodes(
     commands.spawn((
         Name::new("RunningArea"),
         DespawnOnReset(ProgramState::InGame),
-        ScriptsRunningArea,
+        GuiAreaMarker::ScriptsRunningArea,
         TextFont {
             font: assets.hack_font.clone(),
             font_size: icon_size,
@@ -807,7 +840,7 @@ fn setup_gui_nodes(
     commands.spawn((
         Name::new("RunningCrossArea"),
         DespawnOnReset(ProgramState::InGame),
-        ScriptsRunningCrossArea,
+        GuiAreaMarker::ScriptsRunningCrossArea,
         TextFont {
             font: assets.emoji_icon_font.clone(),
             font_size: icon_size,
@@ -829,7 +862,7 @@ fn setup_gui_nodes(
     right_x += icon_size;
     commands.spawn((
         DespawnOnReset(ProgramState::InGame),
-        PhysicsRunningArea,
+        GuiAreaMarker::PhysicsRunningArea,
         TextFont {
             font: assets.emoji_icon_font.clone(),
             font_size: icon_size,
@@ -848,7 +881,7 @@ fn setup_gui_nodes(
     ));
     commands.spawn((
         DespawnOnReset(ProgramState::InGame),
-        PhysicsRunningCrossArea,
+        GuiAreaMarker::PhysicsRunningCrossArea,
         TextFont {
             font: assets.emoji_icon_font.clone(),
             font_size: icon_size,
@@ -870,20 +903,26 @@ fn setup_gui_nodes(
 
 fn update_pause_ui(
     paused: Res<PauseState>,
-    mut vis_q: Query<&mut Visibility, With<UserPausedArea>>,
+    gui_area: GuiAreaMarkerLocator,
+    mut vis_q: Query<&mut Visibility>,
 ) {
-    if let Ok(mut vis) = vis_q.single_mut() {
-        *vis = if paused.is_paused() { Visibility::Inherited } else { Visibility::Hidden };
-    }
+    gui_area.with_marker(GuiAreaMarker::UserPausedArea, |ent| {
+        if let Ok(mut vis) = vis_q.get_mut(ent) {
+            *vis = if paused.is_paused() { Visibility::Inherited } else { Visibility::Hidden };
+        }
+    });
 }
 
 fn update_mute_ui(
     vol_q: Single<&UserVolume, With<MainBus>>,
-    mut vis_q: Query<&mut Visibility, With<MuteArea>>,
+    gui_area: GuiAreaMarkerLocator,
+    mut vis_q: Query<&mut Visibility>,
 ) {
-    if let Ok(mut vis) = vis_q.single_mut() {
-        *vis = if vol_q.muted { Visibility::Inherited } else { Visibility::Hidden };
-    }
+    gui_area.with_marker(GuiAreaMarker::MuteArea, |ent| {
+        if let Ok(mut vis) = vis_q.get_mut(ent) {
+            *vis = if vol_q.muted { Visibility::Inherited } else { Visibility::Hidden };
+        }
+    });
 }
 
 #[derive(Resource, Debug, Default, Deref, DerefMut, Reflect)]
@@ -892,16 +931,18 @@ pub struct PhysicsPaused(pub bool);
 
 fn update_physics_pause_ui(
     paused: Res<PhysicsPaused>,
-    mut vis_q: ParamSet<(
-        Query<&mut Visibility, With<PhysicsRunningArea>>,
-        Query<&mut Visibility, With<PhysicsRunningCrossArea>>,
-    )>,
+
+    gui_area: GuiAreaMarkerLocator,
+    mut vis_q: Query<&mut Visibility>,
+
     mut time: ResMut<Time<avian3d::prelude::Physics>>,
 ) {
-    if let Ok(mut vis) = vis_q.p0().single_mut() {
-        // If we're here, we've got physics.
-        vis.set_if_neq(Visibility::Inherited);
-    }
+    gui_area.with_marker(GuiAreaMarker::PhysicsRunningArea, |ent| {
+        if let Ok(mut vis) = vis_q.get_mut(ent) {
+            // If we're here, we've got physics.
+            vis.set_if_neq(Visibility::Inherited);
+        }
+    });
     if !paused.is_changed() {
         return
     }
@@ -910,9 +951,12 @@ fn update_physics_pause_ui(
     } else {
         time.unpause();
     }
-    if let Ok(mut vis) = vis_q.p1().single_mut() {
-        vis.set_if_neq(if **paused { Visibility::Inherited } else { Visibility::Hidden });
-    }
+    gui_area.with_marker(GuiAreaMarker::PhysicsRunningCrossArea, |ent| {
+        if let Ok(mut vis) = vis_q.get_mut(ent) {
+            // If we're here, it's paused.
+            vis.set_if_neq(if **paused { Visibility::Inherited } else { Visibility::Hidden });
+        }
+    });
 }
 
 /// Set the instruction text for level.
@@ -934,7 +978,7 @@ fn show_instructions(
     level: Option<Res<CurrentLevel>>,
     showed: Option<Res<ShowedInstructions>>,
     fonts: Res<CommonGuiAssets>,
-    instructions_q: Single<Entity, With<InstructionsArea>>,
+    gui_area: GuiAreaMarkerLocator,
 ) {
     use bevy_tweening::AnimTarget;
     use bevy_tweening::EaseMethod;
@@ -964,7 +1008,8 @@ fn show_instructions(
 
     let mut text_ent = Entity::PLACEHOLDER;
 
-    commands.entity(*instructions_q)
+    gui_area.with_first(GuiAreaMarker::InstructionsArea, |ent| {
+        commands.entity(ent)
         .insert(Visibility::Inherited)  // show
         .with_children(|builder| {
             text_ent = builder.spawn((
@@ -983,6 +1028,7 @@ fn show_instructions(
                 },
             )).id();
         });
+    });
 
     // Fade in and out.
 
@@ -1020,20 +1066,15 @@ fn show_instructions(
     ));
 }
 
-pub fn fade_instructions(
-    mut inst_q: Query<&mut Visibility, With<InstructionsArea>>,
-) {
-    for mut vis in inst_q.iter_mut() {
-        *vis = Visibility::Hidden;
-    }
-}
-
 pub fn hide_instructions(
-    mut inst_q: Query<&mut Visibility, With<InstructionsArea>>,
+    gui_area: GuiAreaMarkerLocator,
+    mut vis_q: Query<&mut Visibility>,
 ) {
-    for mut vis in inst_q.iter_mut() {
-        *vis = Visibility::Hidden;
-    }
+    gui_area.with_marker(GuiAreaMarker::InstructionsArea, |ent| {
+        if let Ok(mut vis) = vis_q.get_mut(ent) {
+            *vis = Visibility::Hidden;
+        }
+    });
 }
 
 pub fn reset_instructions(
