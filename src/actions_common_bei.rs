@@ -22,7 +22,8 @@ impl Plugin for ActionPlugin {
             .add_systems(Update, handle_escape)
             .add_systems(Update, toggle_context.run_if(resource_changed::<State<OverlayState>>))
             .add_observer(handle_pause_gameplay)
-            .add_observer(handle_pause_physics)
+            .add_observer(handle_toggle_physics)
+            .add_observer(handle_toggle_physics_gizmos)
             .add_observer(handle_debug_ui)
             .add_observer(handle_full_screen)
             .add_observer(handle_mute)
@@ -185,10 +186,15 @@ pub mod actions {
     #[action_output(f32)]
     pub struct CycleHighlightedItem;
 
-    /// Toggle physics.
+    /// Toggle physics (default on).
     #[derive(InputAction)]
     #[action_output(bool)]
-    pub struct PausePhysics;
+    pub struct TogglePhysics;
+
+    /// Toggle physics gizmo display (default off).
+    #[derive(InputAction)]
+    #[action_output(bool)]
+    pub struct TogglePhysicsGizmos;
 
     /// Toggle the player flashlight.
     #[derive(InputAction)]
@@ -224,8 +230,11 @@ pub(crate) fn handle_pause_gameplay(_event: On<Start<actions::PauseGameplay>>, k
 
 // note, ^^^ scripting plugin needs to handle PauseScripting
 
-pub(crate) fn handle_pause_physics(_event: On<Start<actions::PausePhysics>>, mut pause_state: ResMut<PhysicsPaused>) {
+pub(crate) fn handle_toggle_physics(_event: On<Start<actions::TogglePhysics>>, mut pause_state: ResMut<PhysicsPaused>) {
     **pause_state ^= true;
+}
+pub(crate) fn handle_toggle_physics_gizmos(_event: On<Start<actions::TogglePhysicsGizmos>>, mut gui_state: ResMut<GuiState>) {
+    gui_state.show_physics_gizmos ^= true;
 }
 
 pub(crate) fn handle_debug_ui(
