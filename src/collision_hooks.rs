@@ -21,7 +21,7 @@ pub struct GeometryCollisionHooks<'w, 's> {
 /// (This is most useful with [player_spawning::add_fps_foot_gameplay_collider].)
 #[derive(Resource)]
 pub struct GeometryCollisionHooksCallbacks {
-    pub is_liquid: Box<dyn Fn(Entity) -> bool + Sync + Send>,
+    pub is_liquid: Box<dyn Fn(Entity) -> bool + Sync + Send + 'static>,
 }
 
 impl GeometryCollisionHooks<'_, '_> {

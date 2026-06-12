@@ -975,26 +975,29 @@ const END_LEVEL_DELAY_SECS: u64 = 3;
 #[type_path = "game"]
 pub struct AutoEndLevelTimer(pub(crate) Timer);
 
-
 fn won_level(
     mut commands: Commands,
-    mut score_q: Single<(&mut Text, &mut TextColor), With<GameStatusArea>>,
+    gui_area: GuiAreaMarkerLocator,
+    mut score_q: Query<(&mut Text, &mut TextColor)>,
 ) {
-    let (ref mut text, ref mut color) = *score_q;
-    text.0 = "Passed!".to_string();
-    color.0 = Color::Srgba(tailwind::LIME_300);
-
+    gui_area.with_first(GuiAreaMarker::GameStatusArea, |ent| {
+        let Ok((ref mut text, ref mut color)) = score_q.get_mut(ent) else { return };
+        text.0 = "Passed!".to_string();
+        color.0 = Color::Srgba(tailwind::LIME_300);
+    });
     commands.insert_resource(AutoEndLevelTimer(Timer::new(Duration::from_secs(END_LEVEL_DELAY_SECS), TimerMode::Once)));
 }
 
 fn lost_level(
     mut commands: Commands,
-    mut score_q: Single<(&mut Text, &mut TextColor), With<GameStatusArea>>,
+    gui_area: GuiAreaMarkerLocator,
+    mut score_q: Query<(&mut Text, &mut TextColor)>,
 ) {
-    let (ref mut text, ref mut color) = *score_q;
-    text.0 = "Failed...\nTry again!".to_string();
-    color.0 = Color::Srgba(tailwind::RED_700);
-
+    gui_area.with_first(GuiAreaMarker::GameStatusArea, |ent| {
+        let Ok((ref mut text, ref mut color)) = score_q.get_mut(ent) else { return };
+        text.0 = "Failed...\nTry again!".to_string();
+        color.0 = Color::Srgba(tailwind::RED_700);
+    });
     commands.insert_resource(AutoEndLevelTimer(Timer::new(Duration::from_secs(END_LEVEL_DELAY_SECS), TimerMode::Once)));
 }
 
