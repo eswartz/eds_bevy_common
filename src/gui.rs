@@ -33,16 +33,17 @@ impl Plugin for GuiPlugin {
         if !app.is_plugin_added::<bevy_tweening::TweeningPlugin>() {
             app.add_plugins(bevy_tweening::TweeningPlugin);
         }
-        app.insert_resource(GuiState::default())
+        app
+        .insert_resource(GuiState::default())
+        .insert_resource(UiFont(default()))
+
         .init_resource::<GrabState>()
         .add_message::<GrabCursor>()
         .init_resource::<PhysicsPaused>()
-        .add_systems(Startup,
-            load_ui_font,
-        )
         .add_systems(
             Update,
             (
+                ensure_ui_font.run_if(resource_exists_and_changed::<UiFontPath>),
                 update_ui_alpha,
                 apply_ui_alpha,
             )
@@ -287,14 +288,15 @@ pub struct UiFontPath(pub PathBuf);
 #[type_path = "game"]
 pub struct UiFont(pub Handle<Font>);
 
-fn load_ui_font(
+fn ensure_ui_font(
     mut commands: Commands,
     assets: Res<AssetServer>,
     ui_font_path: Option<Res<UiFontPath>>,
-    ui_font: Option<Res<UiFont>>,
 ) {
-    if let Some(path) = ui_font_path && ui_font.is_none() {
+    if let Some(path) = ui_font_path {
         commands.insert_resource(UiFont(assets.load(AssetPath::from_path(&path.0))));
+    } else {
+        commands.insert_resource(UiFont(default()));
     }
 }
 
@@ -313,7 +315,7 @@ pub struct LoadingScreen;
 
 pub fn on_loading(
     mut commands: Commands,
-    ui_font: Option<Res<UiFont>>,
+    ui_font: Res<UiFont>,
 ) {
     let ent_commands = commands.spawn((
         Name::new("Loading..."),
@@ -333,7 +335,7 @@ pub fn on_loading_finished(
 
 pub fn setup_loading_screen(
     mut ent_commands: EntityCommands,
-    ui_font: Option<Res<UiFont>>,
+    ui_font: Res<UiFont>,
 ) -> Entity {
     let icon_size = 32.0f32;
 
@@ -355,7 +357,7 @@ pub fn setup_loading_screen(
                 "Loading...",
             ),
             TextFont {
-                font: ui_font.map_or(default(), |f| f.0.clone()),
+                font: ui_font.0.clone(),
                 font_size: icon_size,
                 .. default()
             },
@@ -639,16 +641,12 @@ impl<'w, 's> GuiAreaMarkerLocator<'w, 's> {
 fn setup_gui_nodes(
     mut commands: Commands,
     assets: Res<CommonGuiAssets>,
-    ui_font: Option<Res<UiFont>>,
+    ui_font: Res<UiFont>,
 ) {
-    let font = ui_font.map_or(default(), |f| f.0.clone());
+    // let font = ui_font.map_or(default(), |f| f.0.clone());
+    let font = ui_font.0.clone();
     let icon_size = 32.0;
 
-    // By design, doesn't detect Reenter.
-    // let despawn = (
-    //     DespawnOnExit(ProgramState::InGame),
-    //     DespawnOnEnter(ProgramState::InGame),
-    // );
     let despawn = DespawnOnReset(ProgramState::InGame);
 
     // Info
