@@ -139,15 +139,11 @@ fn apply_collider(
                 ColliderConstructor::ConvexDecompositionFromMeshWithConfig(
                     // Apply base parameters but correct for some panic-inducing range errors.
                     VhacdParameters {
-                        concavity: vhacd.concavity,
-                        alpha: vhacd.alpha,
-                        beta: vhacd.beta,
                         resolution: resolution.max(16),
                         plane_downsampling: vhacd.plane_downsampling.max(1),
                         convex_hull_downsampling: vhacd.convex_hull_downsampling.max(1),
-                        fill_mode: vhacd.fill_mode.clone(),
-                        convex_hull_approximation: vhacd.convex_hull_approximation,
                         max_convex_hulls: max_convex_hulls.max(16),
+                        ..vhacd.clone()
                     }
                 )
             }
