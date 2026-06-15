@@ -643,7 +643,7 @@ fn mask_and_unmask_inputs(
     mut count: Local<i32>,
 ) {
     let (window, _cursor) = window_cursor_options.into_inner();
-    let mouse_busy = !window.focused || wants_input_opt.is_none_or(|inp| inp.wants_any_pointer_input());
+    let mouse_busy = !window.focused || wants_input_opt.is_some_and(|inp| inp.wants_any_pointer_input());
     if mouse_busy {
         if sources.mouse_buttons {
             sources.mouse_buttons = false;
