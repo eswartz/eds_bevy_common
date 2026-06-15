@@ -240,7 +240,7 @@ impl OurCamera {
 
             if speed >= 0.25 {
                 let bob_max = speed * settings.bob_distance.abs();
-                self.bob_distance = ops::sin(self.bob_timer * std::f32::consts::TAU / settings.bob_time.as_secs_f32()) * bob_max;
+                self.bob_distance = (self.bob_timer * std::f32::consts::TAU / settings.bob_time.as_secs_f32()).sin() * bob_max;
                 self.bob_timer += dt;
             } else {
                 self.bob_distance *= 0.5;
