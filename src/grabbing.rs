@@ -164,8 +164,12 @@ impl GrabbedItemStyle {
 #[reflect(Clone)]
 #[type_path = "game"]
 pub enum GrabbingCommand {
+    /// Grab the given item.
     GrabItem(Entity),
-    ReleaseItems,
+    /// Release items being grabbed.
+    /// If the payload is Some, apply LinearVelocity.
+    ReleaseItems(Option<Vec3>),
+    /// Stop the grabbing operation.
     CancelGrabItems,
 }
 
@@ -300,7 +304,7 @@ fn on_start_grab(
     || (inputs.pressed(KeyCode::AltLeft) || inputs.pressed(KeyCode::AltRight))
     {
         // Still holding, release.
-        commands.write_message(GrabbingCommand::ReleaseItems);
+        commands.write_message(GrabbingCommand::ReleaseItems(None));
     } else {
         // Try to grab.
         let release = release_q.iter().any(|e| e.contains(ActionEvents::START));
@@ -323,7 +327,7 @@ fn on_end_grab_drop(
 ) {
     // Let go.
     if grabbed_opt.is_some() {
-        commands.write_message(GrabbingCommand::ReleaseItems);
+        commands.write_message(GrabbingCommand::ReleaseItems(None));
     }
     commands.insert_resource(HighlightingMode::Disabled);
 }
@@ -336,7 +340,7 @@ fn on_end_grab_fire(
 ) {
     // Let go.
     if grabbed_opt.is_some() {
-        commands.write_message(GrabbingCommand::ReleaseItems);
+        commands.write_message(GrabbingCommand::ReleaseItems(None));
     }
 }
 
@@ -385,7 +389,7 @@ fn process_grab_commands(
                 let Ok((item_global_xfrm, _, rigid_opt, layers_opt, axes_opt, gravity_opt)) = phys_info_q.get(entity) else {
                     log::warn!("no world-located item {entity}");
                     // Whatever we have is not valid, so clear it out.
-                    commands.write_message(GrabbingCommand::ReleaseItems);
+                    commands.write_message(GrabbingCommand::CancelGrabItems);
                     continue
                 };
 
@@ -452,7 +456,7 @@ fn process_grab_commands(
                 // Insert the outline bundle, whatever it is.
                 styler.apply_to(commands.entity(entity));
             }
-            GrabbingCommand::ReleaseItems => {
+            GrabbingCommand::ReleaseItems(vel) => {
                 commands.remove_resource::<GrabbedItem>();
                 if let Some(grabbed) = &grabbed_opt {
 
@@ -495,8 +499,9 @@ fn process_grab_commands(
                         ent_commands.try_remove::<GravityScale>();
                     }
 
-                    if is_rigid {
+                    if is_rigid && let Some(vel) = vel {
                         // ent_commands.try_remove::<Sleeping>();
+                        ent_commands.insert(LinearVelocity(vel.adjust_precision()));
                     }
 
                     styler.remove_from(ent_commands);
