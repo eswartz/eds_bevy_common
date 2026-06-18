@@ -22,6 +22,10 @@ impl Plugin for PlayerCameraPlugin {
         app
             .init_resource::<PlayerCameraSettings>()
             .init_resource::<FovZoomState>()
+            .add_systems(
+                OnEnter(LevelState::Playing),
+                update_player_camera_render
+            )
             .add_systems(FixedPreUpdate,
                 (
                     // HACK: we "know" zoom and move-while-grabbed use the same actions
@@ -331,12 +335,14 @@ pub fn handle_player_camera_actions(
     mut zoom_state: ResMut<FovZoomState>,
     settings: Res<PlayerCameraSettings>,
     time: Res<Time>,
+    mut commands: Commands,
 ) {
     #[cfg(feature = "input_bei")]
     {
         if let Some(change_camera) = change_camera.iter().next()
         && change_camera.contains(ActionEvents::START) {
             camera_q.0 = camera_q.0.next();
+            commands.run_system_cached(update_player_camera_render);
         }
         if let Some(zoom_camera) = zoom_camera.iter().next()
         && zoom_camera.length() > 0. {
@@ -349,6 +355,25 @@ pub fn handle_player_camera_actions(
                 *zoom_state = FovZoomState::AtZoom(settings.fov_delta_hold_time)
             }
         }
+    }
+}
+
+pub fn update_player_camera_render(
+    mut commands: Commands,
+    camera_q: Single<&mut PlayerCamera, (With<WorldCamera>, With<OurCamera>)>,
+    player_q: Single<Entity, (With<OurPlayer>, With<Collider>)>,
+) {
+    let player_ent = *player_q;
+    if camera_q.0 == CameraMode::FirstPerson {
+        commands.entity(player_ent).try_insert(DebugRender {
+            axis_lengths: None,
+            aabb_color: None,
+            collider_color: None,
+            sleeping_color_multiplier: None,
+            hide_mesh: true,
+        });
+    } else {
+        commands.entity(player_ent).try_remove::<DebugRender>();
     }
 }
 
