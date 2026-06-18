@@ -55,17 +55,6 @@ impl Plugin for GrabbingPlugin {
             .init_resource::<GrabbedItemStyle>()
             .add_message::<GrabbingCommand>()
             .add_systems(
-                FixedFirst,
-                    move_grabbed_item
-                    .run_if(is_grabbing_item)
-                    .before(PhysicsSystems::Prepare)
-                    .run_if(not(is_in_menu))
-                    .run_if(is_level_active)
-                    .run_if(not(is_paused))
-                    .run_if(not(debug_gui_wants_input))
-                    .run_if(in_state(ProgramState::InGame)),
-            )
-            .add_systems(
                 FixedUpdate,
                 (
                     sync_grabbable_with_highlighted
@@ -273,6 +262,8 @@ pub struct GrabbingBehavior {
     pub min_speed: f32,
     /// Maximum speed, to avoid explosive movements.
     pub max_speed: f32,
+    /// Turn speed (radians/sec).
+    pub turn_speed: f32,
 }
 
 impl Default for GrabbingBehavior {
@@ -283,6 +274,7 @@ impl Default for GrabbingBehavior {
             move_accel: 1.1,
             min_speed: 0.05,
             max_speed: 10.0,
+            turn_speed: std::f32::consts::FRAC_PI_2,
         }
     }
 }
@@ -533,6 +525,8 @@ fn move_grabbed_item(
     mut world_info_q: Query<(Option<Forces>, &mut Transform, &GlobalTransform, Option<&Mass>)>,
     time: Res<Time>,
     physics_paused: Res<PhysicsPaused>,
+
+    key_input: Res<ButtonInput<KeyCode>>,
 ) {
     let Ok((forces_opt, mut item_xfrm, item_global_xfrm, mass_opt)) = world_info_q.get_mut(grabbed.entity) else {
         // Despawned?
@@ -602,6 +596,28 @@ fn move_grabbed_item(
         grabbed.movement += movement;
     } else {
         grabbed.speed *= 0.95;
+    }
+
+    let rot = grabbing_force.turn_speed * time.delta_secs();
+    let ctrl_pressed = key_input.pressed(KeyCode::ControlLeft) ||key_input.pressed(KeyCode::ControlRight);
+    let alt_pressed = key_input.pressed(KeyCode::AltLeft) ||key_input.pressed(KeyCode::AltRight);
+    if key_input.pressed(KeyCode::BracketLeft) {
+        if ctrl_pressed {
+            item_xfrm.rotate_local_x(-rot);
+        } else if alt_pressed {
+            item_xfrm.rotate_local_z(-rot);
+        } else {
+            item_xfrm.rotate_local_y(-rot);
+        }
+    }
+    else if key_input.pressed(KeyCode::BracketRight) {
+        if ctrl_pressed {
+            item_xfrm.rotate_local_x(rot);
+        } else if alt_pressed {
+            item_xfrm.rotate_local_z(rot);
+        } else {
+            item_xfrm.rotate_local_y(rot);
+        }
     }
 
     // Draw axes from all edges.
