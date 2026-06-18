@@ -257,7 +257,7 @@ impl MidiSynth {
             use bevy_seedling::edge::Connect as _;
 
             use crate::midi_synth::synth::firewheel_nodes::MidiSynthPlayerNodeConfig;
-            commands.entity(entity).insert((
+            commands.entity(entity).try_insert((
                 MidiSynthPlayerNode,
                 MidiSynthPlayerNodeConfig(Arc::new(decoder)),
             ));
@@ -405,7 +405,7 @@ fn restart_synths(
     for (ent, synth) in synth_q.iter() {
         log::warn!("restarting synth {ent}");
         synth.thread_quit.store(true, Ordering::Release);
-        commands.entity(ent).remove::<MidiSynth>();
+        commands.entity(ent).try_remove::<MidiSynth>();
     }
 }
 

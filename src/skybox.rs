@@ -179,7 +179,7 @@ fn check_skybox_setup(
     if *setup == SkyboxSetup::Finished {
         commands.remove_resource::<SkyboxSetup>();
         skybox_q.iter().for_each(|ent| {
-            commands.entity(ent).remove::<ConfigureBeforePlaying>();
+            commands.entity(ent).try_remove::<ConfigureBeforePlaying>();
         });
     }
 }
@@ -244,7 +244,7 @@ fn check_load_skybox(
     }
 
     // Here's the actual work. (Yes, I'm sure the above could be done in a better way.)
-    commands.entity(cam).insert(Skybox {
+    commands.entity(cam).try_insert(Skybox {
         image: skybox_image.clone(),
         brightness: model.brightness,
         rotation: model.rotation,
@@ -258,7 +258,7 @@ fn check_load_skybox(
     };
 
     // Set up reflection probe machinery.
-    commands.entity(cam).insert((
+    commands.entity(cam).try_insert((
         ReflectionProbeModel{
             image: skybox_image,
             brightness,
@@ -339,7 +339,7 @@ fn check_load_reflection_probe(
         ..default()
     });
 
-    commands.entity(cam_entity).insert((
+    commands.entity(cam_entity).try_insert((
         LightProbe,
         EnvironmentMapLight {
             diffuse_map: diffuse.clone(),

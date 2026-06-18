@@ -250,23 +250,23 @@ fn apply_effect_settings(
     for (camera_ent, mut cam3d) in camera_q.iter_mut() {
         let mut ent_commands = commands.entity(camera_ent);
 
-        ent_commands.remove::<Msaa>();
-        ent_commands.remove::<ScreenSpaceAmbientOcclusion>();
-        ent_commands.remove::<TemporalAntiAliasing>();
+        ent_commands.try_remove::<Msaa>();
+        ent_commands.try_remove::<ScreenSpaceAmbientOcclusion>();
+        ent_commands.try_remove::<TemporalAntiAliasing>();
 
         match video_settings.antialiasing {
             Antialiasing::Off => {
-                ent_commands.remove::<(
+                ent_commands.try_remove::<(
                     ScreenSpaceAmbientOcclusion,
                     TemporalAntiAliasing,
                 )>();
 
-                ent_commands.insert((
+                ent_commands.try_insert((
                     Msaa::Off,
                 ));
             },
             Antialiasing::TSAA => {
-                ent_commands.insert((
+                ent_commands.try_insert((
                     Msaa::Off,
                     ScreenSpaceAmbientOcclusion {
                         quality_level:
@@ -282,8 +282,8 @@ fn apply_effect_settings(
                 ));
             }
             // Antialiasing::MSAA => {
-            //     ent_commands.remove::<(Msaa, ScreenSpaceAmbientOcclusion, TemporalAntiAliasing)>();
-            //     ent_commands.insert(Msaa::Sample4);
+            //     ent_commands.try_remove::<(Msaa, ScreenSpaceAmbientOcclusion, TemporalAntiAliasing)>();
+            //     ent_commands.try_insert(Msaa::Sample4);
             // }
         }
 

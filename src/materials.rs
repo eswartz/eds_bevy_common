@@ -328,7 +328,7 @@ pub fn handle_spawn_texture(
             SpawnMaterial::None => (),
         }
 
-        ent_commands.remove::<TextureSources>();
+        ent_commands.try_remove::<TextureSources>();
     }
 }
 
@@ -550,7 +550,7 @@ pub fn handle_spawn_shape(
                     .build();
                 let mesh = meshes.add(mesh);
                 ent_commands.try_insert(Mesh3d(mesh));
-                ent_commands.remove::<SpawnShape>();
+                ent_commands.try_remove::<SpawnShape>();
             }
             SpawnShapeKind::Model(path) => {
                 if path.contains("#Scene") || !path.contains('#') {
@@ -595,7 +595,7 @@ pub fn handle_spawn_shape(
                     }
 
                     // Done!
-                    ent_commands.remove::<SpawnShape>();
+                    ent_commands.try_remove::<SpawnShape>();
                 } else {
                     error!("unexpected Model path {path}");
                 }
@@ -606,7 +606,7 @@ pub fn handle_spawn_shape(
         }
 
         // All the successful paths lead here.
-        ent_commands.remove::<SpawnShape>();
+        ent_commands.try_remove::<SpawnShape>();
     }
 }
 
@@ -793,7 +793,7 @@ pub(crate) fn handle_spawn_material(
             }
             SpawnMaterial::None => (),
         }
-        ent_commands.remove::<SpawnMaterial>();
+        ent_commands.try_remove::<SpawnMaterial>();
     }
 }
 

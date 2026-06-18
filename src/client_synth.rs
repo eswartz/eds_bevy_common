@@ -98,7 +98,7 @@ fn reset_synth_config(
 ) {
     for (ent, synth) in synth_q.iter_mut() {
         synth.thread_quit.store(true, Ordering::Release);
-        commands.entity(ent).remove::<MidiSynth>();
+        commands.entity(ent).try_remove::<MidiSynth>();
     }
 
     synth_map.map.clear();

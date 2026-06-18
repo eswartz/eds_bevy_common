@@ -276,9 +276,9 @@ impl<'w, 's> MenuItemBuilder<'w, 's> {
             builder
                 .commands()
                 .entity(ent_id)
-                .insert(Name::new(text.clone()))
-                .insert(other_menu_items)
-                .insert_if(AutoFocus, || self.item_index == 0)
+                .try_insert(Name::new(text.clone()))
+                .try_insert(other_menu_items)
+                .try_insert_if(AutoFocus, || self.item_index == 0)
             ;
         });
 
@@ -315,8 +315,8 @@ impl<'w, 's> MenuItemBuilder<'w, 's> {
             builder
                 .commands()
                 .entity(ent_id)
-                .insert(Name::new(text.clone()))
-                .insert(other_menu_items);
+                .try_insert(Name::new(text.clone()))
+                .try_insert(other_menu_items);
         });
         self
     }
@@ -342,7 +342,7 @@ impl<'w, 's> MenuItemBuilder<'w, 's> {
                 .insert(self.overlay, (first_ent, label).clone());
             self.commands.insert_resource(InputFocus(Some(first_ent)));
             self.commands.insert_resource(RefreshMenu);
-            self.commands.entity(first_ent).insert(Interaction::Hovered);
+            self.commands.entity(first_ent).try_insert(Interaction::Hovered);
             self.commands.write_message(MenuActionMessage::Navigate(first_ent));
 
             // self.prev.0.push(self.overlay);
@@ -582,7 +582,7 @@ fn spawn_menu_button_bundle(
     handler: Arc<Mutex<dyn MenuItemHandler>>,
 ) -> Entity {
     let ent_id = spawn_menu_row_bundle(builder, font, font_size_scale);
-    builder.commands().entity(ent_id).insert((
+    builder.commands().entity(ent_id).try_insert((
         Button,
         Text::new(text.clone()),
         MenuBaseText(text, font_size_scale),
@@ -600,7 +600,7 @@ fn spawn_menu_label_bundle(
     font_size_scale: f32,
 ) -> Entity {
     let ent_id = spawn_menu_row_bundle(builder, font, font_size_scale);
-    builder.commands().entity(ent_id).insert((
+    builder.commands().entity(ent_id).try_insert((
         Text::new(text.clone()),
         MenuBaseText(text, font_size_scale),
     ));

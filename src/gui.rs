@@ -193,7 +193,7 @@ fn update_ui_alpha(
             if !alpha_q.contains(kid)
             && let Ok((a, b, c, d)) = color_q.get(kid)
             && (a.is_some() || b.is_some() || c.is_some() || d.is_some()) {
-                commands.entity(kid).insert(UiNodeAlpha(1.0));
+                commands.entity(kid).try_insert(UiNodeAlpha(1.0));
             }
         });
 
@@ -203,7 +203,7 @@ fn update_ui_alpha(
             if comp.alpha != full_alpha {
                 comp.alpha = full_alpha;
 
-                commands.entity(ent).insert((
+                commands.entity(ent).try_insert((
                     if full_alpha <= 0.0 {
                         Visibility::Hidden
                     } else {
@@ -228,7 +228,7 @@ fn update_ui_alpha(
                     orig_values.insert(sprite.type_id(), sprite.color.alpha());
                 }
             }
-            commands.entity(ent).insert((
+            commands.entity(ent).try_insert((
                 UiNodeComputedAlpha {
                     alpha: full_alpha,
                     orig_values,
@@ -346,7 +346,7 @@ pub fn setup_loading_screen(
 ) -> Entity {
     let icon_size = 32.0f32;
 
-    ent_commands.insert((
+    ent_commands.try_insert((
         Node {
             width: Val::Percent(100.),
             height: Val::Percent(100.),
@@ -1016,7 +1016,7 @@ fn show_instructions(
 
     gui_area.with_first(GuiAreaMarker::InstructionsArea, |ent| {
         commands.entity(ent)
-        .insert(Visibility::Inherited)  // show
+        .try_insert(Visibility::Inherited)  // show
         .with_children(|builder| {
             text_ent = builder.spawn((
                 DespawnOnReset(LevelState::Playing),

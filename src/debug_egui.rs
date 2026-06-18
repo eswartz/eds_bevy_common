@@ -108,7 +108,7 @@ pub fn ensure_egui_context(
 ) {
     for camera_ent in camera_q.iter() {
         if debug.is_debug_camera(camera_ent) {
-            commands.entity(camera_ent).insert(
+            commands.entity(camera_ent).try_insert(
                 PrimaryEguiContext,
             );
         }

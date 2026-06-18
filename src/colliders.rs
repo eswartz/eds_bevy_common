@@ -160,10 +160,10 @@ fn apply_collider(
     };
 
     if !mesh_q.contains(ent_commands.id()) {
-        ent_commands.insert(ColliderConstructorHierarchy::new(collider));
+        ent_commands.try_insert(ColliderConstructorHierarchy::new(collider));
     } else{
-        ent_commands.insert(collider);
+        ent_commands.try_insert(collider);
     }
-    ent_commands.insert(layer_config.to_collision_layers());
-    ent_commands.remove::<Collider>();
+    ent_commands.try_insert(layer_config.to_collision_layers());
+    ent_commands.try_remove::<Collider>();
 }

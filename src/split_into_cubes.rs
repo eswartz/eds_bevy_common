@@ -116,21 +116,21 @@ fn handle_split_into_cubes(
                             },
                         ));
 
-                        ent_commands.insert(mat.clone());
+                        ent_commands.try_insert(mat.clone());
 
                         // GROAN copy all the other components.
                         // TODO: figure out how to use EntityCloner...
                         if let Some(c) = friction_opt {
-                            ent_commands.insert(*c);
+                            ent_commands.try_insert(*c);
                         }
                         if let Some(c) = rigid_opt {
-                            ent_commands.insert(*c);
+                            ent_commands.try_insert(*c);
                         }
                         if let Some(c) = layers_opt {
-                            ent_commands.insert(*c);
+                            ent_commands.try_insert(*c);
                         }
                         if let Some(c) = adn_opt {
-                            ent_commands.insert(c.clone());
+                            ent_commands.try_insert(c.clone());
                         }
 
                         count += 1;
@@ -143,7 +143,7 @@ fn handle_split_into_cubes(
 
         // Remove the original large object.
         let mut ent_commands = commands.entity(ent);
-        ent_commands.remove::<(
+        ent_commands.try_remove::<(
             Mesh3d,
             MeshMaterial3d<StandardMaterial>,
             RigidBody,

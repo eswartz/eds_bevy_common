@@ -125,13 +125,13 @@ impl Default for GrabbedItemStyle {
 
 impl GrabbedItemStyle {
     pub fn apply_to<'a>(&self, mut ent_commands: EntityCommands<'a>) {
-        ent_commands.insert(self.volume.clone());
-        ent_commands.insert(self.mode.clone());
+        ent_commands.try_insert(self.volume.clone());
+        ent_commands.try_insert(self.mode.clone());
         if let Some(stencil) = &self.stencil {
-            ent_commands.insert(stencil.clone());
+            ent_commands.try_insert(stencil.clone());
         }
         if let Some(inherit) = &self.inherit {
-            ent_commands.insert(inherit.clone());
+            ent_commands.try_insert(inherit.clone());
         }
     }
     pub fn remove_from<'a>(&self, mut ent_commands: EntityCommands<'a>) {
@@ -189,13 +189,13 @@ fn sync_grabbable_with_highlighted(
     // Turn off formerly highlighted items, which cannot be grabbable now.
     for ent in unhilit_q.iter() {
         if grab_q.contains(ent) {
-            commands.entity(ent).remove::<Grabbable>();
+            commands.entity(ent).try_remove::<Grabbable>();
         }
     }
     // Add newly highlighted items.
     for ent in hilit_q.iter() {
         if !grab_q.contains(ent) {
-            commands.entity(ent).insert(Grabbable);
+            commands.entity(ent).try_insert(Grabbable);
         }
     }
 }
@@ -493,7 +493,7 @@ fn process_grab_commands(
 
                     if is_rigid && let Some(vel) = vel {
                         // ent_commands.try_remove::<Sleeping>();
-                        ent_commands.insert(LinearVelocity(vel.adjust_precision()));
+                        ent_commands.try_insert(LinearVelocity(vel.adjust_precision()));
                     }
 
                     styler.remove_from(ent_commands);

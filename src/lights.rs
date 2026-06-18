@@ -96,7 +96,7 @@ fn apply_light_effect_settings(
 
             match video_settings.shadow_quality {
                 ShadowQuality::Off => {
-                    ent_commands.remove::<CascadeShadowConfig>();
+                    ent_commands.try_remove::<CascadeShadowConfig>();
                 }
                 ShadowQuality::Low => {
                     new_config.num_cascades = 1;
@@ -124,7 +124,7 @@ fn apply_light_effect_settings(
                     new_config.num_cascades = 1;
                 }
 
-                ent_commands.insert(new_config.build());
+                ent_commands.try_insert(new_config.build());
             }
         }
     }
@@ -150,28 +150,28 @@ fn apply_light_effect_settings(
             ShadowQuality::Off => {
                 light.shadows_enabled = false;
                 set_soft_shadows_enabled!(light, false);
-                commands.entity(ent).remove::<ShadowFilteringMethod>();
+                commands.entity(ent).try_remove::<ShadowFilteringMethod>();
             }
             ShadowQuality::Low => {
                 light.shadows_enabled = true;
                 set_soft_shadows_enabled!(light, false);
-                commands.entity(ent).insert(ShadowFilteringMethod::Hardware2x2);
+                commands.entity(ent).try_insert(ShadowFilteringMethod::Hardware2x2);
             }
             ShadowQuality::Medium => {
                 // default
                 light.shadows_enabled = true;
                 set_soft_shadows_enabled!(light, false);
-                commands.entity(ent).insert(default_method);
+                commands.entity(ent).try_insert(default_method);
             }
             ShadowQuality::High => {
                 light.shadows_enabled = true;
                 set_soft_shadows_enabled!(light, true);
-                commands.entity(ent).insert(default_method);
+                commands.entity(ent).try_insert(default_method);
             }
             ShadowQuality::Ultra => {
                 light.shadows_enabled = true;
                 set_soft_shadows_enabled!(light, true);
-                commands.entity(ent).insert(default_method);
+                commands.entity(ent).try_insert(default_method);
             }
 
         };
@@ -181,24 +181,24 @@ fn apply_light_effect_settings(
         match video_settings.shadow_quality {
             ShadowQuality::Off => {
                 set_soft_shadows_enabled!(light, false);
-                commands.entity(ent).remove::<ShadowFilteringMethod>();
+                commands.entity(ent).try_remove::<ShadowFilteringMethod>();
             }
             ShadowQuality::Low => {
                 set_soft_shadows_enabled!(light, false);
-                commands.entity(ent).insert(ShadowFilteringMethod::Hardware2x2);
+                commands.entity(ent).try_insert(ShadowFilteringMethod::Hardware2x2);
             }
             ShadowQuality::Medium => {
                 // default
                 set_soft_shadows_enabled!(light, false);
-                commands.entity(ent).insert(default_method);
+                commands.entity(ent).try_insert(default_method);
             }
             ShadowQuality::High => {
                 set_soft_shadows_enabled!(light, true);
-                commands.entity(ent).insert(default_method);
+                commands.entity(ent).try_insert(default_method);
             }
             ShadowQuality::Ultra => {
                 set_soft_shadows_enabled!(light, true);
-                commands.entity(ent).insert(default_method);
+                commands.entity(ent).try_insert(default_method);
             }
 
         };
@@ -210,32 +210,32 @@ fn apply_light_effect_settings(
                 light.shadows_enabled = false;
                 #[cfg(feature = "experimental_pbr_pcss")]
                 {light.soft_shadow_size = None;}
-                commands.entity(ent).remove::<ShadowFilteringMethod>();
+                commands.entity(ent).try_remove::<ShadowFilteringMethod>();
             }
             ShadowQuality::Low => {
                 light.shadows_enabled = true;
                 #[cfg(feature = "experimental_pbr_pcss")]
                 {light.soft_shadow_size = None;}
-                commands.entity(ent).insert(ShadowFilteringMethod::Hardware2x2);
+                commands.entity(ent).try_insert(ShadowFilteringMethod::Hardware2x2);
             }
             ShadowQuality::Medium => {
                 // default
                 light.shadows_enabled = true;
                 #[cfg(feature = "experimental_pbr_pcss")]
                 {light.soft_shadow_size = None;}
-                commands.entity(ent).insert(default_method);
+                commands.entity(ent).try_insert(default_method);
             }
             ShadowQuality::High => {
                 light.shadows_enabled = true;
                 // #[cfg(feature = "experimental_pbr_pcss")]
                 // {light.soft_shadow_size = Some(0.02);}
-                commands.entity(ent).insert(default_method);
+                commands.entity(ent).try_insert(default_method);
             }
             ShadowQuality::Ultra => {
                 light.shadows_enabled = true;
                 // #[cfg(feature = "experimental_pbr_pcss")]
                 // {light.soft_shadow_size = Some(0.02);}
-                commands.entity(ent).insert(default_method);
+                commands.entity(ent).try_insert(default_method);
             }
 
         };

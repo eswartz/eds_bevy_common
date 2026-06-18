@@ -43,12 +43,12 @@ fn sync_player(
     for ent in removed.read() {
         if params.p0().contains(ent) {
             log::info!("Despawned our player");
-            commands.entity(ent).remove::<OurPlayer>();
+            commands.entity(ent).try_remove::<OurPlayer>();
         }
     }
     for (ent, player) in params.p1().iter() {
         if player.0 == user.0 {
-            commands.entity(ent).insert(OurPlayer);
+            commands.entity(ent).try_insert(OurPlayer);
             log::info!("Claiming entity {ent} for player {}", user.0);
             break;
         }

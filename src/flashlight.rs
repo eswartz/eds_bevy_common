@@ -47,9 +47,9 @@ fn enable_disable_flashlight(
     for (ent, light) in lights_q.iter() {
         let mut ent_commands = commands.entity(ent);
         if light.enabled {
-            ent_commands.insert(light.spot.clone());
+            ent_commands.try_insert(light.spot.clone());
         } else {
-            ent_commands.remove::<SpotLight>();
+            ent_commands.try_remove::<SpotLight>();
         }
     }
 }

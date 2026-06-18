@@ -140,8 +140,8 @@ fn handle_assign_detail_normals(
         let new_handle = ext_materials.add(ext_mat);
 
         let mut ent_commands = commands.entity(ent);
-        ent_commands.remove::<MeshMaterial3d<StandardMaterial>>();
-        ent_commands.insert((
+        ent_commands.try_remove::<MeshMaterial3d<StandardMaterial>>();
+        ent_commands.try_insert((
             MeshMaterial3d(new_handle.clone()),
             // for egui inspector
             CustomMaterialNormalExtension {

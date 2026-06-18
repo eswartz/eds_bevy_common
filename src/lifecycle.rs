@@ -155,7 +155,7 @@ fn check_configure_before_playing(
             error!("Removing stuck ConfigureBeforePlaying on: {ents:?}");
             // Remove them all.
             for ent in ents {
-                commands.entity(ent).remove::<ConfigureBeforePlaying>();
+                commands.entity(ent).try_remove::<ConfigureBeforePlaying>();
             }
             // Let the next frame handle their removal and re-querying,
             // or not, in case something is e.g. adding this component

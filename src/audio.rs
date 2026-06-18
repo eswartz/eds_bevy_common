@@ -108,7 +108,7 @@ struct BackgroundAudio;
 ///
 /// Either use directly or copy and freely adapt per client.
 pub fn initialize_audio(master: Single<Entity, With<MainBus>>, mut commands: Commands) {
-    commands.entity(*master).insert(UserVolume {
+    commands.entity(*master).try_insert(UserVolume {
         volume: Volume::Linear(0.5),
         muted: false,
     });
@@ -225,14 +225,14 @@ fn check_pause_request(
         for (ent, mut settings, _) in settings_q.iter_mut() {
             if *settings.play {
                 settings.pause();
-                commands.entity(ent).insert(PlaybackPaused);
+                commands.entity(ent).try_insert(PlaybackPaused);
             }
         }
     } else /* !pause ==> resume */ {
         for (ent, mut settings, paused) in settings_q.iter_mut() {
             if paused.is_some() {
                 settings.play();
-                commands.entity(ent).remove::<PlaybackPaused>();
+                commands.entity(ent).try_remove::<PlaybackPaused>();
             }
         }
     }

@@ -93,22 +93,22 @@ impl Default for HighlightedItemStyle {
 
 impl HighlightedItemStyle {
     pub fn apply_to<'a>(&self, mut ent_commands: EntityCommands<'a>) {
-        ent_commands.insert(self.volume.clone());
-        ent_commands.insert(self.mode.clone());
+        ent_commands.try_insert(self.volume.clone());
+        ent_commands.try_insert(self.mode.clone());
         if let Some(stencil) = &self.stencil {
-            ent_commands.insert(stencil.clone());
+            ent_commands.try_insert(stencil.clone());
         }
         if let Some(inherit) = &self.inherit {
-            ent_commands.insert(inherit.clone());
+            ent_commands.try_insert(inherit.clone());
         }
     }
     pub fn remove_from<'a>(&self, mut ent_commands: EntityCommands<'a>) {
-        ent_commands.remove::<OutlineVolume>();
+        ent_commands.try_remove::<OutlineVolume>();
         if self.stencil.is_some() {
-            ent_commands.remove::<OutlineStencil>();
+            ent_commands.try_remove::<OutlineStencil>();
         }
         if self.inherit.is_some() {
-            ent_commands.remove::<InheritOutline>();
+            ent_commands.try_remove::<InheritOutline>();
         }
     }
 }
@@ -165,7 +165,7 @@ fn clear_highlighted(
 ) {
     for ent in hilit_q.iter() {
         let mut ent_commands = commands.entity(ent);
-        ent_commands.remove::<Highlighted>();
+        ent_commands.try_remove::<Highlighted>();
         style.remove_from(ent_commands);
     }
 }
