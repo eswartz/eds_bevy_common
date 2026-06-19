@@ -509,6 +509,7 @@ fn process_grab_commands(
                 {
                     *mode = HighlightingMode::Disabled;
                 }
+                commands.remove_resource::<GrabbedItem>();
             }
         }
     }
