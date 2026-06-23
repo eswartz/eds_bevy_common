@@ -313,7 +313,7 @@ fn ensure_font_assets(
             font: assets.emoji_icon_font.clone(),
             .. default()
         },
-        Text::new("\u{1F508}\u{1F6AB}\u{23f1}\u{fe0f}"), // various emoji used below
+        Text::new("🚀\u{1F508}\u{1F6AB}\u{23f1}\u{fe0f}"), // various emoji used below
     ));
 }
 
@@ -881,7 +881,7 @@ fn setup_gui_nodes(
             right: Val::Px(right_x),
             .. default()
         },
-        Text::new("\u{1F3C3}"), // runner
+        Text::new("\u{1f680}"), // rocket 🚀
         Visibility::Inherited,
         ZIndex(-1), // under
     ));
