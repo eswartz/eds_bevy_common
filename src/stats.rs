@@ -1,15 +1,13 @@
 use bevy::ecs::world::CommandQueue;
 use bevy::prelude::*;
 use avian3d::dynamics::solver::SolverDiagnostics;
-
-use sysinfo;
-
 use std::collections::VecDeque;
 use std::time::Duration;
-
+use sysinfo;
 
 use crate::Player;
 use crate::PlayerLook;
+use crate::PlayerMovement;
 use crate::ProgramState;
 use crate::repeating_with_delay;
 
@@ -252,9 +250,6 @@ impl StatsProvider for CpuUsageProvider {
 #[derive(Default)]
 pub struct MemoryUsageProvider;
 
-impl MemoryUsageProvider {
-}
-
 impl StatsProvider for MemoryUsageProvider {
     fn get_label(&self) -> String {
         "Memory Usage".to_string()
@@ -274,9 +269,6 @@ impl StatsProvider for MemoryUsageProvider {
 
 #[derive(Default)]
 pub struct PlayerPosProvider;
-
-impl PlayerPosProvider {
-}
 
 impl StatsProvider for PlayerPosProvider {
     fn get_label(&self) -> String {
@@ -302,9 +294,6 @@ impl StatsProvider for PlayerPosProvider {
 
 #[derive(Default)]
 pub struct PlayerAngProvider;
-
-impl PlayerAngProvider {
-}
 
 impl StatsProvider for PlayerAngProvider {
     fn get_label(&self) -> String {
@@ -333,6 +322,33 @@ fn add_default_providers(mut regy: ResMut<StatsRegistry>) {
     regy.add_provider(Box::new(MemoryUsageProvider));
     regy.add_provider(Box::new(PlayerPosProvider));
     regy.add_provider(Box::new(PlayerAngProvider));
+    regy.add_provider(Box::new(PlayerMoveProvider));
+}
+
+
+#[derive(Default)]
+pub struct PlayerMoveProvider;
+
+impl StatsProvider for PlayerMoveProvider {
+    fn get_label(&self) -> String {
+        "Player State/Move".to_string()
+    }
+
+    fn priority(&self) -> i32 { -4 }
+
+    fn fetch_value(&self, world: &mut World) -> StatsValue {
+        let mut query = world.query_filtered::<&PlayerMovement, With<Player>>();
+        if let Some(movement) = query.iter(world).next() {
+            StatsValue::new(format!("{:?}|{:.3} m/s|{:?}",
+                movement.state,
+                movement.velocity_ramp,
+                movement.area,
+            ))
+
+        } else {
+            default()
+        }
+    }
 }
 
 #[derive(Resource, Debug, Reflect)]

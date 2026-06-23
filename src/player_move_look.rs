@@ -214,7 +214,7 @@ impl MovementState {
 #[require(Saveable)]
 #[type_path = "game"]
 pub struct PlayerMovement {
-    /// Current velocity.
+    /// Current velocity. (FIXME, not used)
     pub velocity: f32,
     /// Current velocity rampup.
     pub velocity_ramp: f32,

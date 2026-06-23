@@ -1,6 +1,7 @@
 /// Generic reusable area markers.
 use bevy::prelude::*;
 
+/// The content volume of a given area.
 #[derive(
     Default,
     Reflect,
@@ -27,12 +28,10 @@ pub enum AreaContent {
     Air = 0,
     /// Water.
     Water = 1,
-    /// Ice.
-    Ice = 2,
     /// Slime.
-    Slime = 3,
+    Slime = 2,
     /// Lava.
-    Lava = 4,
+    Lava = 3,
 }
 
 impl AreaContent {
@@ -40,7 +39,6 @@ impl AreaContent {
         match self {
             AreaContent::Air => false,
             AreaContent::Water => true,
-            AreaContent::Ice => false,
             AreaContent::Slime => true,
             AreaContent::Lava => true,
         }
