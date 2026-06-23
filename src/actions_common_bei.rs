@@ -19,7 +19,11 @@ impl Plugin for ActionPlugin {
         app.add_plugins(EnhancedInputPlugin)
             .add_input_context::<PlayerContext>()
             .add_input_context::<MenuContext>()
+
+            // All the time!
             .add_systems(Update, handle_escape)
+            .add_systems(Last, mask_and_unmask_inputs)
+
             .add_systems(Update, toggle_context.run_if(resource_changed::<State<OverlayState>>))
             .add_observer(handle_pause_gameplay)
             .add_observer(handle_toggle_physics)
@@ -28,9 +32,6 @@ impl Plugin for ActionPlugin {
             .add_observer(handle_full_screen)
             .add_observer(handle_mute)
 
-            .add_systems(PostUpdate,
-                    mask_and_unmask_inputs
-            )
             ;
     }
 }
@@ -232,6 +233,7 @@ pub(crate) fn handle_pause_gameplay(_event: On<Start<actions::PauseGameplay>>, k
 
 pub(crate) fn handle_toggle_physics(_event: On<Start<actions::TogglePhysics>>, mut pause_state: ResMut<PhysicsPaused>) {
     **pause_state ^= true;
+    log::info!("Physics {}", if !**pause_state { "RUNNING" } else { "PAUSED" });
 }
 pub(crate) fn handle_toggle_physics_gizmos(_event: On<Start<actions::TogglePhysicsGizmos>>, mut gui_state: ResMut<GuiState>) {
     gui_state.show_physics_gizmos ^= true;
@@ -633,7 +635,7 @@ pub fn default_mouse_wheel_scale(factor: f32) -> Scale {
     }
 }
 
-/// Disable BEI handling of mouse input when a window is not focused.
+/// Hide inputs from BEI when, e.g., a window is not focused or egui input
 /// (This is to avoid having such inputs be passed when the window is re-focused
 /// by the mouse on window managers with "activate and pass click" enabled.)
 fn mask_and_unmask_inputs(
@@ -643,12 +645,15 @@ fn mask_and_unmask_inputs(
     mut count: Local<i32>,
 ) {
     let (window, _cursor) = window_cursor_options.into_inner();
-    let mouse_busy = !window.focused || wants_input_opt.is_some_and(|inp| inp.wants_any_pointer_input());
+    let mouse_busy = !window.focused || wants_input_opt.as_ref().is_some_and(|inp| inp.wants_any_pointer_input());
+    let kbd_busy = !window.focused || wants_input_opt.as_ref().is_some_and(|inp| inp.wants_any_keyboard_input());
     if mouse_busy {
+        // Use this flag to detect the previous state.
         if sources.mouse_buttons {
             sources.mouse_buttons = false;
             sources.mouse_motion = false;
             sources.mouse_wheel = false;
+            sources.keyboard = kbd_busy;
             *count = 0;
         }
     } else {
@@ -657,6 +662,7 @@ fn mask_and_unmask_inputs(
                 sources.mouse_buttons = true;
                 sources.mouse_motion = true;
                 sources.mouse_wheel = true;
+                sources.keyboard = true;
             } else {
                 // Wait for debounce.
                 *count += 1;
