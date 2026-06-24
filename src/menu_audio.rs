@@ -8,7 +8,7 @@ pub struct MenuAudioPlugin;
 impl Plugin for MenuAudioPlugin {
     fn build(&self, app: &mut App) {
         app
-            .add_systems(Update,
+            .add_systems(FixedUpdate,
                 (
                     spawn_menu_fx,
                     handle_menu_actions,

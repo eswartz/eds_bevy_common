@@ -33,7 +33,7 @@ impl Plugin for AudioCommonPlugin {
                     .load_collection::<CommonFxAssets>()
             )
 
-            .add_systems(PreUpdate,
+            .add_systems(FixedPreUpdate,
                 (
                     check_pause_request,
                 )
