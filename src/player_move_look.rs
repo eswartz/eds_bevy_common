@@ -538,6 +538,7 @@ fn check_player_environment_fps(
             movement.medium_friction = 0.0;
             movement.state = MovementState::Falling;
             movement.jumping_out = false;
+            try_to_land = true;
 
         } else if is_flying {
             movement.medium_friction = 0.0;
@@ -564,7 +565,7 @@ fn check_player_environment_fps(
 
                 for manifold in coll.manifolds.iter() {
                     let angle = manifold.normal.adjust_precision().angle_between(Vec3::NEG_Y);
-                    let steepness = angle / std::f32::consts::PI;
+                    let steepness = 1.0 - angle / std::f32::consts::PI;
                     if steepness > 0.25 {
                         // Ignore very steep floors, walls, etc.
                         continue;
