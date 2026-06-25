@@ -261,17 +261,18 @@ impl OurCamera {
 }
 
 pub fn sync_world_camera_to_player(
-    mut player_q: Single<(&Transform, &PlayerLook, &ColliderAabb, &mut Visibility), (With<OurPlayer>, Without<Camera3d>)>,
+    mut player_q: Single<(&GlobalTransform, &PlayerLook, &ColliderAabb, &mut Visibility), (With<OurPlayer>, Without<Camera3d>)>,
     mut world_camera_q: Single<(&PlayerCamera, &mut Transform, &OurCamera), (With<Camera3d>, With<WorldCamera>)>,
     time: Res<Time>,
 ) {
     let (player_xfrm, look, player_aabb, ref mut model_visibility) = *player_q;
     let (PlayerCamera(mode), ref mut camera_xfrm, cam) = *world_camera_q;
+    let world_pos = player_xfrm.translation();
 
     // let q = (time.delta_secs() * 10.0).min(1.0);
     let q = (-0.5 * time.delta_secs() * 100.0).exp();
 
-    let eyes_pos = player_eyes(player_xfrm, player_aabb, look);
+    let eyes_pos = player_eyes(world_pos, player_aabb, look);
     match mode {
         CameraMode::FirstPerson => {
             model_visibility.set_if_neq(Visibility::Hidden);
@@ -390,12 +391,13 @@ pub fn hide_3d_camera(mut camera_q: Query<&mut Camera, (With<Camera3d>, With<Our
 }
 
 pub fn update_player_ui(
-    mut player_q: Query<(&PlayerMovement, &PlayerLook, &Transform, &ColliderAabb), With<OurPlayer>>,
+    mut player_q: Query<(&PlayerMovement, &PlayerLook, &GlobalTransform, &ColliderAabb), With<OurPlayer>>,
     mut gizmos: Gizmos,
 ) {
     for (movement, look, transform, aabb) in player_q.iter_mut() {
         // Show where we're looking.
-        let head = player_eyes(transform, aabb, look);
+        let world_pos = transform.translation();
+        let head = player_eyes(world_pos, aabb, look);
         let normal = look.rotation * Vec3::NEG_Z;
         gizmos.arrow(
             head,
@@ -404,7 +406,7 @@ pub fn update_player_ui(
         );
 
         if movement.state == MovementState::Grounded {
-            let feet = player_feet(transform, aabb);
+            let feet = player_feet(world_pos, aabb);
             gizmos.circle(
                 Isometry3d::new(feet, Quat::from_rotation_x(std::f32::consts::PI / 2.0)),
                 1.0,

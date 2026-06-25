@@ -437,16 +437,16 @@ pub fn clear_player_velocity(mut player_q: Query<&mut LinearVelocity, With<Playe
 }
 
 /// Get the local position of the player's feet relative to the given player transform.
-pub fn player_feet(transform: &Transform, aabb: &ColliderAabb) -> Vec3 {
+pub fn player_feet(world_pos: Vec3, aabb: &ColliderAabb) -> Vec3 {
     Vec3::new(
-        transform.translation.x,
+        world_pos.x,
         aabb.min.y,
-        transform.translation.z,
+        world_pos.z,
     )
 }
 
 /// Get the local position of the player's eyes relative to the given player transform.
-pub fn player_eyes(transform: &Transform, aabb: &ColliderAabb, look: &PlayerLook) -> Vec3 {
+pub fn player_eyes(world_pos: Vec3, aabb: &ColliderAabb, look: &PlayerLook) -> Vec3 {
     // let center = aabb.center().as_vec3();
     // Eyes are in the middle of the head.
     // let inside_head_pt = Vec3::new(center.x, aabb.max.y as f32 - 0.5, center.z);
@@ -456,9 +456,9 @@ pub fn player_eyes(transform: &Transform, aabb: &ColliderAabb, look: &PlayerLook
     // // inside_head_pt + transform.rotation * (Vec3::NEG_Z * 0.125)
 
     Vec3::new(
-        transform.translation.x,
+        world_pos.x,
         aabb.max.y - 0.25 + look.crouch_y,
-        transform.translation.z - 0.25,
+        world_pos.z - 0.25,
     )
 }
 
@@ -594,12 +594,18 @@ fn check_player_environment_fps(
                 let rc_settings = MeshRayCastSettings::default().with_filter(&is_player_collider);
 
                 // Start from a little bit above the feet.
-                let ray = Ray3d::new(player_feet(&gxfrm.compute_transform(), aabb) + Vec3::new(0.0, 0.5, 0.0), Dir3::NEG_Y);
+                let feet = player_feet(gxfrm.translation(), aabb);
+                const RAY_DIST: f32 = 0.125;
+
+                let ray = Ray3d::new(feet + Vec3::new(0.0, RAY_DIST, 0.0), Dir3::NEG_Y);
                 let results = raycast.cast_ray(ray, &rc_settings);
                 if results.is_empty() {
                     movement.state = MovementState::Falling;
                 } else if let Some(first) = results.first() {
-                    if first.1.distance < (aabb.size().y / 4.0 - 0.5) {
+                    // Assume we hit the ground if within range of the feet or legs.
+                    let hit_distance = (first.1.distance - RAY_DIST).max(0.0);
+                    let feet_range = aabb.size().y / 4.0;
+                    if hit_distance < feet_range {
                         // OK, we should contact with the ground.
                         if movement.state != MovementState::Jumping {
                             movement.state = movement.state.to_grounded();
