@@ -1,3 +1,4 @@
+use bevy::core_pipeline::oit::OrderIndependentTransparencySettings;
 use bevy::prelude::*;
 use serde::Deserialize;
 use serde::Serialize;
@@ -44,7 +45,7 @@ impl Plugin for VideoPlugin {
     }
 }
 
-#[derive(Resource, Debug, Clone, Copy, PartialEq, Reflect)]
+#[derive(Resource, Debug, Clone, Reflect)]
 #[reflect(Default, Clone, Resource)]
 #[type_path = "game"]
 pub struct VideoSettings {
@@ -54,6 +55,7 @@ pub struct VideoSettings {
     pub texture_quality: TextureQuality,
     pub shadow_quality: ShadowQuality,
     pub glass_quality: GlassQuality,
+    pub oit_settings: OrderIndependentTransparencyQuality,
 }
 
 impl Default for VideoSettings {
@@ -65,6 +67,38 @@ impl Default for VideoSettings {
             texture_quality: Default::default(),
             shadow_quality: Default::default(),
             glass_quality: GlassQuality::Off,
+            oit_settings: OrderIndependentTransparencyQuality::default(),
+        }
+    }
+}
+
+#[derive(Resource, Debug, Clone, Copy, PartialEq, Reflect)]
+#[reflect(Default, Clone, Resource)]
+#[type_path = "game"]
+pub enum OrderIndependentTransparencyQuality {
+    Off,
+    Levels(u16),
+}
+
+impl Default for OrderIndependentTransparencyQuality {
+    fn default() -> Self {
+        Self::Levels(8)
+    }
+}
+
+impl OrderIndependentTransparencyQuality {
+    pub fn to_settings(&self) -> Option<OrderIndependentTransparencySettings> {
+        if cfg!(any(target_arch = "wasm32", feature = "solari")) {
+            return None
+        }
+
+        match self {
+            OrderIndependentTransparencyQuality::Off => None,
+            OrderIndependentTransparencyQuality::Levels(layer_count) =>
+                Some(OrderIndependentTransparencySettings {
+                    layer_count: *layer_count as _,
+                    alpha_threshold: 0.0,
+                })
         }
     }
 }
@@ -101,6 +135,7 @@ pub enum Antialiasing {
     Off,
     #[cfg_attr(all(not(target_arch = "wasm32"), not(feature = "solari")), default)]
     TSAA,
+    MSAA,
 }
 
 #[derive(
@@ -264,6 +299,10 @@ fn apply_effect_settings(
                 ent_commands.try_insert((
                     Msaa::Off,
                 ));
+
+                if let Some(settings) = video_settings.oit_settings.to_settings() {
+                    ent_commands.try_insert(settings);
+                }
             },
             Antialiasing::TSAA => {
                 ent_commands.try_insert((
@@ -280,11 +319,14 @@ fn apply_effect_settings(
                     },
                     TemporalAntiAliasing::default(),
                 ));
+                if let Some(settings) = video_settings.oit_settings.to_settings() {
+                    ent_commands.try_insert(settings);
+                }
             }
-            // Antialiasing::MSAA => {
-            //     ent_commands.try_remove::<(Msaa, ScreenSpaceAmbientOcclusion, TemporalAntiAliasing)>();
-            //     ent_commands.try_insert(Msaa::Sample4);
-            // }
+            Antialiasing::MSAA => {
+                ent_commands.try_remove::<(Msaa, ScreenSpaceAmbientOcclusion, TemporalAntiAliasing, OrderIndependentTransparencySettings)>();
+                ent_commands.try_insert(Msaa::Sample4);
+            }
         }
 
         match video_settings.glass_quality {
