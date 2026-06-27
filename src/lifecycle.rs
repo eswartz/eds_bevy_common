@@ -18,10 +18,7 @@ impl Plugin for LifecyclePlugin {
         app
             .init_resource::<PauseState>()
             .add_systems(Startup,
-                (
-                    sample_winit_settings.run_if(not(resource_exists::<PhasedWinitSettings>)),
-                    update_frame_rate_on_pause,
-                ).chain()
+                sample_winit_settings.run_if(not(resource_exists::<PhasedWinitSettings>)),
             )
             .add_systems(Update, (
                 check_pause_request,

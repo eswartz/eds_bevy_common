@@ -25,10 +25,6 @@ use rustc_hash::FxBuildHasher;
 use bevy_enhanced_input::prelude::*;
 use bevy::picking::events::Press;
 
-#[cfg(feature = "input_bei")]
-use crate::MenuAction;
-// #[cfg(feature = "input_bei")]
-// use crate::MenuContext;
 use crate::RENDER_LAYER_UI;
 #[cfg(feature = "input_bei")]
 use crate::actions;
@@ -55,8 +51,6 @@ impl Plugin for MenuCommonPlugin {
             .insert_resource(DraggingMenuItem(None))
             .insert_resource(MenuItemSelectionHistory::default())
             .insert_resource(PreviousMenuStack::default())
-            .insert_resource(CountAccumulator::<MoveDownUp>::default())
-            .insert_resource(CountAccumulator::<MoveLeftRight>::default())
             .add_message::<MenuActionMessage>()
             .add_systems(
                 PreUpdate,
@@ -94,21 +88,16 @@ impl Plugin for MenuCommonPlugin {
         #[cfg(feature = "input_bei")]
         {
             app
-                .add_systems(
-                    Update,
-                    (
-                        handle_focused_item_actions,
-                        handle_menu_navigation,
-                    )
-                    .run_if(is_in_menu)
-                );
+                .add_observer(on_menu_back)
+                .add_observer(on_menu_down_up)
+                .add_observer(on_focused_reset)
+                .add_observer(on_focused_interact_fire)
+                .add_observer(on_focused_left_right)
+            ;
         }
 
     }
 }
-
-struct MoveDownUp;
-struct MoveLeftRight;
 
 #[derive(Resource)]
 pub struct CountAccumulator<T> {
@@ -795,62 +784,70 @@ fn on_focus_change(
 }
 
 #[cfg(feature = "input_bei")]
-fn handle_focused_item_actions(
+fn on_focused_interact_fire(
+    _event: On<Start<actions::Interact>>,
     mut commands: Commands,
 
-    interact_or_fire_q: Query<&ActionEvents, (Or<(With<Action<actions::Interact>>, With<Action<actions::Firing>>)>, With<MenuAction>)>,
-    reset_q: Query<&ActionEvents, (With<Action<actions::Reset>>, With<MenuAction>)>,
-    left_right_q: Query<(&ActionEvents, &Action<actions::MoveLeftRight>), With<MenuAction>>,
+    focus: Res<InputFocus>,
+    menu_item_q: Query<&MenuItem>,
+) {
+    let Some(entity) = focus.0 else { return };
+
+    // Activate menu item?
+    if menu_item_q.contains(entity) {
+        commands.write_message(MenuActionMessage::Activate(entity));
+    } else {
+        warn!("no MenuItem");
+    }
+}
+
+#[cfg(feature = "input_bei")]
+fn on_focused_reset(
+    _event: On<Start<actions::Reset>>,
+    mut commands: Commands,
+
+    focus: Res<InputFocus>,
+    menu_item_q: Query<&MenuItem>,
+) {
+    let Some(entity) = focus.0 else { return };
+
+    if menu_item_q.contains(entity) {
+        commands.write_message(MenuActionMessage::Reset(entity));
+    } else {
+        warn!("no MenuItem");
+    }
+}
+
+#[cfg(feature = "input_bei")]
+fn on_focused_left_right(
+    event: On<Fire<actions::MoveLeftRight>>,
+    overlay: Res<State<OverlayState>>,
 
     focus: Res<InputFocus>,
     toggle_q: Query<&MenuToggle>,
     slider_q: Query<&MenuSlider>,
     enum_q: Query<&MenuEnum>,
-    menu_item_q: Query<&MenuItem>,
-    mut left_right_ctr: ResMut<CountAccumulator<MoveLeftRight>>,
     mut writer: MessageWriter<MenuActionMessage>,
 ) {
+    if !overlay.is_menu() { return };
     let Some(entity) = focus.0 else { return };
+    if event.elapsed_secs < 0.0625 { return };
 
-    let interact_or_fire = interact_or_fire_q.iter().any(|e| e.contains(ActionEvents::START));
-    if interact_or_fire {
-        // Activate menu item?
-        if menu_item_q.contains(entity) {
-            commands.write_message(MenuActionMessage::Activate(entity));
+    let dir = event.value.signum() as i32;
+    if slider_q.contains(entity) {
+        writer.write(MenuActionMessage::Slide(
+            entity,
+            dir as f32,
+        ));
+    } else if toggle_q.contains(entity) || enum_q.contains(entity) {
+        if dir < 0 {
+            writer.write(MenuActionMessage::Previous(entity));
         } else {
-            warn!("no MenuItem");
-        }
-    }
-
-    // Reset to default?
-    let reset = reset_q.iter().any(|e| e.contains(ActionEvents::START));
-    if reset {
-        if menu_item_q.contains(entity) {
-            commands.write_message(MenuActionMessage::Reset(entity));
-        } else {
-            warn!("no MenuItem");
-        }
-    }
-
-    let (left_right_events, left_right) = left_right_q.single().expect("only one MoveLeftRight needed for menu");
-    if left_right_events.contains(ActionEvents::START) {
-        left_right_ctr.reset();
-    }
-    if let Some(dir) = left_right_ctr.add_and_test(**left_right) {
-        if slider_q.contains(entity) {
-            writer.write(MenuActionMessage::Slide(
-                entity,
-                dir as f32,
-            ));
-        } else if toggle_q.contains(entity) || enum_q.contains(entity) {
-            if dir < 0 {
-                writer.write(MenuActionMessage::Previous(entity));
-            } else {
-                writer.write(MenuActionMessage::Next(entity));
-            }
+            writer.write(MenuActionMessage::Next(entity));
         }
     }
 }
+
 
 fn signum_or_zero(f: f32) -> i32 {
     if f < 0. { -1 }
@@ -859,52 +856,52 @@ fn signum_or_zero(f: f32) -> i32 {
 }
 
 #[cfg(feature = "input_bei")]
-fn handle_menu_navigation(
+fn on_menu_back(
+    _event: On<Start<actions::Back>>,
+    overlay: Res<State<OverlayState>>,
+    mut commands: Commands,
+) {
+    if !overlay.is_menu() { return };
+    commands.insert_resource(GoBackInMenuRequest);
+}
+
+#[cfg(feature = "input_bei")]
+fn on_menu_down_up(
+    event: On<Fire<actions::MoveDownUp>>,
+    overlay: Res<State<OverlayState>>,
     mut commands: Commands,
     nav: TabNavigation,
 
-    // menu_or_back_q: Query<&ActionEvents, (Or<(With<Action<actions::Menu>>, With<Action<actions::Back>>)>, With<MenuAction>)>,
-    menu_or_back_q: Query<&ActionEvents, (With<Action<actions::Back>>, With<MenuAction>)>,
-    down_up_q: Query<(&ActionEvents, &Action<actions::MoveDownUp>), With<MenuAction>>,
-
     mut focus: ResMut<InputFocus>,
     mut visible: ResMut<InputFocusVisible>,
-
-    mut down_up_ctr: ResMut<CountAccumulator<MoveDownUp>>,
 ) {
-    let menu_or_back = menu_or_back_q.iter().any(|e| e.contains(ActionEvents::START));
-    if menu_or_back {
-        commands.insert_resource(GoBackInMenuRequest);
-    }
+    if !overlay.is_menu() { return };
+    if focus.0.is_none() { return };
+    if event.elapsed_secs < 0.0625 { return };
 
-    let (down_up_events, down_up) = down_up_q.single().expect("only one MoveDownUp needed for menu");
-    if down_up_events.contains(ActionEvents::START) {
-        down_up_ctr.reset();
-    }
-    if let Some(dir) = down_up_ctr.add_and_test(**down_up) {
-        // Move in menu?
-        let nav_dir = match dir {
-            -1 => Some(NavAction::Previous),
-            1 => Some(NavAction::Next),
-            _ => None,
-        };
-        if let Some(nav_dir) = nav_dir {
-            let maybe_next = nav.navigate(&focus, nav_dir);
+    let dir = event.value.signum() as i32;
+    // Move in menu?
+    let nav_dir = match dir {
+        -1 => Some(NavAction::Previous),
+        1 => Some(NavAction::Next),
+        _ => None,
+    };
+    if let Some(nav_dir) = nav_dir {
+        let maybe_next = nav.navigate(&focus, nav_dir);
 
-            match maybe_next {
-                Ok(next) => {
-                    focus.set(next);
+        match maybe_next {
+            Ok(next) => {
+                focus.set(next);
+                visible.0 = true;
+                commands.write_message(MenuActionMessage::Navigate(next));
+            }
+            Err(e) => {
+                // This failure mode is recoverable, but still indicates a problem.
+                // warn!("Tab navigation error: {}", e);
+                if let TabNavigationError::NoTabGroupForCurrentFocus { new_focus, .. } = e {
+                    focus.set(new_focus);
                     visible.0 = true;
-                    commands.write_message(MenuActionMessage::Navigate(next));
-                }
-                Err(e) => {
-                    // This failure mode is recoverable, but still indicates a problem.
-                    // warn!("Tab navigation error: {}", e);
-                    if let TabNavigationError::NoTabGroupForCurrentFocus { new_focus, .. } = e {
-                        focus.set(new_focus);
-                        visible.0 = true;
-                        commands.write_message(MenuActionMessage::Navigate(new_focus));
-                    }
+                    commands.write_message(MenuActionMessage::Navigate(new_focus));
                 }
             }
         }

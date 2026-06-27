@@ -275,28 +275,12 @@ pub(crate) fn handle_mute(
     vol_q.muted = !vol_q.muted;
 }
 
-// pub(crate) fn toggle_pointer_actions(
-//     overlay: Res<State<OverlayState>>,
-//     mut state: ResMut<ActionState<UserAction>>,
-// ) {
-//     // Just to be safe, turn off all look actions while debug UI is open.
-//     let Some(look_axis) = state.action_data_mut(&UserAction::Look) else { return };
-//     if overlay.is_debug() {
-//         look_axis.disabled = true;
-//     } else {
-//         look_axis.disabled = false;
-//     }
-// }
-
 #[macro_export]
 macro_rules! add_actions {
     ($context:ty [$($action:expr),*$(,)?]) => {
         ::bevy::prelude::related!($crate::prelude::Actions<$context>[$($action),*])
     };
 }
-
-const UI_SENSITIVITY_X: f32 = 8.0;    // relatively quick for sliders
-const UI_SENSITIVITY_Y: f32 = 7.0;    // move through menus slower
 
 /// Assign actions to your own context/etc.
 /// include: should be at least e.g. `ActionOf::<YourContext>::new(context_entity)`
@@ -390,9 +374,12 @@ pub fn assign_stock_menu_actions(
         include.clone(),
 
         Action::<actions::MoveDownUp>::new(),
+        Pulse::new(0.25).with_time_kind(TimeKind::Auto).trigger_on_start(true),
         DeadZone::default(),
-        DeltaScale::default(),
-        Scale::splat(UI_SENSITIVITY_Y),
+        ActionSettings {
+            require_reset: true,
+            ..default()
+        },
         Bindings::spawn((
             Bidirectional::new(KeyCode::ArrowDown, KeyCode::ArrowUp),
             Bidirectional::new(GamepadButton::DPadDown, GamepadButton::DPadUp),
@@ -402,9 +389,12 @@ pub fn assign_stock_menu_actions(
         include.clone(),
 
         Action::<actions::MoveLeftRight>::new(),
+        Pulse::new(0.25).with_time_kind(TimeKind::Auto).trigger_on_start(true),
         DeadZone::default(),
-        DeltaScale::default(),
-        Scale::splat(UI_SENSITIVITY_X),
+        ActionSettings {
+            require_reset: true,
+            ..default()
+        },
         Bindings::spawn((
             Bidirectional::new(KeyCode::ArrowRight, KeyCode::ArrowLeft),
             Bidirectional::new(GamepadButton::DPadRight, GamepadButton::DPadLeft),
@@ -445,9 +435,6 @@ pub fn assign_stock_player_actions(
     commands.spawn((
         include.clone(),
         Action::<actions::MoveFlycam>::new(),
-        // DeadZone::default(),
-        // SmoothNudge::default(),
-        // DeltaScale::default(),
         Negate::y(),
         Bindings::spawn((
             Cardinal::wasd_keys(),
@@ -457,9 +444,6 @@ pub fn assign_stock_player_actions(
     commands.spawn((
         include.clone(),
         Action::<actions::MoveDownUp>::new(),
-        // DeadZone::default(),
-        // SmoothNudge::default(),
-        // DeltaScale::default(),
         Bindings::spawn((
             Bidirectional::new(KeyCode::Space, KeyCode::KeyC),
             Bidirectional::new(GamepadButton::DPadUp, GamepadButton::DPadDown),
@@ -486,22 +470,6 @@ pub fn assign_stock_player_actions(
                 )),
         )),
     ));
-    // commands.spawn((
-    //     include.clone(),
-    //     Action::<actions::Zoom>::new(),
-    //     DeadZone::default(),
-    //     Bindings::spawn((
-    //         Spawn((Binding::mouse_wheel(),
-    //             Negate::y(),
-    //             Scale::new(Vec3::splat(10.0))
-    //         )),
-    //         Axial::right_stick()
-    //             .with((
-    //                 Scale::new(Vec3::splat(100.0)),
-    //                 SmoothNudge::default(),
-    //             )),
-    //     )),
-    // ));
     commands.spawn((
         include.clone(),
         Action::<actions::Accelerate>::new(),
