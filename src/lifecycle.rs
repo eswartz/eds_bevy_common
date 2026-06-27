@@ -1,6 +1,10 @@
+use std::time::Duration;
+
 use avian3d::prelude::Physics;
 use avian3d::prelude::PhysicsTime as _;
 use bevy::prelude::*;
+use bevy::winit::UpdateMode;
+use bevy::winit::WinitSettings;
 use bevy_tweening::TweenAnim;
 
 use crate::*;
@@ -13,12 +17,20 @@ impl Plugin for LifecyclePlugin {
     fn build(&self, app: &mut App) {
         app
             .init_resource::<PauseState>()
+            .add_systems(Startup,
+                (
+                    sample_winit_settings.run_if(not(resource_exists::<PhasedWinitSettings>)),
+                    update_frame_rate_on_pause,
+                ).chain()
+            )
             .add_systems(Update, (
                 check_pause_request,
                 reset_pause_on_enter_launch_menu
                     .run_if(resource_changed::<State<ProgramState>>),
-                check_despawners.run_if(not(is_paused)),
-                check_configure_before_playing,
+                    check_despawners.run_if(not(is_paused)),
+                    check_configure_before_playing,
+                update_frame_rate_on_pause
+                    .run_if(resource_changed::<PauseState>),
             ))
 
             .add_systems(
@@ -117,6 +129,45 @@ fn check_pause_request(
         //     runner.set_paused(false);
         // }
     }
+}
+
+/// This stores the winit settings to apply when the main program is running vs. paused.
+/// These are orthogonal from the focused/unfocused state.
+#[derive(Resource)]
+pub struct PhasedWinitSettings{
+    pub running: WinitSettings,
+    pub paused: WinitSettings,
+}
+
+fn sample_winit_settings(
+    mut commands: Commands,
+    winit_settings: Res<WinitSettings>,
+    phased_settings: Option<Res<PhasedWinitSettings>>,
+) {
+    if phased_settings.is_none() {
+        commands.insert_resource(PhasedWinitSettings{
+            running: winit_settings.clone(),
+            paused: WinitSettings {
+                focused_mode: UpdateMode::reactive_low_power(Duration::from_secs_f32(1.0 / 10.0)),
+                unfocused_mode: winit_settings.unfocused_mode,
+            },
+        });
+    }
+}
+
+// App-specific handling on top of ebc systems.
+// Reduce the frame rate when paused.
+fn update_frame_rate_on_pause(
+    paused: ResMut<PauseState>,
+    phased_settings: If<Res<PhasedWinitSettings>>,
+    mut winit_settings: ResMut<WinitSettings>,
+) {
+    let pause = paused.is_menu_paused();
+    *winit_settings = if !pause {
+        phased_settings.running.clone()
+    } else {
+        phased_settings.paused.clone()
+    };
 }
 
 /// If we see a big state change, clear the pause state.
