@@ -607,7 +607,7 @@ fn check_player_environment_fps(
                     let feet_range = aabb.size().y / 4.0;
                     if hit_distance < feet_range {
                         // OK, we should contact with the ground.
-                        if movement.state != MovementState::Jumping {
+                        if movement.state != MovementState::Jumping || (!movement.had_jump_event && vel.0.y >= 0.0 && vel.0.y < 0.01) {
                             movement.state = movement.state.to_grounded();
                             colliding = false;
                         }
