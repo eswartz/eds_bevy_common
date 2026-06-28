@@ -1,16 +1,16 @@
 use avian3d::math::Scalar;
 use bevy::ecs::system::SystemParam;
+use bevy::ecs::system::lifetimeless::Read;
 use bevy::prelude::*;
 use avian3d::prelude::*;
-
 use crate::*;
 
 /// Define a `SystemParam` for modifying collision hooks.
 #[derive(SystemParam)]
 pub struct GeometryCollisionHooks<'w, 's> {
-    player_q: Query<'w, 's, &'static PlayerMovement, With<Player>>,
+    player_q: Query<'w, 's, Read<PlayerMovement>, With<Player>>,
     projectile_q: Query<'w, 's, (), With<Projectile>>,
-    parent_q: Query<'w, 's, &'static ChildOf>,
+    parent_q: Query<'w, 's, Read<ChildOf>>,
     cb_opt: Option<Res<'w, GeometryCollisionHooksCallbacks>>,
     unit_q: Res<'w, PhysicsLengthUnit>,
 }

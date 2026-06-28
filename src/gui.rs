@@ -9,6 +9,7 @@ use bevy::asset::AssetPath;
 use bevy::camera::visibility::RenderLayers;
 use bevy::color::palettes::tailwind;
 use bevy::ecs::system::SystemParam;
+use bevy::ecs::system::lifetimeless::Read;
 use bevy::platform::collections::HashMap;
 use bevy::prelude::*;
 use bevy::reflect::Typed;
@@ -614,7 +615,7 @@ pub enum GuiAreaMarker {
 
 #[derive(SystemParam)]
 pub struct GuiAreaMarkerLocator<'w, 's> {
-    marker_q: Query<'w, 's, (Entity, &'static GuiAreaMarker)>,
+    marker_q: Query<'w, 's, (Entity, Read<GuiAreaMarker>)>,
 }
 
 impl<'w, 's> GuiAreaMarkerLocator<'w, 's> {
