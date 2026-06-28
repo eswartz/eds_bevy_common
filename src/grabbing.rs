@@ -55,7 +55,7 @@ impl Plugin for GrabbingPlugin {
             .init_resource::<GrabbedItemStyle>()
             .add_message::<GrabbingCommand>()
             .add_systems(
-                FixedUpdate,
+                FixedPreUpdate,
                 (
                     sync_grabbable_with_highlighted
                         .run_if(highlighted_is_grabbable)
@@ -67,7 +67,7 @@ impl Plugin for GrabbingPlugin {
                         .run_if(not(debug_gui_wants_input)),
                 )
                 .chain()
-                .after(PhysicsSystems::Writeback)
+                .before(PhysicsSystems::Prepare)
                 .run_if(not(is_in_menu))
                 .run_if(is_level_active)
                 .run_if(not(is_paused))
