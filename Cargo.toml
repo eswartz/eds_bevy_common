@@ -77,9 +77,7 @@ web = [
 
 [dependencies]
 bevy = { version = "0.19.0", default-features = false, features = [
-    "default_app", "default_platform", "common_api", "scene",
-    "bevy_input_focus",
-    "bevy_gltf",
+    "3d", "ui",
 
     # And these optional:
     # "dev",
