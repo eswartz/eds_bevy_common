@@ -8,7 +8,7 @@
 //! Highlighting is represented with the [Highlighted] component.
 //!
 use bevy_mod_outline::{InheritOutline, OutlineStencil};
-use bevy_mod_outline::{OutlineMode, OutlinePlugin, OutlineVolume};
+use bevy_mod_outline::{OutlinePlugin, OutlineVolume};
 use bevy_seedling::sample::PlaybackSettings;
 use bevy_seedling::prelude::*;
 
@@ -26,7 +26,7 @@ pub struct HighlightingPlugin;
 impl Plugin for HighlightingPlugin {
     fn build(&self, app: &mut App) {
         if !app.is_plugin_added::<OutlinePlugin>() {
-            app.add_plugins(OutlinePlugin::EXTRUDE_VERTEX);
+            app.add_plugins(OutlinePlugin::JUMP_FLOOD);
         }
         app
             .add_message::<ChangeHighlightedItem>()
@@ -71,7 +71,6 @@ impl Plugin for HighlightingPlugin {
 #[type_path = "game"]
 pub struct HighlightedItemStyle {
     pub volume: OutlineVolume,
-    pub mode: OutlineMode,
     pub stencil: Option<OutlineStencil>,
     pub inherit: Option<InheritOutline>,
 }
@@ -84,7 +83,6 @@ impl Default for HighlightedItemStyle {
                 width: 2.0,
                 colour: Color::WHITE.with_alpha(0.5),
             },
-            mode: OutlineMode::FloodFlat,
             stencil: None,
             inherit: None,
         }
@@ -94,7 +92,6 @@ impl Default for HighlightedItemStyle {
 impl HighlightedItemStyle {
     pub fn apply_to<'a>(&self, mut ent_commands: EntityCommands<'a>) {
         ent_commands.try_insert(self.volume.clone());
-        ent_commands.try_insert(self.mode.clone());
         if let Some(stencil) = &self.stencil {
             ent_commands.try_insert(stencil.clone());
         }

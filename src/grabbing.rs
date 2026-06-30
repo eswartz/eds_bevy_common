@@ -13,7 +13,7 @@ use bevy_mod_outline::OutlineStencil;
 use avian3d::prelude::*;
 use bevy::prelude::*;
 
-use bevy_mod_outline::{OutlineMode, OutlinePlugin, OutlineVolume};
+use bevy_mod_outline::{OutlinePlugin, OutlineVolume};
 
 #[cfg(feature = "input_bei")]
 use bevy_enhanced_input::prelude::*;
@@ -47,7 +47,7 @@ pub struct GrabbingPlugin;
 impl Plugin for GrabbingPlugin {
     fn build(&self, app: &mut App) {
         if !app.is_plugin_added::<OutlinePlugin>() {
-            app.add_plugins(OutlinePlugin::EXTRUDE_VERTEX);
+            app.add_plugins(OutlinePlugin::JUMP_FLOOD);
         }
         app
             .init_resource::<GrabbingBehavior>()
@@ -103,7 +103,6 @@ impl Plugin for GrabbingPlugin {
 #[type_path = "game"]
 pub struct GrabbedItemStyle {
     pub volume: OutlineVolume,
-    pub mode: OutlineMode,
     pub stencil: Option<OutlineStencil>,
     pub inherit: Option<InheritOutline>,
 }
@@ -116,7 +115,6 @@ impl Default for GrabbedItemStyle {
                 width: 4.0,
                 colour: tailwind::LIME_500.with_alpha(0.75).into(),
             },
-            mode: OutlineMode::FloodFlat,
             stencil: None,
             inherit: None,
         }
@@ -126,7 +124,6 @@ impl Default for GrabbedItemStyle {
 impl GrabbedItemStyle {
     pub fn apply_to<'a>(&self, mut ent_commands: EntityCommands<'a>) {
         ent_commands.try_insert(self.volume.clone());
-        ent_commands.try_insert(self.mode.clone());
         if let Some(stencil) = &self.stencil {
             ent_commands.try_insert(stencil.clone());
         }
@@ -135,7 +132,7 @@ impl GrabbedItemStyle {
         }
     }
     pub fn remove_from<'a>(&self, mut ent_commands: EntityCommands<'a>) {
-        ent_commands.try_remove::<(OutlineVolume, OutlineMode, ComputedOutline)>();
+        ent_commands.try_remove::<(OutlineVolume, ComputedOutline)>();
         if self.stencil.is_some() {
             ent_commands.try_remove::<OutlineStencil>();
         }

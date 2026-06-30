@@ -1167,6 +1167,8 @@ pub(crate) fn spawn_level(
     commands.insert_resource(InstructionText(
         r#"
         Move around with WASD.
+
+        Right-click to highlight and move items.
         "#.to_string()
     ));
 }
