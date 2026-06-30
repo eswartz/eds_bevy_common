@@ -57,17 +57,17 @@ pub(crate) fn fixup_light_shadows(
         ent_commands.try_remove::<ConfigureBeforePlaying>();
     };
     for (ent, mut light, enabled) in light_q.p0().iter_mut() {
-        light.shadows_enabled = enabled;
+        light.shadow_maps_enabled = enabled;
 
         common_handling(commands.reborrow(), ent, enabled);
     }
     for (ent, mut light, enabled) in light_q.p1().iter_mut() {
-        light.shadows_enabled = enabled;
+        light.shadow_maps_enabled = enabled;
 
         common_handling(commands.reborrow(), ent, enabled);
     }
     for (ent, mut light, enabled) in light_q.p2().iter_mut() {
-        light.shadows_enabled = enabled;
+        light.shadow_maps_enabled = enabled;
 
         common_handling(commands.reborrow(), ent, enabled);
     }
@@ -148,28 +148,28 @@ fn apply_light_effect_settings(
     for (ent, mut light) in point_light_q.iter_mut() {
         match video_settings.shadow_quality {
             ShadowQuality::Off => {
-                light.shadows_enabled = false;
+                light.shadow_maps_enabled = false;
                 set_soft_shadows_enabled!(light, false);
                 commands.entity(ent).try_remove::<ShadowFilteringMethod>();
             }
             ShadowQuality::Low => {
-                light.shadows_enabled = true;
+                light.shadow_maps_enabled = true;
                 set_soft_shadows_enabled!(light, false);
                 commands.entity(ent).try_insert(ShadowFilteringMethod::Hardware2x2);
             }
             ShadowQuality::Medium => {
                 // default
-                light.shadows_enabled = true;
+                light.shadow_maps_enabled = true;
                 set_soft_shadows_enabled!(light, false);
                 commands.entity(ent).try_insert(default_method);
             }
             ShadowQuality::High => {
-                light.shadows_enabled = true;
+                light.shadow_maps_enabled = true;
                 set_soft_shadows_enabled!(light, true);
                 commands.entity(ent).try_insert(default_method);
             }
             ShadowQuality::Ultra => {
-                light.shadows_enabled = true;
+                light.shadow_maps_enabled = true;
                 set_soft_shadows_enabled!(light, true);
                 commands.entity(ent).try_insert(default_method);
             }
@@ -207,32 +207,32 @@ fn apply_light_effect_settings(
     for (ent, mut light) in dir_light_q.iter_mut() {
         match video_settings.shadow_quality {
             ShadowQuality::Off => {
-                light.shadows_enabled = false;
+                light.shadow_maps_enabled = false;
                 #[cfg(feature = "experimental_pbr_pcss")]
                 {light.soft_shadow_size = None;}
                 commands.entity(ent).try_remove::<ShadowFilteringMethod>();
             }
             ShadowQuality::Low => {
-                light.shadows_enabled = true;
+                light.shadow_maps_enabled = true;
                 #[cfg(feature = "experimental_pbr_pcss")]
                 {light.soft_shadow_size = None;}
                 commands.entity(ent).try_insert(ShadowFilteringMethod::Hardware2x2);
             }
             ShadowQuality::Medium => {
                 // default
-                light.shadows_enabled = true;
+                light.shadow_maps_enabled = true;
                 #[cfg(feature = "experimental_pbr_pcss")]
                 {light.soft_shadow_size = None;}
                 commands.entity(ent).try_insert(default_method);
             }
             ShadowQuality::High => {
-                light.shadows_enabled = true;
+                light.shadow_maps_enabled = true;
                 // #[cfg(feature = "experimental_pbr_pcss")]
                 // {light.soft_shadow_size = Some(0.02);}
                 commands.entity(ent).try_insert(default_method);
             }
             ShadowQuality::Ultra => {
-                light.shadows_enabled = true;
+                light.shadow_maps_enabled = true;
                 // #[cfg(feature = "experimental_pbr_pcss")]
                 // {light.soft_shadow_size = Some(0.02);}
                 commands.entity(ent).try_insert(default_method);

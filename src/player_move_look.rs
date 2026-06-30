@@ -17,7 +17,7 @@ impl Plugin for PlayerMovementPlugin {
                 (
                     clear_player_velocity.run_if(
                         window_changed_focus
-                        .or(resource_changed::<PlayerMode>)
+                        .or_else(resource_changed::<PlayerMode>)
                     ),
                     check_player_environment_fps,
                     check_player_environment_space,

@@ -1,4 +1,5 @@
 use bevy::core_pipeline::oit::OrderIndependentTransparencySettings;
+use bevy::pbr::ScreenSpaceTransmission;
 use bevy::prelude::*;
 use serde::Deserialize;
 use serde::Serialize;
@@ -8,11 +9,11 @@ use strum_macros::EnumString;
 use strum_macros::FromRepr;
 use strum_macros::VariantArray;
 
-use bevy::camera::ScreenSpaceTransmissionQuality;
-
 use bevy::anti_alias::taa::TemporalAntiAliasing;
+
 use bevy::pbr::ScreenSpaceAmbientOcclusion;
 use bevy::pbr::ScreenSpaceAmbientOcclusionQualityLevel;
+use bevy::pbr::ScreenSpaceTransmissionQuality;
 
 use crate::GameplayState;
 use crate::LevelState;
@@ -38,7 +39,7 @@ impl Plugin for VideoPlugin {
             .add_systems(PreUpdate,
                 (
                     apply_effect_settings.run_if(resource_changed::<VideoSettings>),
-                    apply_camera_settings.run_if(resource_changed::<VideoSettings>.or(resource_changed::<FovDelta>)),
+                    apply_camera_settings.run_if(resource_changed::<VideoSettings>.or_else(resource_changed::<FovDelta>)),
                 )
             )
         ;
@@ -96,8 +97,10 @@ impl OrderIndependentTransparencyQuality {
             OrderIndependentTransparencyQuality::Off => None,
             OrderIndependentTransparencyQuality::Levels(layer_count) =>
                 Some(OrderIndependentTransparencySettings {
-                    layer_count: *layer_count as _,
+                    // layer_count: *layer_count as _,
+                    sorted_fragment_max_count: *layer_count as _,
                     alpha_threshold: 0.0,
+                    ..default()
                 })
         }
     }
@@ -278,11 +281,11 @@ fn apply_camera_settings(
 
 fn apply_effect_settings(
     mut commands: Commands,
-    mut camera_q: Query<(Entity, &mut Camera3d)>, // all cameras
+    camera_q: Query<Entity, With<Camera3d>>, // all cameras
     video_settings: Res<VideoSettings>,
 ) {
     info!("Setting up effects {video_settings:?}");
-    for (camera_ent, mut cam3d) in camera_q.iter_mut() {
+    for camera_ent in camera_q.iter() {
         let mut ent_commands = commands.entity(camera_ent);
 
         ent_commands.try_remove::<Msaa>();
@@ -331,24 +334,31 @@ fn apply_effect_settings(
 
         match video_settings.glass_quality {
             GlassQuality::Off => {
-                cam3d.screen_space_specular_transmission_steps = 0;
-                cam3d.screen_space_specular_transmission_quality = ScreenSpaceTransmissionQuality::Low;
+                ent_commands.try_remove::<ScreenSpaceTransmission>();
             }
             GlassQuality::Low => {
-                cam3d.screen_space_specular_transmission_steps = 1;
-                cam3d.screen_space_specular_transmission_quality = ScreenSpaceTransmissionQuality::Low;
+                ent_commands.try_insert(ScreenSpaceTransmission {
+                    steps: 1,
+                    quality: ScreenSpaceTransmissionQuality::Low,
+                });
             }
             GlassQuality::Medium => {
-                cam3d.screen_space_specular_transmission_steps = 1;
-                cam3d.screen_space_specular_transmission_quality = ScreenSpaceTransmissionQuality::Medium;
+                ent_commands.try_insert(ScreenSpaceTransmission {
+                    steps: 1,
+                    quality: ScreenSpaceTransmissionQuality::Medium,
+                });
             }
             GlassQuality::High => {
-                cam3d.screen_space_specular_transmission_steps = 2;
-                cam3d.screen_space_specular_transmission_quality = ScreenSpaceTransmissionQuality::High;
+                ent_commands.try_insert(ScreenSpaceTransmission {
+                    steps: 2,
+                    quality: ScreenSpaceTransmissionQuality::High,
+                });
             }
             GlassQuality::Ultra => {
-                cam3d.screen_space_specular_transmission_steps = 3;
-                cam3d.screen_space_specular_transmission_quality = ScreenSpaceTransmissionQuality::Ultra;
+                ent_commands.try_insert(ScreenSpaceTransmission {
+                    steps: 3,
+                    quality: ScreenSpaceTransmissionQuality::Ultra,
+                });
             }
         }
     }

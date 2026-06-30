@@ -1,6 +1,7 @@
 //! Stock widgetry for handling menus.
 //!
 use bevy::input_focus::AutoFocus;
+use bevy::input_focus::FocusCause;
 use bevy::platform::collections::HashMap;
 use std::hash::BuildHasher as _;
 use std::marker::PhantomData;
@@ -11,7 +12,6 @@ use std::time::Duration;
 
 use bevy::color::palettes::tailwind;
 use bevy::ecs::system::SystemId;
-use bevy::input_focus::InputDispatchPlugin;
 use bevy::input_focus::InputFocus;
 use bevy::input_focus::InputFocusVisible;
 use bevy::input_focus::tab_navigation::*;
@@ -46,8 +46,7 @@ const PRESSED_BUTTON: Color = Color::srgb(0.35, 0.75, 0.35);
 pub struct MenuCommonPlugin;
 impl Plugin for MenuCommonPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins(InputDispatchPlugin)
-            .add_plugins(TabNavigationPlugin)
+        app.add_plugins(TabNavigationPlugin)
             .insert_resource(DraggingMenuItem(None))
             .insert_resource(MenuItemSelectionHistory::default())
             .insert_resource(PreviousMenuStack::default())
@@ -329,7 +328,7 @@ impl<'w, 's> MenuItemBuilder<'w, 's> {
             history
                 .0
                 .insert(self.overlay, (first_ent, label).clone());
-            self.commands.insert_resource(InputFocus(Some(first_ent)));
+            self.commands.insert_resource(InputFocus::from_entity(first_ent));
             self.commands.insert_resource(RefreshMenu);
             self.commands.entity(first_ent).try_insert(Interaction::Hovered);
             self.commands.write_message(MenuActionMessage::Navigate(first_ent));
@@ -611,8 +610,8 @@ pub fn spawn_menu_row_bundle(
                 ..default()
             },
             TextFont {
-                font,
-                font_size: MENU_ITEM_FONT_SIZE * font_size_scale,
+                font: font.into(),
+                font_size: FontSize::Px(MENU_ITEM_FONT_SIZE * font_size_scale),
                 ..default()
             },
             LineHeight::RelativeToFont(font_size_scale),
@@ -638,8 +637,8 @@ fn on_added_menu_item(
                       mut visible: ResMut<InputFocusVisible>,
                       slider_q: Query<&MenuSlider>,
                       mut dragging: ResMut<DraggingMenuItem>| {
-                    if focus.0.is_none() || slider_q.get(trigger.event().entity).iter().next().is_none() {
-                        focus.set(trigger.event().entity);
+                    if focus.get().is_none() || slider_q.get(trigger.event().entity).iter().next().is_none() {
+                        focus.set(trigger.event().entity, FocusCause::Navigated);
                         visible.0 = true;
                         dragging.0 = None;
                         trigger.propagate(false);
@@ -653,8 +652,8 @@ fn on_added_menu_item(
                       mut visible: ResMut<InputFocusVisible>,
                       slider_q: Query<&MenuSlider>,
                       dragging: Res<DraggingMenuItem>| {
-                    let was_focused = focus.0 == Some(trigger.event().entity);
-                    focus.set(trigger.event().entity);
+                    let was_focused = focus.get() == Some(trigger.event().entity);
+                    focus.set(trigger.event().entity, FocusCause::Pressed);
                     visible.0 = true;
                     if was_focused
                         && (dragging.0.is_none()
@@ -675,7 +674,7 @@ fn on_added_menu_item(
                       mut visible: ResMut<InputFocusVisible>,
                       dragging: Option<Res<DraggingMenuItem>>,
                       mut writer: MessageWriter<MenuActionMessage>| {
-                    focus.set(trigger.event().entity);
+                    focus.set(trigger.event().entity, FocusCause::Pressed);
                     visible.0 = true;
                     if dragging.is_none() {
                         writer.write(MenuActionMessage::Activate(trigger.event().entity));
@@ -692,7 +691,7 @@ fn on_added_menu_item(
                       mut visible: ResMut<InputFocusVisible>,
                       dragging: Option<Res<DraggingMenuItem>>,
                       mut writer: MessageWriter<MenuActionMessage>| {
-                    focus.set(trigger.event().entity);
+                    focus.set(trigger.event().entity, FocusCause::Pressed);
                     visible.0 = true;
                     if dragging.is_none() {
                         writer.write(MenuActionMessage::Next(trigger.event().entity));
@@ -709,7 +708,7 @@ fn on_added_menu_item(
                           mut focus: ResMut<InputFocus>,
                           mut visible: ResMut<InputFocusVisible>,
                           mut dragging: ResMut<DraggingMenuItem>| {
-                        focus.set(trigger.event().entity);
+                        focus.set(trigger.event().entity, FocusCause::Pressed);
                         visible.0 = true;
                         dragging.0 = Some(trigger.event().entity);
                     },
@@ -763,7 +762,7 @@ fn on_focus_change(
         for ent in menu_item_q {
             if prev_focus.as_ref().is_some_and(|prev| ***prev == ent) {
                 debug!("switch to previous {ent}");
-                focus.set(ent);
+                focus.set(ent, FocusCause::Navigated);
                 return
             }
             if auto.is_none() && auto_focus_q.contains(ent) {
@@ -774,7 +773,7 @@ fn on_focus_change(
         // Nothing.
         if let Some(ent) = auto {
             debug!("switch to Auto {ent}");
-            focus.set(ent);
+            focus.set(ent, FocusCause::Navigated);
         }
     }
 
@@ -791,7 +790,7 @@ fn on_focused_interact_fire(
     focus: Res<InputFocus>,
     menu_item_q: Query<&MenuItem>,
 ) {
-    let Some(entity) = focus.0 else { return };
+    let Some(entity) = focus.get() else { return };
 
     // Activate menu item?
     if menu_item_q.contains(entity) {
@@ -809,7 +808,7 @@ fn on_focused_reset(
     focus: Res<InputFocus>,
     menu_item_q: Query<&MenuItem>,
 ) {
-    let Some(entity) = focus.0 else { return };
+    let Some(entity) = focus.get() else { return };
 
     if menu_item_q.contains(entity) {
         commands.write_message(MenuActionMessage::Reset(entity));
@@ -830,7 +829,7 @@ fn on_focused_left_right(
     mut writer: MessageWriter<MenuActionMessage>,
 ) {
     if !overlay.is_menu() { return };
-    let Some(entity) = focus.0 else { return };
+    let Some(entity) = focus.get() else { return };
     if event.elapsed_secs < 0.0625 { return };
 
     let dir = event.value.signum() as i32;
@@ -876,7 +875,7 @@ fn on_menu_down_up(
     mut visible: ResMut<InputFocusVisible>,
 ) {
     if !overlay.is_menu() { return };
-    if focus.0.is_none() { return };
+    if focus.get().is_none() { return };
     if event.elapsed_secs < 0.0625 { return };
 
     let dir = event.value.signum() as i32;
@@ -891,7 +890,7 @@ fn on_menu_down_up(
 
         match maybe_next {
             Ok(next) => {
-                focus.set(next);
+                focus.set(next, FocusCause::Navigated);
                 visible.0 = true;
                 commands.write_message(MenuActionMessage::Navigate(next));
             }
@@ -899,7 +898,7 @@ fn on_menu_down_up(
                 // This failure mode is recoverable, but still indicates a problem.
                 // warn!("Tab navigation error: {}", e);
                 if let TabNavigationError::NoTabGroupForCurrentFocus { new_focus, .. } = e {
-                    focus.set(new_focus);
+                    focus.set(new_focus, FocusCause::Navigated);
                     visible.0 = true;
                     commands.write_message(MenuActionMessage::Navigate(new_focus));
                 }
@@ -922,7 +921,7 @@ fn handle_menu_mouse_drag(
     mut writer: MessageWriter<MenuActionMessage>,
     focus: Res<InputFocus>,
 ) {
-    if let Some(focus) = focus.0.as_ref() {
+    if let Some(focus) = focus.get().as_ref() {
         for event in reader.read() {
             writer.write(MenuActionMessage::Slide(
                 *focus,
@@ -951,7 +950,7 @@ fn handle_menu_mouse_click(
                 ent,
                 slider_release_time: time.elapsed().saturating_add(DELAY)
             });
-            focus.set(ent);
+            focus.set(ent, FocusCause::Pressed);
         }
         else if *int == Interaction::Hovered
         && let Some(pressed) = &pressed
@@ -980,15 +979,15 @@ fn handle_menu_item_decoration(
     focus: Res<InputFocus>,
 ) {
     for (ent, interaction, MenuBaseText(_, scale), mut text, mut color) in &mut interaction_query {
-        let (font_size, item_color) = match (*interaction, focus.0 == Some(ent)) {
+        let (font_size, item_color) = match (*interaction, focus.get() == Some(ent)) {
             (_, true) => (MENU_ITEM_FONT_SIZE * scale * 1.1, PRESSED_BUTTON.into()),
             (Interaction::Pressed, _) => (MENU_ITEM_FONT_SIZE * scale * 1.1, PRESSED_BUTTON.into()),
             (Interaction::Hovered, _) => (MENU_ITEM_FONT_SIZE * scale * 1.1, HOVERED_BUTTON.into()),
             (Interaction::None, _) => (MENU_ITEM_FONT_SIZE * scale, NORMAL_BUTTON.into()),
         };
         #[expect(clippy::float_cmp, reason = "binary diff checking")]
-        if text.font_size != font_size || *color != item_color {
-            text.font_size = font_size;
+        if text.font_size != FontSize::Px(font_size) || *color != item_color {
+            text.font_size = FontSize::Px(font_size);
             *color = item_color;
         }
     }

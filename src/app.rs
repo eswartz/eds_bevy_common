@@ -203,8 +203,8 @@ pub fn setup_error_screen(
                 "There is an installation error\n(assets are missing or corrupt).\nPlease gather stdout and stderr and report.",
             ),
             TextFont {
-                font: ui_font.map_or(default(), |f| f.0.clone()),
-                font_size: 32.0,
+                font: ui_font.map_or(default(), |f| f.0.clone()).into(),
+                font_size: FontSize::Px(32.0),
                 .. default()
             },
             TextColor(Color::WHITE.with_alpha(0.5)),

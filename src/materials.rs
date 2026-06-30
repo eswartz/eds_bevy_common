@@ -1,3 +1,4 @@
+use bevy::gltf::GltfMaterial;
 use bevy::gltf::GltfMesh;
 use bevy::image::ImageAddressMode;
 use bevy::image::ImageLoaderSettings;
@@ -222,12 +223,14 @@ impl TextureSource {
     /// Otherwise return the handle as-is.
     pub fn get_handle(&self, assets: &AssetServer, assume_is_srgb: bool) -> Handle<Image> {
         match self {
-            TextureSource::Load{ path, params } => assets.load_with_settings(
-                path,
-                make_image_loader_settings_applier(
-                    params.clone(), assume_is_srgb,
-                ),
-            ),
+            TextureSource::Load{ path, params } => assets
+                .load_builder()
+                .with_settings(
+                    make_image_loader_settings_applier(
+                        params.clone(), assume_is_srgb,
+                    ),
+                )
+                .load(path),
             TextureSource::Handle(handle) => handle.clone(),
         }
     }
@@ -510,6 +513,8 @@ pub fn handle_spawn_shape(
     assets: Res<AssetServer>,
     gltf_meshes: If<Res<Assets<GltfMesh>>>,
     mut meshes: If<ResMut<Assets<Mesh>>>,
+    gltf_mats: If<Res<Assets<GltfMaterial>>>,
+    mut stdmats: If<ResMut<Assets<StandardMaterial>>>,
     vid_settings: Res<VideoSettings>,
 
     shape_q: Query<(Entity, &SpawnShape)>,
@@ -554,8 +559,8 @@ pub fn handle_spawn_shape(
             }
             SpawnShapeKind::Model(path) => {
                 if path.contains("#Scene") || !path.contains('#') {
-                    let scene = assets.load::<Scene>(path);
-                    ent_commands.try_insert(SceneRoot(scene));
+                    let scene = assets.load::<WorldAsset>(path);
+                    ent_commands.try_insert(WorldAssetRoot(scene));
                 } else if path.contains("#Mesh") {
                     let mesh_handle;
                     if let Some(cached_mesh) = assets.get_handle(&*path) {
@@ -579,16 +584,21 @@ pub fn handle_spawn_shape(
                         // Single mesh, add directly.
                         let prim = &gltf_mesh.primitives[0];
                         ent_commands.try_insert(Mesh3d(prim.mesh.clone()));
-                        if let Some(mat) = &prim.material {
-                            ent_commands.try_insert(MeshMaterial3d(mat.clone()));
+                        if let Some(mat) = &prim.material
+                            && let Some(mat) = gltf_mats.get(mat)
+                        {
+                            let stdmat = standard_material_from_gltf_material(mat);
+                            ent_commands.try_insert(MeshMaterial3d(stdmats.add(stdmat)));
                         }
                     } else {
                         // Need to add each as a child.
                         ent_commands.with_children(|spawn| {
                             for prim in &gltf_mesh.primitives {
                                 let mut kid_commands = spawn.spawn(Mesh3d(prim.mesh.clone()));
-                                if let Some(mat) = &prim.material {
-                                    kid_commands.try_insert(MeshMaterial3d(mat.clone()));
+                                if let Some(mat) = &prim.material
+                                    && let Some(mat) = gltf_mats.get(mat) {
+                                    let stdmat = standard_material_from_gltf_material(mat);
+                                    kid_commands.try_insert(MeshMaterial3d(stdmats.add(stdmat)));
                                 }
                             }
                         });
@@ -607,6 +617,76 @@ pub fn handle_spawn_shape(
 
         // All the successful paths lead here.
         ent_commands.try_remove::<SpawnShape>();
+    }
+}
+
+/// Converts a [`GltfMaterial`] to a [`StandardMaterial`]
+// copied from bevy::pbr::gltf, which is private...
+fn standard_material_from_gltf_material(material: &GltfMaterial) -> StandardMaterial {
+    StandardMaterial {
+        base_color: material.base_color,
+        base_color_channel: material.base_color_channel.clone(),
+        base_color_texture: material.base_color_texture.clone(),
+        emissive: material.emissive,
+        emissive_channel: material.emissive_channel.clone(),
+        emissive_texture: material.emissive_texture.clone(),
+        perceptual_roughness: material.perceptual_roughness,
+        metallic: material.metallic,
+        metallic_roughness_channel: material.metallic_roughness_channel.clone(),
+        metallic_roughness_texture: material.metallic_roughness_texture.clone(),
+        reflectance: material.reflectance,
+        specular_tint: material.specular_tint,
+        specular_transmission: material.specular_transmission,
+        #[cfg(feature = "pbr_transmission_textures")]
+        specular_transmission_channel: material.specular_transmission_channel.clone(),
+        #[cfg(feature = "pbr_transmission_textures")]
+        specular_transmission_texture: material.specular_transmission_texture.clone(),
+        thickness: material.thickness,
+        #[cfg(feature = "pbr_transmission_textures")]
+        thickness_channel: material.thickness_channel.clone(),
+        #[cfg(feature = "pbr_transmission_textures")]
+        thickness_texture: material.thickness_texture.clone(),
+        ior: material.ior,
+        attenuation_distance: material.attenuation_distance,
+        attenuation_color: material.attenuation_color,
+        normal_map_channel: material.normal_map_channel.clone(),
+        normal_map_texture: material.normal_map_texture.clone(),
+        occlusion_channel: material.occlusion_channel.clone(),
+        occlusion_texture: material.occlusion_texture.clone(),
+        #[cfg(feature = "pbr_specular_textures")]
+        specular_channel: material.specular_channel.clone(),
+        #[cfg(feature = "pbr_specular_textures")]
+        specular_texture: material.specular_texture.clone(),
+        #[cfg(feature = "pbr_specular_textures")]
+        specular_tint_channel: material.specular_tint_channel.clone(),
+        #[cfg(feature = "pbr_specular_textures")]
+        specular_tint_texture: material.specular_tint_texture.clone(),
+        clearcoat: material.clearcoat,
+        #[cfg(feature = "pbr_multi_layer_material_textures")]
+        clearcoat_channel: material.clearcoat_channel.clone(),
+        #[cfg(feature = "pbr_multi_layer_material_textures")]
+        clearcoat_texture: material.clearcoat_texture.clone(),
+        clearcoat_perceptual_roughness: material.clearcoat_perceptual_roughness,
+        #[cfg(feature = "pbr_multi_layer_material_textures")]
+        clearcoat_roughness_channel: material.clearcoat_roughness_channel.clone(),
+        #[cfg(feature = "pbr_multi_layer_material_textures")]
+        clearcoat_roughness_texture: material.clearcoat_roughness_texture.clone(),
+        #[cfg(feature = "pbr_multi_layer_material_textures")]
+        clearcoat_normal_channel: material.clearcoat_normal_channel.clone(),
+        #[cfg(feature = "pbr_multi_layer_material_textures")]
+        clearcoat_normal_texture: material.clearcoat_normal_texture.clone(),
+        anisotropy_strength: material.anisotropy_strength,
+        anisotropy_rotation: material.anisotropy_rotation,
+        #[cfg(feature = "pbr_anisotropy_texture")]
+        anisotropy_channel: material.anisotropy_channel.clone(),
+        #[cfg(feature = "pbr_anisotropy_texture")]
+        anisotropy_texture: material.anisotropy_texture.clone(),
+        double_sided: material.double_sided,
+        cull_mode: material.cull_mode,
+        unlit: material.unlit,
+        alpha_mode: material.alpha_mode,
+        uv_transform: material.uv_transform,
+        ..Default::default()
     }
 }
 

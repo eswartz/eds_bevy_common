@@ -311,7 +311,7 @@ fn ensure_font_assets(
     world.spawn((
         DespawnOnEnter(GameplayState::Playing),
         TextFont {
-            font: assets.emoji_icon_font.clone(),
+            font: assets.emoji_icon_font.clone().into(),
             .. default()
         },
         Text::new("🚀\u{1F508}\u{1F6AB}\u{23f1}\u{fe0f}"), // various emoji used below
@@ -365,8 +365,8 @@ pub fn setup_loading_screen(
                 "Loading...",
             ),
             TextFont {
-                font: ui_font.0.clone(),
-                font_size: icon_size,
+                font: ui_font.0.clone().into(),
+                font_size: FontSize::Px(icon_size),
                 .. default()
             },
             TextColor(Color::WHITE.with_alpha(0.5)),
@@ -652,7 +652,7 @@ fn setup_gui_nodes(
     ui_font: Res<UiFont>,
 ) {
     // let font = ui_font.map_or(default(), |f| f.0.clone());
-    let font = ui_font.0.clone();
+    let font: FontSource = ui_font.0.clone().into();
     let icon_size = 32.0;
 
     let despawn = DespawnOnReset(ProgramState::InGame);
@@ -664,7 +664,7 @@ fn setup_gui_nodes(
         Text::new(""),
         TextFont {
             font: font.clone(),
-            font_size: 10.0,
+            font_size: FontSize::Px(10.0),
             ..default()
         },
         Node {
@@ -685,7 +685,7 @@ fn setup_gui_nodes(
         ),
         TextFont {
             font: font.clone(),
-            font_size: 16.0,
+            font_size: FontSize::Px(16.0),
             .. default()
         },
         Node {
@@ -705,7 +705,7 @@ fn setup_gui_nodes(
         Text::default(),
         TextFont {
             font: font.clone(),
-            font_size: icon_size,
+            font_size: FontSize::Px(icon_size),
             ..default()
         },
         TextColor(Color::Srgba(tailwind::YELLOW_300)),
@@ -742,7 +742,7 @@ fn setup_gui_nodes(
             ),
             TextFont {
                 font: font.clone(),
-                font_size: 64.0,
+                font_size: FontSize::Px(64.0),
                 .. default()
             },
             TextColor( Color::linear_rgba(0., 0., 0., 1.0)),
@@ -786,8 +786,8 @@ fn setup_gui_nodes(
         DespawnOnReset(ProgramState::InGame),
         GuiAreaMarker::MuteArea,
         TextFont {
-            font: assets.emoji_icon_font.clone(),
-            font_size: icon_size,
+            font: assets.emoji_icon_font.clone().into(),
+            font_size: FontSize::Px(icon_size),
             .. default()
         },
         TextColor(Color::Srgba(tailwind::YELLOW_300)),
@@ -807,8 +807,8 @@ fn setup_gui_nodes(
         DespawnOnReset(ProgramState::InGame),
         GuiAreaMarker::UserPausedArea,
         TextFont {
-            font: assets.emoji_icon_font.clone(),
-            font_size: icon_size,
+            font: assets.emoji_icon_font.clone().into(),
+            font_size: FontSize::Px(icon_size),
             .. default()
         },
         TextColor(Color::Srgba(tailwind::YELLOW_300)),
@@ -829,8 +829,8 @@ fn setup_gui_nodes(
         DespawnOnReset(ProgramState::InGame),
         GuiAreaMarker::ScriptsRunningArea,
         TextFont {
-            font: assets.hack_font.clone(),
-            font_size: icon_size,
+            font: assets.hack_font.clone().into(),
+            font_size: FontSize::Px(icon_size),
             .. default()
         },
         TextColor(Color::Srgba(tailwind::GRAY_100)),
@@ -849,8 +849,8 @@ fn setup_gui_nodes(
         DespawnOnReset(ProgramState::InGame),
         GuiAreaMarker::ScriptsRunningCrossArea,
         TextFont {
-            font: assets.emoji_icon_font.clone(),
-            font_size: icon_size,
+            font: assets.emoji_icon_font.clone().into(),
+            font_size: FontSize::Px(icon_size),
             .. default()
         },
         TextColor(Color::Srgba(tailwind::RED_700)),
@@ -871,8 +871,8 @@ fn setup_gui_nodes(
         DespawnOnReset(ProgramState::InGame),
         GuiAreaMarker::PhysicsRunningArea,
         TextFont {
-            font: assets.emoji_icon_font.clone(),
-            font_size: icon_size,
+            font: assets.emoji_icon_font.clone().into(),
+            font_size: FontSize::Px(icon_size),
             .. default()
         },
         TextColor(Color::Srgba(tailwind::GRAY_300)),
@@ -890,8 +890,8 @@ fn setup_gui_nodes(
         DespawnOnReset(ProgramState::InGame),
         GuiAreaMarker::PhysicsRunningCrossArea,
         TextFont {
-            font: assets.emoji_icon_font.clone(),
-            font_size: icon_size,
+            font: assets.emoji_icon_font.clone().into(),
+            font_size: FontSize::Px(icon_size),
             .. default()
         },
         TextColor(Color::Srgba(tailwind::RED_700)),
@@ -1024,8 +1024,8 @@ fn show_instructions(
                 Text::new(text.0.clone()),
                 TextLayout::new(Justify::Center, LineBreak::WordBoundary),
                 TextFont {
-                    font: fonts.std_ui.clone(),
-                    font_size: 32.0,
+                    font: fonts.std_ui.clone().into(),
+                    font_size: FontSize::Px(32.0),
                     .. default()
                 },
                 TextColor(Color::WHITE.with_alpha(0.5)),

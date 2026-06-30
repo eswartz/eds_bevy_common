@@ -141,7 +141,7 @@ pub fn setup_egui_style(
         ctx.all_styles_mut(move |style| style.text_styles = text_styles.clone());
     }
 
-    ctx.style_mut(|style| {
+    ctx.global_style_mut(|style| {
         style.visuals.window_shadow = egui::Shadow::NONE;
     });
 }
@@ -383,7 +383,7 @@ pub fn update_egui_settings_ui(
     egui::Window::new("Settings")
         .default_open(true)
         .default_rect(egui::Rect::from_min_size(
-            ctx.available_rect().right_bottom() - egui::Vec2::new(400., 700.),
+            ctx.content_rect().right_bottom() - egui::Vec2::new(400., 700.),
             egui::Vec2::new(400., 600.))
         )
         .resizable(true)

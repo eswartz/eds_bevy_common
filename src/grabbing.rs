@@ -47,7 +47,7 @@ pub struct GrabbingPlugin;
 impl Plugin for GrabbingPlugin {
     fn build(&self, app: &mut App) {
         if !app.is_plugin_added::<OutlinePlugin>() {
-            app.add_plugins(OutlinePlugin);
+            app.add_plugins(OutlinePlugin::EXTRUDE_VERTEX);
         }
         app
             .init_resource::<GrabbingBehavior>()

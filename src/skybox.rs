@@ -245,7 +245,7 @@ fn check_load_skybox(
 
     // Here's the actual work. (Yes, I'm sure the above could be done in a better way.)
     commands.entity(cam).try_insert(Skybox {
-        image: skybox_image.clone(),
+        image: Some(skybox_image.clone()),
         brightness: model.brightness,
         rotation: model.rotation,
     });
@@ -328,7 +328,7 @@ fn check_load_reflection_probe(
     });
     let diffuse = images.add(diffuse);
 
-    let Some(reflection_image) = images.get_mut(image) else {
+    let Some(mut reflection_image) = images.get_mut(image) else {
         error!("failed to locate {image:?}");
         *setup = SkyboxSetup::Finished;
         return;
@@ -340,7 +340,7 @@ fn check_load_reflection_probe(
     });
 
     commands.entity(cam_entity).try_insert((
-        LightProbe,
+        LightProbe::new(),
         EnvironmentMapLight {
             diffuse_map: diffuse.clone(),
             specular_map: image.clone(),
