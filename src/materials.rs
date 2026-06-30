@@ -622,7 +622,7 @@ pub fn handle_spawn_shape(
 
 /// Converts a [`GltfMaterial`] to a [`StandardMaterial`]
 // copied from bevy::pbr::gltf, which is private...
-fn standard_material_from_gltf_material(material: &GltfMaterial) -> StandardMaterial {
+pub fn standard_material_from_gltf_material(material: &GltfMaterial) -> StandardMaterial {
     StandardMaterial {
         base_color: material.base_color,
         base_color_channel: material.base_color_channel.clone(),
