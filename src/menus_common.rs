@@ -546,7 +546,7 @@ pub trait MenuItemHandler: Send + Sync {
     }
 }
 
-fn create_menu_page_node() -> (Node, BackgroundColor, RenderLayers) {
+fn create_menu_page_node() -> impl Bundle {
     (
         Node {
             width: Val::Percent(100.),
