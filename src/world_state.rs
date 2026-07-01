@@ -76,7 +76,7 @@ pub fn setup_world_marker(
     if world_q.is_empty() {
         let ent = commands.spawn((
             Name::new("World"),
-            DespawnOnExit(ProgramState::InGame),
+            //DespawnOnExit(ProgramState::InGame),
             WorldMarker::default(),
             Transform::IDENTITY,
             Visibility::Inherited,
