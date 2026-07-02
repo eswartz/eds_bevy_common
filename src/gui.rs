@@ -829,7 +829,7 @@ fn setup_gui_nodes(
         DespawnOnReset(ProgramState::InGame),
         GuiAreaMarker::ScriptsRunningArea,
         TextFont {
-            font: assets.hack_font.clone(),
+            font: assets.emoji_icon_font.clone(),
             font_size: icon_size,
             .. default()
         },
@@ -840,7 +840,10 @@ fn setup_gui_nodes(
             right: Val::Px(right_x),
             .. default()
         },
-        Text::new("\u{23f1}\u{fe0f}"), // stopwatch
+        // Text::new("\u{23f1}\u{fe0f}"), // stopwatch
+        // ⚡⚠⚒⛭
+        // missing ⛯⚗⛕⛈⏻⛹
+        Text::new("⛭"),
         Visibility::Hidden, // by default
         ZIndex(-1), // under
     ));
