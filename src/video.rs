@@ -72,18 +72,16 @@ impl Default for VideoSettings {
     }
 }
 
-#[derive(Resource, Debug, Clone, Copy, PartialEq, Reflect)]
-#[reflect(Default, Clone, Resource)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Reflect)]
+#[reflect(Default, Clone)]
 #[type_path = "game"]
 pub enum OrderIndependentTransparencyQuality {
     Off,
-    Levels(u16),
-}
-
-impl Default for OrderIndependentTransparencyQuality {
-    fn default() -> Self {
-        Self::Levels(8)
-    }
+    Low,
+    #[default]
+    Medium,
+    High,
+    Ultra,
 }
 
 impl OrderIndependentTransparencyQuality {
@@ -92,14 +90,29 @@ impl OrderIndependentTransparencyQuality {
             return None
         }
 
-        match self {
-            OrderIndependentTransparencyQuality::Off => None,
-            OrderIndependentTransparencyQuality::Levels(layer_count) =>
-                Some(OrderIndependentTransparencySettings {
-                    layer_count: *layer_count as _,
-                    alpha_threshold: 0.0,
-                })
-        }
+        Some(match self {
+            OrderIndependentTransparencyQuality::Off => return None,
+            OrderIndependentTransparencyQuality::Low =>
+                OrderIndependentTransparencySettings {
+                    layer_count: 8,
+                    ..default()
+                },
+            OrderIndependentTransparencyQuality::Medium =>
+                OrderIndependentTransparencySettings {
+                    layer_count: 16,
+                    ..default()
+                },
+            OrderIndependentTransparencyQuality::High =>
+                OrderIndependentTransparencySettings {
+                    layer_count: 32,
+                    ..default()
+                },
+            OrderIndependentTransparencyQuality::Ultra =>
+                OrderIndependentTransparencySettings {
+                    layer_count: 64,
+                    ..default()
+                },
+        })
     }
 }
 

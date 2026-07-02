@@ -820,7 +820,7 @@ fn on_focused_reset(
 
 #[cfg(feature = "input_bei")]
 fn on_focused_left_right(
-    event: On<Fire<actions::MoveLeftRight>>,
+    event: On<Fire<actions::MoveRightLeft>>,
     overlay: Res<State<OverlayState>>,
 
     focus: Res<InputFocus>,
@@ -867,7 +867,7 @@ fn on_menu_back(
 
 #[cfg(feature = "input_bei")]
 fn on_menu_down_up(
-    event: On<Fire<actions::MoveDownUp>>,
+    event: On<Fire<actions::MoveUpDown>>,
     overlay: Res<State<OverlayState>>,
     mut commands: Commands,
     nav: TabNavigation,
