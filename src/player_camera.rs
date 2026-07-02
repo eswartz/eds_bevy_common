@@ -26,7 +26,7 @@ impl Plugin for PlayerCameraPlugin {
                 OnEnter(LevelState::Playing),
                 update_player_camera_render
             )
-            .add_systems(FixedPreUpdate,
+            .add_systems(FixedPostUpdate,
                 (
                     // HACK: we "know" zoom and move-while-grabbed use the same actions
                     handle_player_camera_actions.run_if(not(is_grabbing_item)),
@@ -39,7 +39,7 @@ impl Plugin for PlayerCameraPlugin {
                 .run_if(is_game_active)
                 ,
             )
-            .add_systems(FixedPreUpdate,
+            .add_systems(FixedPostUpdate,
                 (
                     sync_world_camera_to_player,
                     sync_view_camera_to_player,

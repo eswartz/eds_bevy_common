@@ -55,7 +55,7 @@ impl Plugin for DeathboxPlugin {
             .add_message::<HitDeathboxMessage>()
             .insert_resource(self.flags.clone())
             .add_systems(
-                FixedUpdate,
+                FixedPostUpdate,
                 (
                     check_out_of_bounds,
                 )
