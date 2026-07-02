@@ -285,7 +285,7 @@ fn on_start_grab(
     grabbable_q: Query<Entity, With<Grabbable>>,
     grabbed_opt: Option<Res<GrabbedItem>>,
     #[cfg(feature = "highlighting")]
-    mut highlighting_mode: ResMut<HighlightingMode>,
+    mut highlighting_mode: If<ResMut<HighlightingMode>>,
     release_q: Query<&ActionEvents, Or<(With<Action<actions::ToggleSelect>>, With<Action<actions::AltFiring>>)>>,
 ) {
     if grabbed_opt.is_some()
@@ -298,7 +298,7 @@ fn on_start_grab(
         // Try to grab.
         let release = release_q.iter().any(|e| e.contains(ActionEvents::START));
         if release && highlighting_mode.is_disabled() {
-            *highlighting_mode = HighlightingMode::Enabled;
+            **highlighting_mode = HighlightingMode::Enabled;
         }
 
         if let Some(grabbed) = grabbable_q.iter().next() {
@@ -359,7 +359,7 @@ fn process_grab_commands(
     camera_q: Query<&GlobalTransform, (With<Camera3d>, With<WorldCamera>)>,
 
     #[cfg(feature = "highlighting")]
-    mut mode: ResMut<HighlightingMode>,
+    mut mode: If<ResMut<HighlightingMode>>,
 
     mut raycast: MeshRayCast,
     phys_info_q: Query<(&GlobalTransform, &Transform,
@@ -415,7 +415,7 @@ fn process_grab_commands(
                 });
 
                 if cfg!(feature = "highlighting") {
-                    *mode = HighlightingMode::Busy;
+                    **mode = HighlightingMode::Busy;
                 }
 
                 // Mark as grabbed
@@ -496,15 +496,15 @@ fn process_grab_commands(
                     styler.remove_from(ent_commands);
 
                     #[cfg(feature = "highlighting")]
-                    if *mode == HighlightingMode::Busy {
-                        *mode = grabbed.orig_mode;
+                    if **mode == HighlightingMode::Busy {
+                        **mode = grabbed.orig_mode;
                     }
                 }
             }
             GrabbingCommand::CancelGrabItems => {
                 #[cfg(feature = "highlighting")]
                 {
-                    *mode = HighlightingMode::Disabled;
+                    **mode = HighlightingMode::Disabled;
                 }
                 commands.remove_resource::<GrabbedItem>();
             }

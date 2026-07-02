@@ -97,8 +97,8 @@ fn collect_player_movement(
     crouch_events: Query<&ActionEvents, (With<Action<Crouch>>, With<PlayerAction>)>,
     jump_events: Query<&ActionEvents, (With<Action<Jump>>, With<PlayerAction>)>,
     move_flycam: Query<&Action<MoveFlycam>, With<PlayerAction>>,
-    move_down_up: Query<&Action<MoveDownUp>, With<PlayerAction>>,
-    move_left_right: Query<&Action<MoveLeftRight>, With<PlayerAction>>,
+    move_down_up: Query<&Action<MoveUpDown>, With<PlayerAction>>,
+    move_left_right: Query<&Action<MoveRightLeft>, With<PlayerAction>>,
 
     ctrl_settings: Res<PlayerControllerSettings>,
     input_settings: Res<PlayerInputSettings>,

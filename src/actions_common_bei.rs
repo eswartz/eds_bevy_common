@@ -145,15 +145,15 @@ pub mod actions {
     #[action_output(Vec2)]
     pub struct MoveFlycam;
 
-    /// Move in the Y axis (fly/dive).
+    /// Move in the Y axis (fly/crouch/dive).
     #[derive(InputAction)]
     #[action_output(f32)]
-    pub struct MoveDownUp;
+    pub struct MoveUpDown;
 
     /// Move in the X axis (i.e. strafe).
     #[derive(InputAction)]
     #[action_output(f32)]
-    pub struct MoveLeftRight;
+    pub struct MoveRightLeft;
 
     /// Change camera see closer/further.
     #[derive(InputAction)]
@@ -201,6 +201,11 @@ pub mod actions {
     #[derive(InputAction)]
     #[action_output(bool)]
     pub struct ToggleFlashlight;
+
+    /// Toggle components for debug purposes.
+    #[derive(InputAction)]
+    #[action_output(bool)]
+    pub struct Tweak;
 }
 
 fn toggle_context(
@@ -373,7 +378,7 @@ pub fn assign_stock_menu_actions(
     commands.spawn((
         include.clone(),
 
-        Action::<actions::MoveDownUp>::new(),
+        Action::<actions::MoveUpDown>::new(),
         Pulse::new(0.125).with_time_kind(TimeKind::Real).trigger_on_start(true).with_initial_delay(0.125),
         DeadZone::default(),
         ActionSettings {
@@ -388,7 +393,7 @@ pub fn assign_stock_menu_actions(
     commands.spawn((
         include.clone(),
 
-        Action::<actions::MoveLeftRight>::new(),
+        Action::<actions::MoveRightLeft>::new(),
         Pulse::new(0.125).with_time_kind(TimeKind::Real).trigger_on_start(true).with_initial_delay(0.125),
         DeadZone::default(),
         ActionSettings {
@@ -443,16 +448,17 @@ pub fn assign_stock_player_actions(
     ));
     commands.spawn((
         include.clone(),
-        Action::<actions::MoveDownUp>::new(),
+        Action::<actions::MoveUpDown>::new(),
         Bindings::spawn((
-            Bidirectional::new(KeyCode::Space, KeyCode::KeyC),
+            Bidirectional::new(KeyCode::KeyQ, KeyCode::KeyZ),
             Bidirectional::new(GamepadButton::DPadUp, GamepadButton::DPadDown),
         )),
     ));
     commands.spawn((
         include.clone(),
-        Action::<actions::MoveLeftRight>::new(),
+        Action::<actions::MoveRightLeft>::new(),
         Bindings::spawn((
+            Bidirectional::new(KeyCode::KeyD, KeyCode::KeyA),
             Bidirectional::new(GamepadButton::DPadRight, GamepadButton::DPadLeft),
         )),
     ));
@@ -590,8 +596,6 @@ pub fn assign_stock_player_actions(
             GamepadButton::North,
         ],
     ));
-
-
 }
 
 /// Workaround for different use of [MouseScrollUnit] on different OSes.

@@ -73,18 +73,16 @@ impl Default for VideoSettings {
     }
 }
 
-#[derive(Resource, Debug, Clone, Copy, PartialEq, Reflect)]
-#[reflect(Default, Clone, Resource)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Reflect)]
+#[reflect(Default, Clone)]
 #[type_path = "game"]
 pub enum OrderIndependentTransparencyQuality {
     Off,
-    Levels(u16),
-}
-
-impl Default for OrderIndependentTransparencyQuality {
-    fn default() -> Self {
-        Self::Levels(8)
-    }
+    Low,
+    #[default]
+    Medium,
+    High,
+    Ultra,
 }
 
 impl OrderIndependentTransparencyQuality {
@@ -93,16 +91,37 @@ impl OrderIndependentTransparencyQuality {
             return None
         }
 
-        match self {
-            OrderIndependentTransparencyQuality::Off => None,
-            OrderIndependentTransparencyQuality::Levels(layer_count) =>
-                Some(OrderIndependentTransparencySettings {
-                    // layer_count: *layer_count as _,
-                    sorted_fragment_max_count: *layer_count as _,
+        Some(match self {
+            OrderIndependentTransparencyQuality::Off => return None,
+            OrderIndependentTransparencyQuality::Low =>
+                OrderIndependentTransparencySettings {
+                    sorted_fragment_max_count: 4,
+                    fragments_per_pixel_average: 2.0,
                     alpha_threshold: 0.0,
                     ..default()
-                })
-        }
+                },
+            OrderIndependentTransparencyQuality::Medium =>
+                OrderIndependentTransparencySettings {
+                    sorted_fragment_max_count: 8,
+                    fragments_per_pixel_average: 4.0,
+                    alpha_threshold: 0.0,
+                    ..default()
+                },
+            OrderIndependentTransparencyQuality::High =>
+                OrderIndependentTransparencySettings {
+                    sorted_fragment_max_count: 16,
+                    fragments_per_pixel_average: 6.0,
+                    alpha_threshold: 0.0,
+                    ..default()
+                },
+            OrderIndependentTransparencyQuality::Ultra =>
+                OrderIndependentTransparencySettings {
+                    sorted_fragment_max_count: 24,
+                    fragments_per_pixel_average: 8.0,
+                    alpha_threshold: 0.0,
+                    ..default()
+                },
+        })
     }
 }
 
