@@ -265,10 +265,10 @@ pub(crate) fn handle_full_screen(
     let new_mode = match cur_mode {
         WindowMode::Windowed => WindowMode::BorderlessFullscreen(MonitorSelection::Current),
         WindowMode::BorderlessFullscreen(_monitor_selection) => WindowMode::Windowed,
-
         // WindowMode::BorderlessFullscreen(monitor_selection) => WindowMode::Fullscreen(
         //     monitor_selection, VideoModeSelection::Current),
-        WindowMode::Fullscreen(_monitor_selection, _video_mode_selection) => WindowMode::Windowed,
+        // WindowMode::Fullscreen(_monitor_selection, _video_mode_selection) => WindowMode::Windowed,
+        _ => WindowMode::Windowed,
     };
     window.mode = new_mode;
 }
