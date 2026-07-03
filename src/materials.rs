@@ -1,4 +1,3 @@
-use bevy::gltf::GltfMesh;
 use bevy::image::ImageAddressMode;
 use bevy::image::ImageLoaderSettings;
 use bevy::image::ImageSampler;
@@ -493,6 +492,7 @@ pub enum SpawnShapeKind {
     Sphere(f32),
     Plane(Vec2),
     Model(String),
+    MeshMaterial{ mesh: String, material: String },
     #[default]
     None,
 }
@@ -508,14 +508,10 @@ pub fn handle_spawn_shape(
     mut commands: Commands,
 
     assets: Res<AssetServer>,
-    gltf_meshes: If<Res<Assets<GltfMesh>>>,
     mut meshes: If<ResMut<Assets<Mesh>>>,
     vid_settings: Res<VideoSettings>,
 
     shape_q: Query<(Entity, &SpawnShape)>,
-
-    // FIXME: need to do this to avoid delayed loading every single time the model is loaded...
-    mut mesh_cache: Local<FxHashMap<String, Handle<GltfMesh>>>,
 ) {
     // Spawn the appropriate mesh and remove the SpawnShape when complete.
     for (ent, shape) in shape_q.iter() {
@@ -550,55 +546,30 @@ pub fn handle_spawn_shape(
                     .build();
                 let mesh = meshes.add(mesh);
                 ent_commands.try_insert(Mesh3d(mesh));
-                ent_commands.try_remove::<SpawnShape>();
             }
             SpawnShapeKind::Model(path) => {
-                if path.contains("#Scene") || !path.contains('#') {
-                    let scene = assets.load::<Scene>(path);
-                    ent_commands.try_insert(SceneRoot(scene));
-                } else if path.contains("#Mesh") {
-                    let mesh_handle;
-                    if let Some(cached_mesh) = assets.get_handle(&*path) {
-                        mesh_handle = cached_mesh.clone();
-                    } else {
-                        mesh_handle = assets.load::<GltfMesh>(path);
-                        mesh_cache.insert(path.clone(), mesh_handle.clone());
-                    }
-
-                    // Might take a while to load, so keep iterating until we see it.
-                    // (We need its precious data!)
-                    let Some(gltf_mesh) = gltf_meshes.get(&mesh_handle) else {
-                        debug!("{ent}: no GltfMesh found for {path} (waiting) [{mesh_handle:?}]");
-                        continue
-                    };
-
-                    // Got it!
-                    if gltf_mesh.primitives.len() == 0 {
-                        warn!("{ent}: GltfMesh {path} is empty");
-                    } else if gltf_mesh.primitives.len() == 1 {
-                        // Single mesh, add directly.
-                        let prim = &gltf_mesh.primitives[0];
-                        ent_commands.try_insert(Mesh3d(prim.mesh.clone()));
-                        if let Some(mat) = &prim.material {
-                            ent_commands.try_insert(MeshMaterial3d(mat.clone()));
-                        }
-                    } else {
-                        // Need to add each as a child.
-                        ent_commands.with_children(|spawn| {
-                            for prim in &gltf_mesh.primitives {
-                                let mut kid_commands = spawn.spawn(Mesh3d(prim.mesh.clone()));
-                                if let Some(mat) = &prim.material {
-                                    kid_commands.try_insert(MeshMaterial3d(mat.clone()));
-                                }
-                            }
-                        });
-                    }
-
-                    // Done!
+                let scene = assets.load::<Scene>(path);
+                ent_commands.try_insert(SceneRoot(scene));
+            }
+            SpawnShapeKind::MeshMaterial{ mesh, material } => {
+                if !mesh.contains("#Mesh") {
+                    error!("unexpected Mesh Model path {mesh}");
                     ent_commands.try_remove::<SpawnShape>();
-                } else {
-                    error!("unexpected Model path {path}");
+                    return
                 }
+                if !material.contains("#Material") {
+                    error!("unexpected Material path {material}");
+                    ent_commands.try_remove::<SpawnShape>();
+                    return
+                }
+
+                let mesh_handle = assets.load::<Mesh>(mesh);
+                let mat_handle = assets.load::<StandardMaterial>(material);
+
+                ent_commands.try_insert((
+                    Mesh3d(mesh_handle),
+                    MeshMaterial3d(mat_handle),
+                ));
             }
 
             // 'twas just a placeholder.
@@ -628,18 +599,18 @@ pub(crate) struct SpawnMaterialHandles (
 );
 
 #[derive(Debug, Clone, PartialEq, Eq,Hash)]
-pub(crate) struct StandardMaterialHash(String);
+pub struct StandardMaterialHash(String);
 
 impl StandardMaterialHash {
-    fn new(mat: String) -> Self {
+    pub fn new(mat: String) -> Self {
         Self(mat)
     }
 }
 
-fn hash_color(color: Color) -> String {
+pub fn hash_color(color: Color) -> String {
     format!("{}", color.to_linear().as_u32())
 }
-fn hash_image(image: &Option<Handle<Image>>) -> String {
+pub fn hash_image(image: &Option<Handle<Image>>) -> String {
     if let Some(image) = image {
         format!("{}", image.id())
     } else {
@@ -647,7 +618,7 @@ fn hash_image(image: &Option<Handle<Image>>) -> String {
     }
 }
 
-fn hash_stdmat(m: &StandardMaterial) -> String {
+pub fn hash_stdmat(m: &StandardMaterial) -> String {
     let basic = format!(
         "bc={}
         bcc={:?}
@@ -769,8 +740,6 @@ pub(crate) fn handle_spawn_material(
     mut commands: Commands,
     mut mats: If<ResMut<Assets<StandardMaterial>>>,
     mat_q: Query<(Entity, &SpawnMaterial), (Without<TextureSources>, Without<SpawnShape>)>,
-
-    mut std_mat_cache: ResMut<SpawnMaterialHandles>,
 ) {
     for (ent, mat) in mat_q.iter() {
         let mut ent_commands = commands.entity(ent);
@@ -784,11 +753,7 @@ pub(crate) fn handle_spawn_material(
                     },
                     ..mat.clone()
                 };
-                let key = StandardMaterialHash::new(hash_stdmat(&mat));
-                let std_mat = std_mat_cache.0
-                    .entry(key)
-                    .or_insert_with(|| mats.add(mat));
-
+                let std_mat = mats.add(mat);
                 ent_commands.try_insert(MeshMaterial3d(std_mat.clone()));
             }
             SpawnMaterial::None => (),
