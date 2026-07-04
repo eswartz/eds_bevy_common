@@ -742,6 +742,7 @@ pub(crate) fn handle_spawn_material(
     mut commands: Commands,
     mut mats: If<ResMut<Assets<StandardMaterial>>>,
     mat_q: Query<(Entity, &SpawnMaterial), (Without<TextureSources>, Without<SpawnShape>)>,
+    mut mat_cache: If<ResMut<SpawnMaterialHandles>>,
 ) {
     for (ent, mat) in mat_q.iter() {
         let mut ent_commands = commands.entity(ent);
@@ -755,7 +756,9 @@ pub(crate) fn handle_spawn_material(
                     },
                     ..mat.clone()
                 };
-                let std_mat = mats.add(mat);
+                let mat_hash = StandardMaterialHash(hash_stdmat(&mat));
+                let std_mat = (**mat_cache).0.entry(mat_hash)
+                    .or_insert_with(|| mats.add(mat));
                 ent_commands.try_insert(MeshMaterial3d(std_mat.clone()));
             }
             SpawnMaterial::None => (),
