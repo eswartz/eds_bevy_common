@@ -26,7 +26,7 @@ pub struct LevelInfo {
     /// Label for menus / status screens.
     pub label: String,
     /// The scene that comprises the level (swapped in to [crate::WorldMarker]).
-    pub scene: Handle<Scene>,
+    pub scene: Handle<WorldAsset>,
 }
 
 /// This defines the list of levels.

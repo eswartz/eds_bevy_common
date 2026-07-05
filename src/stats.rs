@@ -420,8 +420,8 @@ fn diagnostic_system(
 
             let mut result  = Vec::with_capacity(stats_registry.len());
             let font = TextFont {
-                font_size: style.font_size,
-                font: style.font.clone(),
+                font: style.font.clone().into(),
+                font_size: FontSize::Px(style.font_size),
                 ..default()
             };
             commands.spawn((

@@ -15,7 +15,7 @@ But ⚠️⚠️⚠️ this is my personal repo and will <span style="color:red"
 
 ## What?
 
-This is an *opinionated* set of plugins that can be used in Bevy game projects (it's not on crates.io). I've got a certain  I've been using this in my own (private) projects since Bevy 0.15. It currently works for 0.18.1.
+This is an *opinionated* set of plugins that can be used in Bevy game projects (it's not on crates.io). I've got a certain  I've been using this in my own (private) projects since Bevy 0.15. It currently works for 0.19.
 
 *It is not documented* but just start from the example `example_menu.rs`.
 

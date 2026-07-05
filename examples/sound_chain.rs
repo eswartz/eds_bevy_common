@@ -7,7 +7,7 @@ use bevy::asset::uuid::Uuid;
 use bevy::color::palettes::tailwind;
 use bevy::camera::visibility::RenderLayers;
 use bevy::ecs::world::CommandQueue;
-use bevy::scene::SceneInstanceReady;
+use bevy::world_serialization::WorldInstanceReady;
 use bevy::sprite::Text2dShadow;
 use bevy_seedling::spatial::SpatialListener3D;
 #[cfg(feature = "bevy_skein")]
@@ -399,8 +399,8 @@ fn on_enter_main_menu(
         DespawnOnExit(OverlayState::MainMenu),
         Text2d::new(&product_name.0),
         TextFont {
-            font_size: 128.0,
-            font: font.0.clone(),
+            font_size: FontSize::Px(128.0),
+            font: font.0.clone().into(),
             ..default()
         },
         Text2dShadow {
@@ -1059,7 +1059,7 @@ pub(crate) fn level_spawn_finished(
     commands.spawn((
         DirectionalLight {
             illuminance: 5000.0,
-            shadows_enabled: true,
+            shadow_maps_enabled: true,
             ..default()
         },
         Transform::default().looking_at(Vec3::new(-1.0, -2.5, -1.5), Vec3::Y),
@@ -1086,10 +1086,10 @@ pub(crate) fn spawn_level(
     commands
         .spawn((
             DespawnOnExit(GameplayState::Playing),
-            SceneRoot(level.scene.clone()),
+            WorldAssetRoot(level.scene.clone()),
             ChildOf(world.0),
         ))
-        .observe(|_event: On<SceneInstanceReady>, mut commands: Commands,| {
+        .observe(|_event: On<WorldInstanceReady>, mut commands: Commands,| {
             commands.set_state(GameplayState::Playing);
         })
     ;

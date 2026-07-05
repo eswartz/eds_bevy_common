@@ -221,12 +221,14 @@ impl TextureSource {
     /// Otherwise return the handle as-is.
     pub fn get_handle(&self, assets: &AssetServer, assume_is_srgb: bool) -> Handle<Image> {
         match self {
-            TextureSource::Load{ path, params } => assets.load_with_settings(
-                path,
-                make_image_loader_settings_applier(
-                    params.clone(), assume_is_srgb,
-                ),
-            ),
+            TextureSource::Load{ path, params } => assets
+                .load_builder()
+                .with_settings(
+                    make_image_loader_settings_applier(
+                        params.clone(), assume_is_srgb,
+                    ),
+                )
+                .load(path),
             TextureSource::Handle(handle) => handle.clone(),
         }
     }
@@ -548,8 +550,8 @@ pub fn handle_spawn_shape(
                 ent_commands.try_insert(Mesh3d(mesh));
             }
             SpawnShapeKind::Model(path) => {
-                let scene = assets.load::<Scene>(path);
-                ent_commands.try_insert(SceneRoot(scene));
+                let scene = assets.load::<WorldAsset>(path);
+                ent_commands.try_insert(WorldAssetRoot(scene));
             }
             SpawnShapeKind::MeshMaterial{ mesh, material } => {
                 if !mesh.contains("#Mesh") {

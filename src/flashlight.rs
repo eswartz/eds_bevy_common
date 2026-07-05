@@ -31,7 +31,7 @@ impl Default for Flashlight {
                 color: Color::LinearRgba(Color::WHITE.to_linear() * 10.0f32),
                 outer_angle: 0.75,
                 inner_angle: 0.5,
-                shadows_enabled: true,
+                shadow_maps_enabled: true,
                 #[cfg(feature = "experimental_pbr_pcss")]
                 soft_shadows_enabled: true,
                 .. default()
