@@ -1,7 +1,10 @@
+use std::hash::Hash;
+
 use bevy::image::ImageAddressMode;
 use bevy::image::ImageLoaderSettings;
 use bevy::image::ImageSampler;
 use bevy::image::ImageSamplerDescriptor;
+use bevy::math::FloatOrd;
 use bevy::mesh::PlaneMeshBuilder;
 use bevy::platform::collections::HashMap;
 use bevy::prelude::*;
@@ -20,6 +23,7 @@ impl Plugin for MaterialsPlugin {
     fn build(&self, app: &mut App) {
         app
             .insert_resource(SpawnMaterialHandles::default())
+            .insert_resource(SpawnMeshHandles::default())
             .add_message::<RefreshImages>()
             .add_systems(
                 FixedPreUpdate,
@@ -38,7 +42,10 @@ impl Plugin for MaterialsPlugin {
 
             .add_systems(
                 OnEnter(LevelState::Advance),
-                cleanup_materials,
+                (
+                    cleanup_materials,
+                    cleanup_meshes,
+                )
             )
         ;
     }
@@ -474,10 +481,8 @@ pub fn apply_uv_box_map(
     Ok(())
 }
 
-
-
 /// A component that builds the given Mesh when needed.
-#[derive(Component, Debug, Default, Clone, Reflect)]
+#[derive(Component, Debug, Default, Clone, Reflect, PartialEq, Eq, Hash)]
 #[component(storage = "SparseSet")]
 #[reflect(Component, Default, Clone)]
 #[type_path = "game"]
@@ -486,7 +491,7 @@ pub struct SpawnShape {
     pub info: SpawnShapeInfo,
 }
 
-#[derive(Default, Debug, Clone, Reflect)]
+#[derive(Default, Debug, Clone, Reflect, PartialEq)]
 #[reflect(Default, Clone)]
 #[type_path = "game"]
 pub enum SpawnShapeKind {
@@ -499,14 +504,49 @@ pub enum SpawnShapeKind {
     None,
 }
 
-#[derive(Default, Debug, Clone, Reflect)]
+/// We don't care about NaNs.
+impl Eq for SpawnShapeKind {}
+
+impl std::hash::Hash for SpawnShapeKind {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        match self {
+            SpawnShapeKind::Cube(vec3) => {
+                FloatOrd(vec3.x).hash(state);
+                FloatOrd(vec3.y).hash(state);
+                FloatOrd(vec3.z).hash(state);
+            }
+            SpawnShapeKind::Sphere(rad) => {
+                FloatOrd(*rad).hash(state);
+            }
+            SpawnShapeKind::Plane(vec2) => {
+                FloatOrd(vec2.x).hash(state);
+                FloatOrd(vec2.y).hash(state);
+            }
+            SpawnShapeKind::Model(path) => {
+                path.hash(state);
+            }
+            SpawnShapeKind::MeshMaterial { mesh, material } => {
+                mesh.hash(state);
+                material.hash(state);
+            }
+            SpawnShapeKind::None => {
+                0u32.hash(state);
+            }
+        }
+    }
+}
+
+#[derive(Default, Debug, Clone, Reflect, PartialEq, Eq, Hash)]
 #[reflect(Default, Clone)]
 #[type_path = "game"]
 pub struct SpawnShapeInfo {
     pub subdivisions: u16,
 }
 
-pub fn handle_spawn_shape(
+#[derive(Resource, Default)]
+struct SpawnMeshHandles(HashMap<(SpawnShape, MeshQuality), Handle<Mesh>>);
+
+fn handle_spawn_shape(
     mut commands: Commands,
 
     assets: Res<AssetServer>,
@@ -514,40 +554,53 @@ pub fn handle_spawn_shape(
     vid_settings: Res<VideoSettings>,
 
     shape_q: Query<(Entity, &SpawnShape)>,
+    mut mesh_cache: ResMut<SpawnMeshHandles>,
 ) {
     // Spawn the appropriate mesh and remove the SpawnShape when complete.
     for (ent, shape) in shape_q.iter() {
         let mut ent_commands = commands.entity(ent);
         match &shape.kind {
             SpawnShapeKind::Cube(vec3) => {
-                let shape = Cuboid::new(vec3.x, vec3.y, vec3.z);
-                let mut mesh: Mesh = shape.mesh().into();
-                mesh.generate_tangents().unwrap();
-                let mesh = meshes.add(mesh);
-                ent_commands.try_insert(Mesh3d(mesh));
+                let mesh = mesh_cache.0.entry((shape.clone(), MeshQuality::Low))
+                    .or_insert_with(|| {
+                        let shape = Cuboid::new(vec3.x, vec3.y, vec3.z);
+                        let mut mesh: Mesh = shape.mesh().into();
+                        mesh.generate_tangents().unwrap();
+                        meshes.add(mesh)
+                    });
+                ent_commands.try_insert(Mesh3d(mesh.clone()));
             }
             SpawnShapeKind::Sphere(rad) => {
-                let (sectors, stacks) = {
-                    {
-                        match vid_settings.mesh_quality {
-                            MeshQuality::Low => (12, 6),
-                            MeshQuality::Medium => (16, 10),
-                            MeshQuality::High => (20, 14),
-                            MeshQuality::Ultra => (24, 18),
-                        }
-                    }
-                };
-                let mut mesh = Sphere::new(*rad).mesh().uv(sectors, stacks);
-                mesh.compute_smooth_normals();
-                let _ = mesh.generate_tangents();
-                ent_commands.try_insert(Mesh3d(meshes.add(mesh)));
+                let mesh = mesh_cache.0.entry((shape.clone(), vid_settings.mesh_quality))
+                    .or_insert_with(|| {
+                        let (sectors, stacks) = {
+                            {
+                                match vid_settings.mesh_quality {
+                                    MeshQuality::Low => (12, 6),
+                                    MeshQuality::Medium => (16, 10),
+                                    MeshQuality::High => (20, 14),
+                                    MeshQuality::Ultra => (24, 18),
+                                }
+                            }
+                        };
+                        let mut mesh = Sphere::new(*rad).mesh().uv(sectors, stacks);
+                        mesh.compute_smooth_normals();
+                        let _ = mesh.generate_tangents();
+                        meshes.add(mesh)
+                    });
+
+                ent_commands.try_insert(Mesh3d(mesh.clone()));
             }
             SpawnShapeKind::Plane(vec2) => {
-                let mesh = PlaneMeshBuilder::from_size(Vec2::new(vec2.x, vec2.y))
-                    .subdivisions(shape.info.subdivisions as u32)
-                    .build();
-                let mesh = meshes.add(mesh);
-                ent_commands.try_insert(Mesh3d(mesh));
+                let mesh = mesh_cache.0.entry((shape.clone(), MeshQuality::Low))
+                    .or_insert_with(|| {
+                        let mesh = PlaneMeshBuilder::from_size(Vec2::new(vec2.x, vec2.y))
+                            .subdivisions(shape.info.subdivisions as u32)
+                            .build();
+                        meshes.add(mesh)
+                    });
+
+                ent_commands.try_insert(Mesh3d(mesh.clone()));
             }
             SpawnShapeKind::Model(path) => {
                 let scene = assets.load::<WorldAsset>(path);
@@ -576,7 +629,7 @@ pub fn handle_spawn_shape(
 
             // 'twas just a placeholder.
             SpawnShapeKind::None => (),
-        }
+        };
 
         // All the successful paths lead here.
         ent_commands.try_remove::<SpawnShape>();
@@ -596,7 +649,7 @@ pub enum SpawnMaterial {
 
 /// Record which materials we generated.
 #[derive(Resource, Default)]
-pub(crate) struct SpawnMaterialHandles (
+struct SpawnMaterialHandles (
     HashMap<StandardMaterialHash, Handle<StandardMaterial>>,
 );
 
@@ -738,7 +791,7 @@ pub fn hash_stdmat(m: &StandardMaterial) -> String {
     format!("b={basic} ptt={ptt} pst={pst} pmlmt={pmlmt}")
 }
 
-pub(crate) fn handle_spawn_material(
+fn handle_spawn_material(
     mut commands: Commands,
     mut mats: If<ResMut<Assets<StandardMaterial>>>,
     mat_q: Query<(Entity, &SpawnMaterial), (Without<TextureSources>, Without<SpawnShape>)>,
@@ -767,12 +820,16 @@ pub(crate) fn handle_spawn_material(
     }
 }
 
-pub(crate) fn cleanup_materials(
-    mats: Option<ResMut<SpawnMaterialHandles>>,
+fn cleanup_materials(
+    mut mats: If<ResMut<SpawnMaterialHandles>>,
 ) {
-    if let Some(mut mats) = mats {
-        mats.0.clear();
-    }
+    mats.0.0.clear();
+}
+
+fn cleanup_meshes(
+    mut meshes: If<ResMut<SpawnMeshHandles>>,
+) {
+    meshes.0.0.clear();
 }
 
 #[derive(Debug, Default, Clone, Message)]
