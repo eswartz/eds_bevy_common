@@ -487,7 +487,7 @@ fn ungrab_cursor_for_overlay(
     mut commands: Commands,
     gui_state: Res<GuiState>,
 ) {
-    commands.write_message(GrabCursor(gui_state.show_cursor()));
+    commands.write_message(GrabCursor(false));
 }
 
 /// This is the logic managing [GrabCursor] and [WindowFocused] messages
