@@ -221,6 +221,25 @@ pub struct CommonFxAssets {
     pub bump2: Handle<AudioSample>,
     #[asset(path = "common://sounds/412378__smokenweewalt__closet_hit_01.ogg")]
     pub bump3: Handle<AudioSample>,
+
+    #[asset(path = "common://sounds/01-800117__cvltiv8r__shells-and-quartz-crystals-rustling-and-scraping-on-marble.ogg")]
+    pub glass_scrape1a: Handle<AudioSample>,
+    #[asset(path = "common://sounds/02-800117__cvltiv8r__shells-and-quartz-crystals-rustling-and-scraping-on-marble.ogg")]
+    pub glass_scrape1b: Handle<AudioSample>,
+    #[asset(path = "common://sounds/03-800117__cvltiv8r__shells-and-quartz-crystals-rustling-and-scraping-on-marble.ogg")]
+    pub glass_scrape1c: Handle<AudioSample>,
+    #[asset(path = "common://sounds/04-800117__cvltiv8r__shells-and-quartz-crystals-rustling-and-scraping-on-marble.ogg")]
+    pub glass_scrape1d: Handle<AudioSample>,
+    #[asset(path = "common://sounds/05-800117__cvltiv8r__shells-and-quartz-crystals-rustling-and-scraping-on-marble.ogg")]
+    pub glass_scrape1e: Handle<AudioSample>,
+    #[asset(path = "common://sounds/06-800117__cvltiv8r__shells-and-quartz-crystals-rustling-and-scraping-on-marble.ogg")]
+    pub glass_scrape1f: Handle<AudioSample>,
+    #[asset(path = "common://sounds/07-800117__cvltiv8r__shells-and-quartz-crystals-rustling-and-scraping-on-marble.ogg")]
+    pub glass_scrape1g: Handle<AudioSample>,
+    #[asset(path = "common://sounds/08-800117__cvltiv8r__shells-and-quartz-crystals-rustling-and-scraping-on-marble.ogg")]
+    pub glass_scrape1h: Handle<AudioSample>,
+    #[asset(path = "common://sounds/09-800117__cvltiv8r__shells-and-quartz-crystals-rustling-and-scraping-on-marble.ogg")]
+    pub glass_scrape1i: Handle<AudioSample>,
 }
 
 #[cfg(feature = "midi_synth")]
