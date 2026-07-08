@@ -542,6 +542,117 @@ pub struct CommonFxAssets {
     pub footsteps_2l: Handle<AudioSample>,
     #[asset(path = "common://sounds/150444__splicesound__footsteps-solid-wood-rug-male-boots-medium-pace-and-scuffs-13.ogg")]
     pub footsteps_2m: Handle<AudioSample>,
+
+    #[asset(path = "common://sounds/405667__anthousai__metal-bowl-handling-and-sliding-around-on-counter-01-01.ogg")]
+    pub metal_bowl_1a: Handle<AudioSample>,
+    #[asset(path = "common://sounds/405667__anthousai__metal-bowl-handling-and-sliding-around-on-counter-01-02.ogg")]
+    pub metal_bowl_1b: Handle<AudioSample>,
+    #[asset(path = "common://sounds/405667__anthousai__metal-bowl-handling-and-sliding-around-on-counter-01-03.ogg")]
+    pub metal_bowl_1c: Handle<AudioSample>,
+    #[asset(path = "common://sounds/405667__anthousai__metal-bowl-handling-and-sliding-around-on-counter-01-04.ogg")]
+    pub metal_bowl_1d: Handle<AudioSample>,
+    #[asset(path = "common://sounds/405667__anthousai__metal-bowl-handling-and-sliding-around-on-counter-01-05.ogg")]
+    pub metal_bowl_1e: Handle<AudioSample>,
+    #[asset(path = "common://sounds/405667__anthousai__metal-bowl-handling-and-sliding-around-on-counter-01-06.ogg")]
+    pub metal_bowl_1f: Handle<AudioSample>,
+    #[asset(path = "common://sounds/405667__anthousai__metal-bowl-handling-and-sliding-around-on-counter-01-07.ogg")]
+    pub metal_bowl_1g: Handle<AudioSample>,
+
+    #[asset(path = "common://sounds/448418__lordforklift__metal-slide-2-01.ogg")]
+    pub metal_slide_1a: Handle<AudioSample>,
+    #[asset(path = "common://sounds/448418__lordforklift__metal-slide-2-02.ogg")]
+    pub metal_slide_1b: Handle<AudioSample>,
+
+    #[asset(path = "common://sounds/383728__deleted_user_7146007__hitting-metal-hammering-slide-hammer-01.ogg")]
+    pub metal_hammer_1a: Handle<AudioSample>,
+    #[asset(path = "common://sounds/383728__deleted_user_7146007__hitting-metal-hammering-slide-hammer-02.ogg")]
+    pub metal_hammer_1b: Handle<AudioSample>,
+    #[asset(path = "common://sounds/383728__deleted_user_7146007__hitting-metal-hammering-slide-hammer-03.ogg")]
+    pub metal_hammer_1c: Handle<AudioSample>,
+    #[asset(path = "common://sounds/383728__deleted_user_7146007__hitting-metal-hammering-slide-hammer-04.ogg")]
+    pub metal_hammer_1d: Handle<AudioSample>,
+    #[asset(path = "common://sounds/383728__deleted_user_7146007__hitting-metal-hammering-slide-hammer-05.ogg")]
+    pub metal_hammer_1e: Handle<AudioSample>,
+    #[asset(path = "common://sounds/383728__deleted_user_7146007__hitting-metal-hammering-slide-hammer-06.ogg")]
+    pub metal_hammer_1f: Handle<AudioSample>,
+    #[asset(path = "common://sounds/383728__deleted_user_7146007__hitting-metal-hammering-slide-hammer-07.ogg")]
+    pub metal_hammer_1g: Handle<AudioSample>,
+    #[asset(path = "common://sounds/383728__deleted_user_7146007__hitting-metal-hammering-slide-hammer-08.ogg")]
+    pub metal_hammer_1h: Handle<AudioSample>,
+    #[asset(path = "common://sounds/383728__deleted_user_7146007__hitting-metal-hammering-slide-hammer-09.ogg")]
+    pub metal_hammer_1i: Handle<AudioSample>,
+    #[asset(path = "common://sounds/383728__deleted_user_7146007__hitting-metal-hammering-slide-hammer-10.ogg")]
+    pub metal_hammer_1j: Handle<AudioSample>,
+
+    #[asset(path = "common://sounds/368654__dynamique__metal-object-sliding-on-wood-surface-01.ogg")]
+    pub wood_metal_1a: Handle<AudioSample>,
+    #[asset(path = "common://sounds/368654__dynamique__metal-object-sliding-on-wood-surface-02.ogg")]
+    pub wood_metal_1b: Handle<AudioSample>,
+    #[asset(path = "common://sounds/368654__dynamique__metal-object-sliding-on-wood-surface-03.ogg")]
+    pub wood_metal_1c: Handle<AudioSample>,
+    #[asset(path = "common://sounds/368654__dynamique__metal-object-sliding-on-wood-surface-04.ogg")]
+    pub wood_metal_1d: Handle<AudioSample>,
+    #[asset(path = "common://sounds/368654__dynamique__metal-object-sliding-on-wood-surface-05.ogg")]
+    pub wood_metal_1e: Handle<AudioSample>,
+    #[asset(path = "common://sounds/368654__dynamique__metal-object-sliding-on-wood-surface-06.ogg")]
+    pub wood_metal_1f: Handle<AudioSample>,
+    #[asset(path = "common://sounds/368654__dynamique__metal-object-sliding-on-wood-surface-07.ogg")]
+    pub wood_metal_1g: Handle<AudioSample>,
+    #[asset(path = "common://sounds/368654__dynamique__metal-object-sliding-on-wood-surface-08.ogg")]
+    pub wood_metal_1h: Handle<AudioSample>,
+    #[asset(path = "common://sounds/368654__dynamique__metal-object-sliding-on-wood-surface-09.ogg")]
+    pub wood_metal_1i: Handle<AudioSample>,
+    #[asset(path = "common://sounds/368654__dynamique__metal-object-sliding-on-wood-surface-10.ogg")]
+    pub wood_metal_1j: Handle<AudioSample>,
+    #[asset(path = "common://sounds/368654__dynamique__metal-object-sliding-on-wood-surface-11.ogg")]
+    pub wood_metal_1k: Handle<AudioSample>,
+    #[asset(path = "common://sounds/368654__dynamique__metal-object-sliding-on-wood-surface-12.ogg")]
+    pub wood_metal_1l: Handle<AudioSample>,
+    #[asset(path = "common://sounds/368654__dynamique__metal-object-sliding-on-wood-surface-13.ogg")]
+    pub wood_metal_1m: Handle<AudioSample>,
+    #[asset(path = "common://sounds/368654__dynamique__metal-object-sliding-on-wood-surface-14.ogg")]
+    pub wood_metal_1n: Handle<AudioSample>,
+    #[asset(path = "common://sounds/368654__dynamique__metal-object-sliding-on-wood-surface-15.ogg")]
+    pub wood_metal_1o: Handle<AudioSample>,
+    #[asset(path = "common://sounds/368654__dynamique__metal-object-sliding-on-wood-surface-16.ogg")]
+    pub wood_metal_1p: Handle<AudioSample>,
+    #[asset(path = "common://sounds/368654__dynamique__metal-object-sliding-on-wood-surface-17.ogg")]
+    pub wood_metal_1q: Handle<AudioSample>,
+
+    #[asset(path = "common://sounds/628983__marsounds__knife-and-pot-sounds_sliding-hitting-01.ogg")]
+    pub metal_1a: Handle<AudioSample>,
+    #[asset(path = "common://sounds/628983__marsounds__knife-and-pot-sounds_sliding-hitting-02.ogg")]
+    pub metal_1b: Handle<AudioSample>,
+    #[asset(path = "common://sounds/628983__marsounds__knife-and-pot-sounds_sliding-hitting-03.ogg")]
+    pub metal_1c: Handle<AudioSample>,
+    #[asset(path = "common://sounds/628983__marsounds__knife-and-pot-sounds_sliding-hitting-04.ogg")]
+    pub metal_1d: Handle<AudioSample>,
+    #[asset(path = "common://sounds/628983__marsounds__knife-and-pot-sounds_sliding-hitting-05.ogg")]
+    pub metal_1e: Handle<AudioSample>,
+    #[asset(path = "common://sounds/628983__marsounds__knife-and-pot-sounds_sliding-hitting-06.ogg")]
+    pub metal_1f: Handle<AudioSample>,
+    #[asset(path = "common://sounds/628983__marsounds__knife-and-pot-sounds_sliding-hitting-07.ogg")]
+    pub metal_1g: Handle<AudioSample>,
+    #[asset(path = "common://sounds/628983__marsounds__knife-and-pot-sounds_sliding-hitting-08.ogg")]
+    pub metal_1h: Handle<AudioSample>,
+    #[asset(path = "common://sounds/628983__marsounds__knife-and-pot-sounds_sliding-hitting-09.ogg")]
+    pub metal_1i: Handle<AudioSample>,
+    #[asset(path = "common://sounds/628983__marsounds__knife-and-pot-sounds_sliding-hitting-10.ogg")]
+    pub metal_1j: Handle<AudioSample>,
+    #[asset(path = "common://sounds/628983__marsounds__knife-and-pot-sounds_sliding-hitting-11.ogg")]
+    pub metal_1k: Handle<AudioSample>,
+    #[asset(path = "common://sounds/628983__marsounds__knife-and-pot-sounds_sliding-hitting-12.ogg")]
+    pub metal_1l: Handle<AudioSample>,
+    #[asset(path = "common://sounds/628983__marsounds__knife-and-pot-sounds_sliding-hitting-13.ogg")]
+    pub metal_1m: Handle<AudioSample>,
+    #[asset(path = "common://sounds/628983__marsounds__knife-and-pot-sounds_sliding-hitting-14.ogg")]
+    pub metal_1n: Handle<AudioSample>,
+    #[asset(path = "common://sounds/628983__marsounds__knife-and-pot-sounds_sliding-hitting-15.ogg")]
+    pub metal_1o: Handle<AudioSample>,
+    #[asset(path = "common://sounds/628983__marsounds__knife-and-pot-sounds_sliding-hitting-16.ogg")]
+    pub metal_1p: Handle<AudioSample>,
+    #[asset(path = "common://sounds/628983__marsounds__knife-and-pot-sounds_sliding-hitting-17.ogg")]
+    pub metal_1q: Handle<AudioSample>,
 }
 
 impl CommonFxAssets {
@@ -588,6 +699,17 @@ impl CommonFxAssets {
                 &fx.wood1d,
                 &fx.thump_7a,
                 &fx.thump_8e,
+                &fx.wood_metal_1a,
+                &fx.wood_metal_1b,
+                &fx.wood_metal_1e,
+                &fx.wood_metal_1g,
+                &fx.wood_metal_1h,
+                &fx.wood_metal_1j,
+                &fx.wood_metal_1l,
+                &fx.wood_metal_1m,
+                &fx.wood_metal_1n,
+                &fx.wood_metal_1o,
+                &fx.wood_metal_1q,
             ],
             SurfaceMaterial::Metal => &[
                 &fx.metal_clang_1a,
@@ -598,6 +720,26 @@ impl CommonFxAssets {
                 &fx.metal_clang_2a,
                 &fx.metal_clang_3a,
                 &fx.thump_8f,
+                &fx.metal_bowl_1e,
+                &fx.metal_bowl_1g,
+                &fx.metal_slide_1b,
+
+                &fx.metal_hammer_1b,
+                &fx.metal_hammer_1d,
+                &fx.metal_hammer_1e,
+                &fx.metal_hammer_1f,
+                &fx.metal_hammer_1j,
+
+                &fx.metal_1a,
+                &fx.metal_1b,
+                &fx.metal_1c,
+                &fx.metal_1d,
+                &fx.metal_1e,
+                &fx.metal_1f,
+                &fx.metal_1g,
+                &fx.metal_1h,
+                &fx.metal_1i,
+                &fx.metal_1j,
             ],
             SurfaceMaterial::Glass => &[
                 &fx.glass_1a,
@@ -694,15 +836,34 @@ impl CommonFxAssets {
                 &fx.wood1b,
                 &fx.wood1c,
                 &fx.wood1d,
+                &fx.wood_metal_1c,
+                &fx.wood_metal_1d,
+                &fx.wood_metal_1f,
+                &fx.wood_metal_1i,
+                &fx.wood_metal_1k,
+                &fx.wood_metal_1p,
             ],
             SurfaceMaterial::Metal => &[
-                &fx.metal_clang_1a,
-                &fx.metal_clang_1b,
-                &fx.metal_clang_1c,
-                &fx.metal_clang_1d,
-                &fx.metal_clang_1e,
-                &fx.metal_clang_2a,
-                &fx.metal_clang_3a,
+                &fx.metal_bowl_1a,
+                &fx.metal_bowl_1b,
+                &fx.metal_bowl_1c,
+                &fx.metal_bowl_1d,
+                &fx.metal_bowl_1f,
+                &fx.metal_slide_1a,
+
+                &fx.metal_hammer_1a,
+                &fx.metal_hammer_1c,
+                &fx.metal_hammer_1g,
+                &fx.metal_hammer_1h,
+                &fx.metal_hammer_1i,
+
+                &fx.metal_1k,
+                &fx.metal_1l,
+                &fx.metal_1m,
+                &fx.metal_1n,
+                &fx.metal_1o,
+                &fx.metal_1p,
+                &fx.metal_1q,
             ],
             SurfaceMaterial::Glass => &[
                 &fx.glass_scrape1a,
@@ -820,13 +981,20 @@ impl CommonFxAssets {
                 &fx.thump_8e,
             ],
             SurfaceMaterial::Metal => &[
-                &fx.metal_clang_1a,
-                &fx.metal_clang_1b,
-                &fx.metal_clang_1c,
-                &fx.metal_clang_1d,
-                &fx.metal_clang_1e,
-                &fx.metal_clang_2a,
-                &fx.metal_clang_3a,
+                &fx.brush1a,
+                &fx.brush1b,
+                &fx.brush1c,
+                &fx.brush1d,
+                &fx.brush1e,
+                &fx.brush1f,
+
+                &fx.metal_1k,
+                &fx.metal_1l,
+                &fx.metal_1m,
+                &fx.metal_1n,
+                &fx.metal_1o,
+                &fx.metal_1p,
+                &fx.metal_1q,
             ],
             SurfaceMaterial::Sand => &[
                  &fx.gravel_1c,

@@ -113,7 +113,7 @@ pub fn initialize_audio(master: Single<Entity, With<MainBus>>, mut commands: Com
         muted: false,
     });
 
-    const DEFAULT_POOL_VOLUME: Volume = Volume::Linear(0.5);
+    const DEFAULT_POOL_VOLUME: Volume = Volume::Linear(0.75);
 
     // For each new pool, we can provide non-default initial values for the volume.
 
