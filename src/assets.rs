@@ -543,6 +543,27 @@ pub struct CommonFxAssets {
     #[asset(path = "common://sounds/150444__splicesound__footsteps-solid-wood-rug-male-boots-medium-pace-and-scuffs-13.ogg")]
     pub footsteps_2m: Handle<AudioSample>,
 
+    #[asset(path = "common://sounds/walking_gravel_1-01.ogg")]
+    pub footsteps_3a: Handle<AudioSample>,
+    #[asset(path = "common://sounds/walking_gravel_1-02.ogg")]
+    pub footsteps_3b: Handle<AudioSample>,
+    #[asset(path = "common://sounds/walking_gravel_1-03.ogg")]
+    pub footsteps_3c: Handle<AudioSample>,
+    #[asset(path = "common://sounds/walking_gravel_1-04.ogg")]
+    pub footsteps_3d: Handle<AudioSample>,
+    #[asset(path = "common://sounds/walking_gravel_1-05.ogg")]
+    pub footsteps_3e: Handle<AudioSample>,
+    #[asset(path = "common://sounds/walking_gravel_1-06.ogg")]
+    pub footsteps_3f: Handle<AudioSample>,
+    #[asset(path = "common://sounds/walking_gravel_1-07.ogg")]
+    pub footsteps_3g: Handle<AudioSample>,
+    #[asset(path = "common://sounds/walking_gravel_1-08.ogg")]
+    pub footsteps_3h: Handle<AudioSample>,
+    #[asset(path = "common://sounds/walking_gravel_1-09.ogg")]
+    pub footsteps_3i: Handle<AudioSample>,
+    #[asset(path = "common://sounds/walking_gravel_1-10.ogg")]
+    pub footsteps_3j: Handle<AudioSample>,
+
     #[asset(path = "common://sounds/405667__anthousai__metal-bowl-handling-and-sliding-around-on-counter-01-01.ogg")]
     pub metal_bowl_1a: Handle<AudioSample>,
     #[asset(path = "common://sounds/405667__anthousai__metal-bowl-handling-and-sliding-around-on-counter-01-02.ogg")]
@@ -947,7 +968,6 @@ impl CommonFxAssets {
             ],
             SurfaceMaterial::Unknown |
             SurfaceMaterial::Synthetic |
-            SurfaceMaterial::Earth |
             SurfaceMaterial::Glass |
             SurfaceMaterial::Stone => &[
                 &fx.footsteps_1a,
@@ -971,6 +991,18 @@ impl CommonFxAssets {
                 &fx.footsteps_1t,
                 &fx.footsteps_1u,
                 &fx.footsteps_1v,
+            ],
+            SurfaceMaterial::Earth => &[
+                &fx.footsteps_3a,
+                &fx.footsteps_3b,
+                &fx.footsteps_3c,
+                &fx.footsteps_3d,
+                &fx.footsteps_3e,
+                &fx.footsteps_3f,
+                &fx.footsteps_3g,
+                &fx.footsteps_3h,
+                &fx.footsteps_3i,
+                &fx.footsteps_3j,
             ],
             SurfaceMaterial::Wood => &[
                 &fx.wood1a,
