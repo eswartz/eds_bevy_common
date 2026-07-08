@@ -53,7 +53,6 @@ dev = [
     "bevy/bevy_ui_debug",
     # Improve error messages coming from Bevy
     "bevy/track_location",
-    # "dep:bevy-inspector-egui",
     "avian3d/diagnostic_ui",
     # "bevy_rerecast/debug_plugin",
     # "bevy_rerecast/editor_integration",
@@ -129,10 +128,10 @@ bevy-inspector-egui = { version = "0.37", default-features = false, features = [
 bevy_egui = { version = "0.40", features = ["render", "serde"] }
 egui = { version = "0.34", features = ["bytemuck"] }
 
-# firewheel = { git = "https://github.com/BillyDM/Firewheel", rev = "e604be4f8bde5a9d70b2cde24241a78eee50487d", optional = true }
-firewheel = { git = "https://github.com/CorvusPrudens/Firewheel", branch = "bevy-0.19", optional = true }
+# We must mention it and maintain the version because of the override below for wasm.
+firewheel = { version = "0.10", optional = true }
 
-# bevy_seedling = { version = "0.8", default-features = false, optional = true, features = [
+# We must mention it and reference the repo because there's no published crate of 0.8 to patch.
 bevy_seedling = { git = "https://github.com/CorvusPrudens/bevy_seedling.git", branch = "symphonia-update", optional = true, default-features = false, features = [
     "wav", "ogg", "rand", "reflect", "diagnostics",
     "hrtf",
@@ -160,8 +159,6 @@ bevy_asset_loader = { version = "0.27.0", features = [
 ] }
 
 bevy_trenchbroom = { version = "0.14.0-rc.2", optional = true, default-features = false, features = [ "bsp", "client", "physics-integration" ] }
-# removed?
-# bevy_trenchbroom_avian = { version = "0.14.0-rc.2", optional = true, default-features = false }
 
 #bevy_mod_outline = { version = "0.13", optional = true }
 bevy_mod_outline = { git = "https://github.com/eswartz/bevy_mod_outline-fork.git", optional = true }
@@ -205,7 +202,7 @@ wasm-bindgen = { version = "0.2.120" }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 #firewheel = { git = "https://github.com/BillyDM/Firewheel", rev = "e604be4f8bde5a9d70b2cde24241a78eee50487d", default-features = false, features = [
-firewheel = { git = "https://github.com/CorvusPrudens/Firewheel", branch = "bevy-0.19", optional = true, default-features = false, features = [
+firewheel = { version = "0.10", optional = true, default-features = false, features = [
   "wasm-bindgen",
 ] }
 
@@ -230,6 +227,31 @@ debug-assertions = false
 # lto = "thin"
 # opt-level = 1
 
+[dev.dependencies]
+bevy = { version = "0.19.0", default-features = false, features = [
+    "3d", "ui",
+
+    # And these optional:
+    # "dev",
+    "bevy_dev_tools",
+    # "file_watcher",
+    # "async-io", # no-go for web
+    # "bevy_remote", # not gonna add it from a lib, but go for it (most is Reflect'able)
+    "jpeg",
+    "webp",
+    "exr",
+    "track_location",
+    "asset_processor",
+    "experimental_pbr_pcss",
+
+    "x11",
+    "wayland",
+    # "webgpu", # noooo not yet
+
+    # "basis-universal",
+    # "trace_tracy",
+] }
+
 [[example]]
 name = "game_menu"
 required-features = ["input_bei", "bevy_skein"]
@@ -238,6 +260,7 @@ required-features = ["input_bei", "bevy_skein"]
 name = "sound_chain"
 required-features = ["input_bei", "bevy_skein", "midi_synth"]
 
+###########
 ###########
 
 [lints.clippy]
@@ -320,3 +343,7 @@ allow_attributes_without_reason = "warn"
 # This is expected in Bevy
 type_complexity = "allow"
 too_many_arguments = "allow"
+
+[patch-crates.io]
+bevy_seedling = { git = "https://github.com/CorvusPrudens/bevy_seedling.git", branch = "symphonia-update" }
+firewheel = { git = "https://github.com/BillyDM/Firewheel", rev = "68f59e07c5d37ab066342b2bed9afe343b87604f", optional = true }
