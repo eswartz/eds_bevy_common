@@ -674,6 +674,18 @@ pub struct CommonFxAssets {
     pub metal_1p: Handle<AudioSample>,
     #[asset(path = "common://sounds/628983__marsounds__knife-and-pot-sounds_sliding-hitting-17.ogg")]
     pub metal_1q: Handle<AudioSample>,
+
+    #[asset(path = "common://sounds/148169__bhweber__glass_on_bar-01.ogg")]
+    pub glass_roll_1a: Handle<AudioSample>,
+    #[asset(path = "common://sounds/148169__bhweber__glass_on_bar-02.ogg")]
+    pub glass_roll_1b: Handle<AudioSample>,
+    #[asset(path = "common://sounds/148169__bhweber__glass_on_bar-03.ogg")]
+    pub glass_roll_1c: Handle<AudioSample>,
+    #[asset(path = "common://sounds/148169__bhweber__glass_on_bar-04.ogg")]
+    pub glass_roll_1d: Handle<AudioSample>,
+    #[asset(path = "common://sounds/148169__bhweber__glass_on_bar-05.ogg")]
+    pub glass_roll_1e: Handle<AudioSample>,
+
 }
 
 impl CommonFxAssets {
@@ -769,6 +781,7 @@ impl CommonFxAssets {
                 &fx.glass_1f,
                 &fx.glass_1g,
                 &fx.glass_1h,
+                &fx.glass_1i,
                 &fx.glass_1k,
                 &fx.glass_1n,
                 &fx.glass_1p,
@@ -898,11 +911,15 @@ impl CommonFxAssets {
                 &fx.glass_scrape1i,
                 &fx.glass_1c,
                 &fx.glass_1e,
-                &fx.glass_1i,
                 &fx.glass_1j,
                 &fx.glass_1l,
                 &fx.glass_1m,
                 &fx.glass_1o,
+                &fx.glass_roll_1a,
+                &fx.glass_roll_1b,
+                &fx.glass_roll_1c,
+                &fx.glass_roll_1d,
+                &fx.glass_roll_1e,
             ],
             SurfaceMaterial::Earth => &[
                 &fx.earth_1a,
