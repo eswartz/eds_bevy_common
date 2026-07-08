@@ -64,6 +64,7 @@ pub mod midi_synth;
 
 pub mod colliders;
 pub mod flashlight;
+pub mod surface_material;
 
 // FIX THIS SOON
 
@@ -108,6 +109,7 @@ pub use model_utils::*;
 pub use lights::*;
 pub use materials::*;
 pub use flashlight::*;
+pub use surface_material::*;
 pub use app::*;
 
 #[cfg(feature = "midi_synth")]

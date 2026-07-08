@@ -485,7 +485,6 @@ fn grab_cursor_for_game(
 
 fn ungrab_cursor_for_overlay(
     mut commands: Commands,
-    gui_state: Res<GuiState>,
 ) {
     commands.write_message(GrabCursor(false));
 }
