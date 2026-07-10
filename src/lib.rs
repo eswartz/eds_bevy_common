@@ -62,6 +62,8 @@ pub mod client_synth;
 #[cfg(feature = "midi_synth")]
 pub mod midi_synth;
 
+pub mod time_stretch;
+
 pub mod colliders;
 pub mod flashlight;
 pub mod surface_material;
@@ -110,6 +112,7 @@ pub use lights::*;
 pub use materials::*;
 pub use flashlight::*;
 pub use surface_material::*;
+pub use time_stretch::*;
 pub use app::*;
 
 #[cfg(feature = "midi_synth")]

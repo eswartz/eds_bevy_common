@@ -18,7 +18,7 @@ impl Plugin for LifecyclePlugin {
         app
             .init_resource::<PauseState>()
             .add_systems(Startup,
-                sample_winit_settings.run_if(not(resource_exists::<PhasedWinitSettings>)),
+                init_phased_winit_settings,
             )
             .add_systems(Update, (
                 check_pause_request,
@@ -32,13 +32,13 @@ impl Plugin for LifecyclePlugin {
 
             .add_systems(
                 OnEnter(ProgramState::InGame),
-                |mut time: ResMut<Time<Physics>>| {
+                |mut time: If<ResMut<Time<Physics>>>| {
                     time.unpause();
                 }
             )
             .add_systems(
                 OnEnter(GameplayState::Setup),
-                |mut time: ResMut<Time<Physics>>| {
+                |mut time: If<ResMut<Time<Physics>>>| {
                     time.pause();
                 }
             )
@@ -99,7 +99,7 @@ impl PauseState {
 ///
 fn check_pause_request(
     paused: Res<PauseState>,
-    mut time: ResMut<Time<Physics>>,
+    time: Option<ResMut<Time<Physics>>>,
     mut animator_transform_q: Query<&mut TweenAnim>,
 ) {
     if !paused.is_changed() {
@@ -109,7 +109,7 @@ fn check_pause_request(
     let pause = paused.is_paused();
     // refactor?
     if pause {
-        time.pause();
+        time.map(|mut time| { time.pause(); });
         for mut animator in animator_transform_q.iter_mut() {
             // By our convention,
             animator.playback_state = bevy_tweening::PlaybackState::Paused;
@@ -118,7 +118,7 @@ fn check_pause_request(
         //     runner.set_paused(true);
         // }
     } else /* !pause ==> resume */ {
-        time.unpause();
+        time.map(|mut time| { time.unpause(); });
         for mut animator in animator_transform_q.iter_mut() {
             animator.playback_state = bevy_tweening::PlaybackState::Playing;
         }
@@ -136,20 +136,22 @@ pub struct PhasedWinitSettings{
     pub paused: WinitSettings,
 }
 
-fn sample_winit_settings(
+fn init_phased_winit_settings(
     mut commands: Commands,
     winit_settings: Res<WinitSettings>,
     phased_settings: Option<Res<PhasedWinitSettings>>,
 ) {
-    if phased_settings.is_none() {
-        commands.insert_resource(PhasedWinitSettings{
-            running: winit_settings.clone(),
-            paused: WinitSettings {
-                focused_mode: UpdateMode::reactive_low_power(Duration::from_secs_f32(1.0 / 10.0)),
-                unfocused_mode: winit_settings.unfocused_mode,
-            },
-        });
-    }
+    if phased_settings.is_some() { return };
+
+    commands.insert_resource(PhasedWinitSettings{
+        running: winit_settings.clone(),
+        paused: WinitSettings {
+            focused_mode: UpdateMode::reactive_low_power(
+                Duration::from_secs_f32(1.0 / 1.0)
+            ),
+            unfocused_mode: winit_settings.unfocused_mode,
+        },
+    });
 }
 
 // App-specific handling on top of ebc systems.

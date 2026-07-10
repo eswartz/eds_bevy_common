@@ -1,3 +1,5 @@
+//! This is a demo program showing the integration of various "ebc" features,
+//! focusing on a game menu.
 use eds_bevy_common::*;
 
 use avian3d::PhysicsPlugins;

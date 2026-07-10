@@ -10,6 +10,7 @@ use bevy_seedling::sample::SamplePlayer;
 use crate::CommonFxAssets;
 use crate::PauseState;
 use crate::ProgramState;
+use crate::TimeStretchNode as TimeStretchNode;
 
 /// Remember to schedule [initialize_audio] or a local copy
 /// (can be as early as [Startup])
@@ -19,6 +20,8 @@ impl Plugin for AudioCommonPlugin {
     fn build(&self, app: &mut App) {
         app
             .add_plugins(SeedlingPlugins)
+            .register_node::<TimeStretchNode>()
+
             .insert_resource(AudioContextConfig(FirewheelConfig {
                 initial_node_capacity: 1024,
                 ..default()
@@ -72,6 +75,12 @@ pub struct Sfx;
 #[type_path = "game"]
 pub struct SfxNode;
 
+/// Node label for the FreeverbNode for the Sfx bus.
+#[derive(Component, Reflect, Debug, Default)]
+#[reflect(Component)]
+#[type_path = "game"]
+pub struct SfxReverbNode;
+
 /// Pool for UI sound effects (menus, etc), not spatial.
 #[derive(PoolLabel, Reflect, PartialEq, Eq, Debug, Hash, Clone)]
 #[reflect(Component)]
@@ -102,6 +111,8 @@ pub struct MusicNode;
 #[type_path = "game"]
 struct BackgroundAudio;
 
+pub const DEFAULT_POOL_VOLUME: Volume = Volume::Linear(0.75);
+
 /// Default means for initializing the Seedling [PoolLabel]s provided here.
 ///
 /// It is not scheduled by default!
@@ -113,7 +124,6 @@ pub fn initialize_audio(master: Single<Entity, With<MainBus>>, mut commands: Com
         muted: false,
     });
 
-    const DEFAULT_POOL_VOLUME: Volume = Volume::Linear(0.75);
 
     // For each new pool, we can provide non-default initial values for the volume.
 
@@ -145,26 +155,45 @@ pub fn initialize_audio(master: Single<Entity, With<MainBus>>, mut commands: Com
     ;
 
     commands.spawn((
-        Name::new("SFX"),
-        SamplerPool(Sfx),
         UserVolume {
             volume: DEFAULT_POOL_VOLUME,
             muted: false,
         },
-
-        // This pool is for spatial samples.
-        PoolSize(0 ..= 256),
-
-        // Marker for the node for spatial effects.
+        // Marker for the bus.
         SfxNode,
-
-        sample_effects![(
-            SpatialBasicNode {
-                panning_threshold: 0.9,
-                ..default()
-            },
-        )],
     ));
+
+    let send = commands.spawn((
+        SfxReverbNode,
+        FreeverbNode {
+            room_size: 0.25,
+            width: 0.5,
+            damping: 0.5,
+            ..default()
+        },
+    ))
+    // .connect(sfx_bus)
+    .head();
+
+    // All the desired effects must be placed in the pool.
+    // Then a given SamplePlayer targeting this pool can override the effects.
+    commands
+        .spawn((
+            SamplerPool(Sfx),
+
+            PoolSize(0 ..= 256),
+
+            sample_effects![
+                // Order matters! Put SpatialBasicNode first so effects happen after
+                // the sound is localized.
+                SpatialBasicNode::default(),
+                FastLowpassNode::<2>::from_cutoff_hz(48000.0),
+                // TimeStretchNode { stretch_factor: 1.0 },
+                // SvfNode::<2>::from_highpass(20.0, 0.5), // effectively disabled
+                SendNode::new(Volume::Linear(0.0), send), // effectively disabled
+            ],
+        ))
+        .connect(SfxNode);
 
     commands.spawn((
         Name::new("UI"),

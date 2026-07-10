@@ -467,12 +467,14 @@ fn update_gui_state(
         status_visible.0 = state.show_player_status;
     }
 
-    let was_enabled = gizmo_config.config::<PhysicsGizmos>().0.enabled;
-    if was_enabled != state.show_physics_gizmos {
-        // Only trigger on actual change,
-        // to avoid avian3d::debug_render::change_mesh_visibility
-        // showing everything without recourse.
-        gizmo_config.config_mut::<PhysicsGizmos>().0.enabled = state.show_physics_gizmos;
+    if let Some(physics_gizmos) = gizmo_config.get_config_mut::<PhysicsGizmos>() {
+        let was_enabled = physics_gizmos.0.enabled;
+        if was_enabled != state.show_physics_gizmos {
+            // Only trigger on actual change,
+            // to avoid avian3d::debug_render::change_mesh_visibility
+            // showing everything without recourse.
+            physics_gizmos.0.enabled = state.show_physics_gizmos;
+        }
     }
 }
 
@@ -945,7 +947,7 @@ fn update_physics_pause_ui(
     gui_area: GuiAreaMarkerLocator,
     mut vis_q: Query<&mut Visibility>,
 
-    mut time: ResMut<Time<avian3d::prelude::Physics>>,
+    mut time: If<ResMut<Time<avian3d::prelude::Physics>>>,
 ) {
     gui_area.with_marker(GuiAreaMarker::PhysicsRunningArea, |ent| {
         if let Ok(mut vis) = vis_q.get_mut(ent) {
