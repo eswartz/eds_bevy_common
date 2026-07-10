@@ -564,6 +564,23 @@ pub struct CommonFxAssets {
     #[asset(path = "common://sounds/walking_gravel_1-10.ogg")]
     pub footsteps_3j: Handle<AudioSample>,
 
+    #[asset(path = "common://sounds/walking_gravel_3-01.ogg")]
+    pub footsteps_4a: Handle<AudioSample>,
+    #[asset(path = "common://sounds/walking_gravel_3-02.ogg")]
+    pub footsteps_4b: Handle<AudioSample>,
+    #[asset(path = "common://sounds/walking_gravel_3-03.ogg")]
+    pub footsteps_4c: Handle<AudioSample>,
+    #[asset(path = "common://sounds/walking_gravel_3-04.ogg")]
+    pub footsteps_4d: Handle<AudioSample>,
+    #[asset(path = "common://sounds/walking_gravel_3-05.ogg")]
+    pub footsteps_4e: Handle<AudioSample>,
+    #[asset(path = "common://sounds/walking_gravel_3-06.ogg")]
+    pub footsteps_4f: Handle<AudioSample>,
+    #[asset(path = "common://sounds/walking_gravel_3-07.ogg")]
+    pub footsteps_4g: Handle<AudioSample>,
+    #[asset(path = "common://sounds/walking_gravel_3-08.ogg")]
+    pub footsteps_4h: Handle<AudioSample>,
+
     #[asset(path = "common://sounds/405667__anthousai__metal-bowl-handling-and-sliding-around-on-counter-01-01.ogg")]
     pub metal_bowl_1a: Handle<AudioSample>,
     #[asset(path = "common://sounds/405667__anthousai__metal-bowl-handling-and-sliding-around-on-counter-01-02.ogg")]
@@ -958,6 +975,14 @@ impl CommonFxAssets {
                  &fx.gravel_1i,
                  &fx.gravel_1k,
                  &fx.gravel_1l,
+                 &fx.footsteps_4a,
+                 &fx.footsteps_4b,
+                 &fx.footsteps_4c,
+                 &fx.footsteps_4d,
+                 &fx.footsteps_4e,
+                 &fx.footsteps_4f,
+                 &fx.footsteps_4g,
+                 &fx.footsteps_4h,
             ],
         };
         if mats.is_empty() { return None };
