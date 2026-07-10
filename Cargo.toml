@@ -160,8 +160,7 @@ bevy_asset_loader = { version = "0.27.0", features = [
 
 bevy_trenchbroom = { version = "0.14.0-rc.2", optional = true, default-features = false, features = [ "bsp", "client", "physics-integration" ] }
 
-#bevy_mod_outline = { version = "0.13", optional = true }
-bevy_mod_outline = { git = "https://github.com/eswartz/bevy_mod_outline-fork.git", optional = true }
+bevy_mod_outline = { version = "0.13", optional = true }
 
 bevy_tweening = "0.16.0"
 
