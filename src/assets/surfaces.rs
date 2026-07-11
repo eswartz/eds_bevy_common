@@ -147,7 +147,6 @@ pub fn sounds_for_surface_impact(fx: &CommonFxAssets) -> FxHashMap<SurfaceMateri
     ];
 
     let gravel = &[
-        &fx.gravel_1a,
         &fx.gravel_1b,
         &fx.gravel_1c,
         &fx.gravel_1d,
@@ -435,7 +434,6 @@ pub fn sounds_for_footsteps_impact(fx: &CommonFxAssets) -> FxHashMap<SurfaceMate
     ];
 
     let gravel = &[
-        &fx.gravel_1a,
         &fx.gravel_1b,
         &fx.gravel_1c,
         &fx.gravel_1d,
@@ -645,7 +643,6 @@ pub fn sounds_for_footsteps_slide(fx: &CommonFxAssets) -> FxHashMap<SurfaceMater
     let gravel = &[
         &fx.gravel_1a,
         &fx.gravel_1b,
-        &fx.gravel_1c,
         &fx.gravel_1d,
         &fx.gravel_1f,
         &fx.gravel_1g,
