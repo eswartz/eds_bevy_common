@@ -115,7 +115,7 @@ impl PlayerInputSettings {
             max_down_speed: 96, // b/t 55 m/s for skydiver, 150 m/s competition
             crouch_depth: 0.5,
             grounded_y_speed: 1,
-            air_scale: 0.25,
+            air_scale: 0.75,
 
             movement_decay_time_secs: 1.0 / 30.0,
             fly_decay_time_secs: 1.0 / 8.0,
