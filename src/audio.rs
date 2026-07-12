@@ -23,7 +23,6 @@ impl Plugin for AudioCommonPlugin {
             .register_node::<TimeStretchNode>()
 
             .insert_resource(AudioContextConfig(FirewheelConfig {
-                initial_node_capacity: 1024,
                 ..default()
             }))
 
@@ -127,24 +126,24 @@ pub fn initialize_audio(master: Single<Entity, With<MainBus>>, mut commands: Com
 
     // For each new pool, we can provide non-default initial values for the volume.
 
-    // Also: The lower bound of 0 on the pools works around seedling bug #87.
-
     commands.spawn((
-        Name::new("Music"),
-        SamplerPool(Music),
+        MusicNode,
 
         // This ensures a sibling VolumeNode.
         UserVolume {
             volume: DEFAULT_POOL_VOLUME,
             muted: false,
         },
+    ))
+    ;
+
+    commands.spawn((
+        Name::new("Music"),
+        SamplerPool(Music),
 
         // This accounts, in theory, for two crossfading songs.
         // Otherwise use the dynamic pool...?
-        PoolSize(0 ..= 2),
-
-        // Marker for the node for music.
-        MusicNode,
+        PoolSize(1 ..= 2),
 
         // Use for e.g. fading *on top of* the [VolumeNode] (fade-out, fade-in) on this node.
         // The [UserVolume] above is the base sound channel volume.
@@ -152,19 +151,22 @@ pub fn initialize_audio(master: Single<Entity, With<MainBus>>, mut commands: Com
             VolumeNode::default(),
         ],
     ))
+    .connect(MusicNode)
     ;
 
     commands.spawn((
+        // Marker for the bus.
+        SfxNode,
+
         UserVolume {
             volume: DEFAULT_POOL_VOLUME,
             muted: false,
         },
-        // Marker for the bus.
-        SfxNode,
     ));
 
     let send = commands.spawn((
         SfxReverbNode,
+
         FreeverbNode {
             room_size: 0.25,
             width: 0.5,

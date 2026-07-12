@@ -6,8 +6,7 @@ use bevy::prelude::*;
 use bevy::asset::io::AssetSourceBuilder;
 use bevy_asset_loader::prelude::*;
 use bevy_seedling::sample::AudioSample;
-use crate::{SurfaceMaterial, find_runtime_base_directory_by_folder};
-use rustc_hash::FxHashMap;
+use crate::find_runtime_base_directory_by_folder;
 
 #[cfg(feature = "midi_synth")]
 use crate::midi_synth::asset::SoundFont;

@@ -586,9 +586,9 @@ fn on_enter_audio_menu(
     }
 
     make_volume_getter_setter_mute!(get_master set_master get_master_muted set_master_muted => MainBus);
-    make_volume_getter_setter_mute!(get_music set_music  get_music_muted set_music_muted => SamplerPool<Music>);
-    make_volume_getter_setter_mute!(get_effects set_effects  get_effects_muted set_effects_muted  => SamplerPool<Sfx>);
-    make_volume_getter_setter_mute!(get_ui set_ui  get_ui_muted set_ui_muted  => SamplerPool<UiSfx>);
+    make_volume_getter_setter_mute!(get_music set_music  get_music_muted set_music_muted => MusicNode);
+    make_volume_getter_setter_mute!(get_effects set_effects  get_effects_muted set_effects_muted  => SfxNode);
+    make_volume_getter_setter_mute!(get_ui set_ui  get_ui_muted set_ui_muted  => UiSfxNode);
 
     let make_audio_slider = |getter, setter, defval| -> MenuSlider {
         MenuSlider::new(

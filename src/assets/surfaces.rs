@@ -1,9 +1,6 @@
-use std::path::Path;
 use bevy::prelude::*;
-use bevy::asset::io::AssetSourceBuilder;
-use bevy_asset_loader::prelude::*;
 use bevy_seedling::sample::AudioSample;
-use crate::{SurfaceMaterial, find_runtime_base_directory_by_folder};
+use crate::SurfaceMaterial;
 use rustc_hash::FxHashMap;
 
 use super::CommonFxAssets;
