@@ -484,6 +484,7 @@ fn check_player_environment_fps(
     mut raycast: MeshRayCast,
     settings: Res<PlayerInputSettings>,
     mode: Res<PlayerMode>,
+    gravity: Res<Gravity>,
 ) {
     if *mode != PlayerMode::Fps {
         return
@@ -552,6 +553,10 @@ fn check_player_environment_fps(
             // Stuck in air?
             movement.medium_friction = 1.0;
             try_to_land = true;
+
+            if vel.y >= 0.0 && gravity.0.y < 0.0 {
+                vel.y *= 0.99;
+            }
         }
 
         // Try to land if needed.
