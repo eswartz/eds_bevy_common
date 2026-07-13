@@ -258,6 +258,8 @@ pub struct CommonFxAssets {
     pub metal_clang_2a: Handle<AudioSample>,
     #[asset(path = "common://sounds/340915__passairmangrace__metalclang1_loud_bip-02.ogg")]
     pub metal_clang_2b: Handle<AudioSample>,
+    #[asset(path = "common://sounds/340915__passairmangrace__metalclang1_loud_bip-03.ogg")]
+    pub metal_clang_2c: Handle<AudioSample>,
 
     #[asset(path = "common://sounds/842171__aardsreal__basic-metal-clang-free.ogg")]
     pub metal_clang_3a: Handle<AudioSample>,
