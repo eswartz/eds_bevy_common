@@ -22,9 +22,6 @@ categories = ["game"]
 # See above to fix error: feature `reqs` includes `gltf/EXT_texture_webp`, but `gltf` is not a dependency
 gltf = { git = "https://github.com/gltf-rs/gltf.git", branch = "main" }
 
-# Fetch a non-crashing version for use by Wine. (See https://gitlab.com/gilrs-project/gilrs/-/work_items/167)
-gilrs = { git = "https://gitlab.com/gilrs-project/gilrs.git", branch = "master" }
-
 #########
 
 [features]
@@ -106,8 +103,6 @@ rand = { version = "0.10.0" }
 ###
 # Overridden above; need some record to override.
 gltf = { version = "*" }
-gilrs = { version = "*" }
-###
 
 # avian3d = { git = "https://github.com/Jondolf/avian.git", branch = "main", default-features = false, features = [
 # avian3d = { git = "https://github.com/Jondolf/avian.git", rev = "442af791512dfc369b41bd8718878df7e0ab26dd", default-features = false, features = [
