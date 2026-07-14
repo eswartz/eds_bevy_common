@@ -21,15 +21,33 @@ impl Plugin for PlayerMovementPlugin {
                     ),
                     check_player_environment_fps,
                     check_player_environment_space,
-                    process_player_input_movement_for_cheats.run_if(is_cheating_or_paused),
-                    process_player_input_movement_for_fps.run_if(not(is_cheating)),
-                    process_player_input_movement_for_space.run_if(not(is_cheating)),
-                    process_player_input_non_movement,
+                    process_player_input_movement_for_fps
+                        .run_if(not(is_cheating))
+                        .run_if(resource_exists_and_equals(PlayerMode::Fps))
+                    ,
+                    process_player_input_movement_for_space
+                        .run_if(not(is_cheating))
+                        .run_if(resource_exists_and_equals(PlayerMode::Space))
+                    ,
+                    process_player_input_look,
+                    process_player_input_misc
+                        .run_if(not(is_grabbing_item)),
                     sync_player_movement,
                 ).chain()
                 .before(TransformSystems::Propagate)
                 .after(PhysicsSystems::Writeback)
                 .run_if(not(is_paused))
+                .run_if(in_state(GameplayState::Playing))
+            )
+            .add_systems(
+                FixedPostUpdate,
+                (
+                    process_player_input_movement_for_cheats
+                        .run_if(is_cheating_or_paused)
+                    ,
+                ).chain()
+                .before(TransformSystems::Propagate)
+                .after(PhysicsSystems::Writeback)
                 .run_if(in_state(GameplayState::Playing))
             )
         ;
@@ -686,7 +704,6 @@ pub fn process_player_input_movement_for_cheats(
     mut inputs: MessageReader<PlayerInput>,
     time: Res<Time>,
     input_settings: Res<PlayerInputSettings>,
-    physics_paused: Res<PhysicsPaused>,
 ) {
     for input in inputs.read() {
         let res = player_q.get_mut(input.player_entity());
@@ -756,7 +773,7 @@ pub fn process_player_input_movement_for_cheats(
         // // Do not fall or fly.
         // let clamped_vel = Vector::new(clamped_vel_xz.x, 0.0, clamped_vel_xz.y);
 
-        if !**physics_paused {
+        if true /* !**physics_paused */ {
             *forces.linear_velocity_mut() = clamped_vel;
         } else {
             transform.translation += clamped_vel * time.delta_secs();
@@ -779,13 +796,7 @@ pub fn process_player_input_movement_for_fps(
     time: Res<Time>,
     input_settings: Res<PlayerInputSettings>,
     camera_settings: Res<PlayerCameraSettings>,
-    mode: Res<PlayerMode>,
-    physics_paused: Res<PhysicsPaused>,
 ) {
-    if *mode != PlayerMode::Fps || **physics_paused {
-        return
-    }
-
     let dt = time.delta_secs();
     for input in inputs.read() {
         let res = player_q.get_mut(input.player_entity());
@@ -978,9 +989,8 @@ pub fn process_player_input_movement_for_space(
     input_settings: Res<PlayerInputSettings>,
     camera_settings: Res<PlayerCameraSettings>,
     mode: Res<PlayerMode>,
-    physics_paused: Res<PhysicsPaused>,
 ) {
-    if *mode != PlayerMode::Space || **physics_paused {
+    if *mode != PlayerMode::Space {
         return
     }
 
@@ -1076,7 +1086,32 @@ pub fn process_player_input_movement_for_space(
     }
 }
 
-pub fn process_player_input_non_movement(
+pub fn process_player_input_look(
+    mut player_q: Query<
+        &mut PlayerLook,
+        With<Player>,
+    >,
+    mut inputs: MessageReader<PlayerInput>,
+    time: Res<Time>,
+    settings: Res<PlayerInputSettings>,
+) {
+    let dt = time.delta_secs();
+    for input in inputs.read() {
+        let res = player_q.get_mut(input.player_entity());
+
+        let Ok(mut look) = res else { continue };
+
+        match input {
+            PlayerInput::HeadTurn(_, turn) => {
+                let euler = turn.get_euler() * settings.turn_scale;
+                look.apply_turn(dt, euler);
+            }
+            _ => ()
+        }
+    }
+}
+
+pub fn process_player_input_misc(
     mut player_q: Query<
         (
             &mut PlayerMovement,
@@ -1097,10 +1132,6 @@ pub fn process_player_input_non_movement(
         let Ok((mut movement, mut look, mut transform)) = res else { continue };
 
         match input {
-            PlayerInput::HeadTurn(_, turn) => {
-                let euler = turn.get_euler() * settings.turn_scale;
-                look.apply_turn(dt, euler);
-            }
             PlayerInput::BodyTurn(_, turn) => {
                 let euler = turn.get_euler() * settings.turn_scale;
                 movement.apply_turn(dt, euler, &mut transform);
@@ -1144,6 +1175,7 @@ pub fn process_player_input_non_movement(
 
             // Handled above.
             PlayerInput::Move(..) => (),
+            PlayerInput::HeadTurn(..) => (),
         }
     }
 }

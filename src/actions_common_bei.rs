@@ -56,7 +56,7 @@ pub struct MenuContext;
 #[type_path = "game"]
 pub struct PlayerAction;
 
-/// Marker for Actions on a menu.
+/// Marker for Actions during a menu.
 #[derive(Component, Reflect, Clone)]
 #[reflect(Component)]
 #[type_path = "game"]
@@ -175,6 +175,11 @@ pub mod actions {
     #[action_output(bool)]
     pub struct AltFiring;
 
+    /// Switch to the next item (forward or back) available to select.
+    #[derive(InputAction)]
+    #[action_output(f32)]
+    pub struct CycleHighlightedItem;
+
     /// (Try to) stop grabbing items.
     /// This has a lead-up time so that quick taps release/drop the item,
     /// but longer presses fire the item.
@@ -182,10 +187,15 @@ pub mod actions {
     #[action_output(bool)]
     pub struct ReleaseGrab;
 
-    /// Move further/closer away, either hovered item or distance of grabbed item.
+    /// When held, move the grabbed item instead of the player.
     #[derive(InputAction)]
-    #[action_output(f32)]
-    pub struct CycleHighlightedItem;
+    #[action_output(bool)]
+    pub struct MoveGrabbedItem;
+
+    /// When held, rotate the grabbed item instead of the player.
+    #[derive(InputAction)]
+    #[action_output(Vec3)]
+    pub struct RotateGrabbedItem;
 
     /// Toggle physics (default on).
     #[derive(InputAction)]
@@ -379,7 +389,7 @@ pub fn assign_stock_menu_actions(
         include.clone(),
 
         Action::<actions::MoveUpDown>::new(),
-        Pulse::new(0.125).with_time_kind(TimeKind::Real).trigger_on_start(true).with_initial_delay(0.125),
+        Pulse::new(0.125).with_time_kind(TimeKind::Real).trigger_on_start(true),
         DeadZone::default(),
         ActionSettings {
             require_reset: true,
@@ -394,7 +404,7 @@ pub fn assign_stock_menu_actions(
         include.clone(),
 
         Action::<actions::MoveRightLeft>::new(),
-        Pulse::new(0.125).with_time_kind(TimeKind::Real).trigger_on_start(true).with_initial_delay(0.125),
+        Pulse::new(0.125).with_time_kind(TimeKind::Real).trigger_on_start(true),
         DeadZone::default(),
         ActionSettings {
             require_reset: true,
@@ -416,7 +426,10 @@ pub fn assign_stock_menu_actions(
     ));
 }
 
+/// Add Action entities for the common player actions.
+///
 /// include: should be at least e.g. `(ActionOf::<YourContext>::new(context_entity), {Menu,Player}Action)`
+/// see: [`MenuAction`] [`PlayerAction`]
 pub fn assign_stock_player_actions(
     mut commands: Commands,
     include: impl Bundle + Clone,
@@ -597,6 +610,58 @@ pub fn assign_stock_player_actions(
         ],
     ));
 }
+
+/// Add Action entities for InputActions related to editing.
+///
+/// include: should be at least e.g. `(ActionOf::<YourContext>::new(context_entity), {Menu,Player}Action)`
+/// see: [`MenuAction`] [`PlayerAction`]
+pub fn assign_stock_editing_actions(
+    mut commands: Commands,
+    include: impl Bundle + Clone,
+) {
+    commands.spawn((
+        include.clone(),
+        Action::<actions::ToggleSelect>::new(),
+        bindings![
+            // MouseButton::Right,
+            // GamepadButton::LeftTrigger2,
+
+            KeyCode::KeyE,
+
+            // These are dangerous since they must be used in isolation
+            // and not with keyboard combinations.
+            // See code in [actions_common::handle_escape].
+            KeyCode::AltLeft,
+            KeyCode::AltRight,
+        ],
+    ));
+
+    commands.spawn((
+        include.clone(),
+        Action::<actions::ReleaseGrab>::new(),
+        // Hold::new(0.125),
+        // Cooldown::new(0.125),
+        bindings![
+            MouseButton::Left,
+            GamepadButton::RightTrigger2,
+        ],
+    ));
+    commands.spawn((
+        include.clone(),
+        Action::<actions::CycleHighlightedItem>::new(),
+        Scale::splat(0.25),
+        Bindings::spawn((
+            Spawn((
+                Binding::mouse_wheel(),
+                SwizzleAxis::YYY,
+                default_mouse_wheel_scale(1.0),
+            )),
+            Bidirectional::new(KeyCode::ArrowUp, KeyCode::ArrowDown),
+            Bidirectional::new(GamepadButton::RightTrigger, GamepadButton::LeftTrigger),
+        )),
+    ));
+}
+
 
 /// Workaround for different use of [MouseScrollUnit] on different OSes.
 pub fn default_mouse_wheel_scale(factor: f32) -> Scale {

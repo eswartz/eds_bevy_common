@@ -93,12 +93,12 @@ impl PlayerControllerSettings {
 /// We gather relevant inputs and send events indicating our intent.
 #[cfg(feature = "input_bei")]
 fn collect_player_movement(
-    accel_events: Query<&ActionEvents, (With<Action<Accelerate>>, With<PlayerAction>)>,
-    crouch_events: Query<&ActionEvents, (With<Action<Crouch>>, With<PlayerAction>)>,
-    jump_events: Query<&ActionEvents, (With<Action<Jump>>, With<PlayerAction>)>,
-    move_flycam: Query<&Action<MoveFlycam>, With<PlayerAction>>,
-    move_down_up: Query<&Action<MoveUpDown>, With<PlayerAction>>,
-    move_left_right: Query<&Action<MoveRightLeft>, With<PlayerAction>>,
+    accel_events: Query<&ActionEvents, (With<Action<Accelerate>>/* , With<PlayerAction> */)>,
+    crouch_events: Query<&ActionEvents, (With<Action<Crouch>>/* , With<PlayerAction> */)>,
+    jump_events: Query<&ActionEvents, (With<Action<Jump>>/* , With<PlayerAction> */)>,
+    move_flycam: Query<&Action<MoveFlycam>/* , With<PlayerAction> */>,
+    move_down_up: Query<&Action<MoveUpDown>/* , With<PlayerAction> */>,
+    move_left_right: Query<&Action<MoveRightLeft>/* , With<PlayerAction> */>,
 
     ctrl_settings: Res<PlayerControllerSettings>,
     input_settings: Res<PlayerInputSettings>,
@@ -191,9 +191,9 @@ fn center_mouse(
 fn collect_player_look(
     primary_window: Query<&Window, With<PrimaryWindow>>,
 
-    look: Query<&Action<Look>, (With<Action<Look>>, With<PlayerAction>)>,
-    turn_around_events: Query<&ActionEvents, (With<Action<TurnAround>>, With<PlayerAction>)>,
-    reset_events: Query<&ActionEvents, (With<Action<Reset>>, With<PlayerAction>)>,
+    look: Query<&Action<Look>, (With<Action<Look>>/* , With<PlayerAction> */)>,
+    turn_around_events: Query<&ActionEvents, (With<Action<TurnAround>>/* , With<PlayerAction> */)>,
+    reset_events: Query<&ActionEvents, (With<Action<Reset>>, /* With<PlayerAction> */)>,
     // alt_fire_events: Query<&ActionEvents, (With<Action<Firing>>, With<PlayerAction>)>,
     mouse_button_events: Res<ButtonInput<MouseButton>>,
 
@@ -262,7 +262,7 @@ fn collect_player_look(
 #[cfg(feature = "input_bei")]
 fn collect_player_input(
     mut commands: Commands,
-    fire_events: Query<&ActionEvents, (With<Action<Firing>>, With<PlayerAction>)>,
+    fire_events: Query<&ActionEvents, (With<Action<Firing>>/* , With<PlayerAction> */)>,
     player_q: Single<Entity, With<OurPlayer>>,
 
     mut focused: MessageReader<WindowFocused>,

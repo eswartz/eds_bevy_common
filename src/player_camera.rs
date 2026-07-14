@@ -328,10 +328,10 @@ pub fn sync_view_camera_to_player(
 
 pub fn handle_player_camera_actions(
     #[cfg(feature = "input_bei")]
-    change_camera: Query<&ActionEvents, (With<Action<ChangeCamera>>, With<PlayerAction>)>,
+    change_camera: Query<&ActionEvents, (With<Action<ChangeCamera>>/* , With<PlayerAction> */)>,
     mut camera_q: Single<&mut PlayerCamera, (With<WorldCamera>, With<OurCamera>)>,
     #[cfg(feature = "input_bei")]
-    zoom_camera: Query<&Action<Zoom>, (With<PlayerAction>,)>,
+    zoom_camera: Query<&Action<Zoom>, /* (With<PlayerAction>,) */>,
     mut fov_delta: ResMut<FovDelta>,
     mut zoom_state: ResMut<FovZoomState>,
     settings: Res<PlayerCameraSettings>,
