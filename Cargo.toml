@@ -51,19 +51,13 @@ dev = [
     # Improve error messages coming from Bevy
     "bevy/track_location",
     "avian3d/diagnostic_ui",
-    # "bevy_rerecast/debug_plugin",
-    # "bevy_rerecast/editor_integration",
 ]
 dev_native = [
     "bevy/bevy_remote",
-    "bevy/basis-universal",
-
     # Enable asset hot reloading for native dev builds.
     "bevy/file_watcher",
     # Enable embedded asset hot reloading for native dev builds.
     "bevy/embedded_watcher",
-    # "bevy_rerecast/editor_integration",
-
     "bevy/webgpu",
 ]
 web = [
@@ -86,7 +80,6 @@ bevy = { version = "0.19.0", default-features = false, features = [
     "exr",
     "track_location",
     "asset_processor",
-    "experimental_pbr_pcss",
 
     "x11",
     "wayland",
