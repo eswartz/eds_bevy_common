@@ -604,20 +604,20 @@ fn move_grabbed_item(
     let alt_pressed = key_input.pressed(KeyCode::AltLeft) ||key_input.pressed(KeyCode::AltRight);
     if key_input.pressed(KeyCode::BracketLeft) {
         if ctrl_pressed {
-            item_xfrm.rotate_local_x(-rot);
+            item_xfrm.rotate_x(-rot);
         } else if alt_pressed {
-            item_xfrm.rotate_local_z(-rot);
+            item_xfrm.rotate_z(-rot);
         } else {
-            item_xfrm.rotate_local_y(-rot);
+            item_xfrm.rotate_y(-rot);
         }
     }
     else if key_input.pressed(KeyCode::BracketRight) {
         if ctrl_pressed {
-            item_xfrm.rotate_local_x(rot);
+            item_xfrm.rotate_x(rot);
         } else if alt_pressed {
-            item_xfrm.rotate_local_z(rot);
+            item_xfrm.rotate_z(rot);
         } else {
-            item_xfrm.rotate_local_y(rot);
+            item_xfrm.rotate_y(rot);
         }
     }
 
