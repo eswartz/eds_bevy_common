@@ -391,8 +391,8 @@ pub fn update_egui_settings_ui(
             egui::CollapsingHeader::new("UI")
                 .default_open(true)
                 .show(ui, |ui| {
-                ui.checkbox(&mut state.show_player_status, "Show Player Status")
-                    .on_hover_text("Show first Player status (position/movement)");
+                // ui.checkbox(&mut state.show_player_status, "Show Player Status")
+                //     .on_hover_text("Show first Player status (position/movement)");
                 ui.checkbox(&mut state.show_stats, "Always Show Stats")
                     .on_hover_text("Show stats overlay even during play.");
                 // ui.checkbox(&mut state.show_skybox, "Show Skybox")
