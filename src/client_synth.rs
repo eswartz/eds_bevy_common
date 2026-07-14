@@ -34,10 +34,6 @@ impl Plugin for ClientSynthPlugin {
                 LoadingStateConfig::new(ProgramState::Initializing)
                     .load_collection::<CommonSoundFontAssets>()
             )
-            .configure_loading_state(
-                LoadingStateConfig::new(ProgramState::LoadingSave)
-                    .load_collection::<CommonSoundFontAssets>()
-            )
 
             // Reset when we know no gameplay should be active.
             // Other clients should use DespawnOnExit for MidiSynth.

@@ -39,10 +39,6 @@ impl Plugin for AppPlugin {
             LoadingStateConfig::new(ProgramState::Initializing)
                 .load_collection::<CommonGuiAssets>()
         )
-        .configure_loading_state(
-            LoadingStateConfig::new(ProgramState::LoadingSave)
-                .load_collection::<CommonGuiAssets>()
-        )
 
         // Custom exit handling.
         .add_systems(

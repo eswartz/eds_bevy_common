@@ -65,41 +65,34 @@ pub enum ProgramState {
     Error,
     /// State when starting fresh, assets loaded.
     New,
-    /// Transitional state when re-loading.
-    /// This is used to distinguish from New -> ... state transitions,
-    /// which initialize content from scratch.
-    LoadingSave,
     /// The main menu, shown to decide how to enter the game, and shown after exiting the game.
+    /// (This runs outside the entire GameplayState lifecycle.)
     LaunchMenu,
-    /// This state means some aspect of the game is active,
-    /// possibly paused, scripted, or behind a transient menu.
-    /// Leaving this state (to LoadingSave, LaunchMenu, New)
-    /// **destroys** the game world (under [crate::WorldMarkerEntity]).
+    /// This state means the game proper is running.
+    /// This state realizes [GameplayState].
+    /// (though possibly paused, scripted, or behind a transient menu.
+    /// Leaving this state destroys the game.
     InGame,
     /// Completed the program. This is not used internally,
     /// but may be useful for tracking when the program is exiting.
     Completed,
 }
 
-/// While the program state is in game,
-/// these are the various modes the player can be in.
+/// While in [ProgramState::InGame] ("in a game"),
+/// these are the various modes the game can progress through.
+/// These are very loose to avoid constraining game design
+/// but define well-known sequence points in the user interface.
 #[derive(SubStates, Reflect, Default, Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[states(scoped_entities)]
 #[reflect(State, Default)]
 #[source(ProgramState = ProgramState::InGame)]
 #[type_path = "game"]
 pub enum GameplayState {
-    Inactive,
-    /// Initial state when starting fresh.
-    /// This only runs once per process.
     #[default]
     New,
-    /// Transitional state when re-loading.
-    /// This is used to distinguish from New -> ... transitions.
-    /// This only runs once per process.
-    LoadingSave,
-    /// Assets for the mode are loaded; continue to the appropriate state.
-    /// This only runs once per process.
+    /// The assets are loaded (via [crate::assets]).
+    /// This typically runs once per game.
+    /// You need to manually progress to [GameplayState::Setup].
     AssetsLoaded,
     /// This state prompts loading the [CurrentLevel] level.
     /// This state is re-entered between levels.

@@ -266,9 +266,9 @@ pub struct GrabbingBehavior {
 impl Default for GrabbingBehavior {
     fn default() -> Self {
         Self {
-            force: 10.0,
+            force: 100.0,
             ignore_mass: false,
-            move_accel: 1.1,
+            move_accel: 1.5,
             min_speed: 0.05,
             max_speed: 10.0,
             turn_speed: std::f32::consts::FRAC_PI_2,
@@ -569,7 +569,8 @@ fn move_grabbed_item(
         };
         let vel = vel * grabbing_force.force;
 
-        let mut new_vel = vel.clamp_length_max(grabbing_force.max_speed);
+        let mut new_vel = vel.clamp_length_min(grabbing_force.min_speed);
+        new_vel = new_vel.clamp_length_max(grabbing_force.max_speed);
         if new_vel.x.abs() < MIN_MOVE {
             new_vel.x = 0.;
         }
@@ -586,6 +587,8 @@ fn move_grabbed_item(
             // in sync with the camera movement.
             *forces.linear_velocity_mut() = new_vel.adjust_precision();
             *forces.angular_velocity_mut() = default();
+            // *forces.
+            // forces.apply_linear_impulse(new_vel.adjust_precision() * 100.0);
         } else {
             // Non-physical, just move.
             item_xfrm.translation += new_vel * time.delta_secs().min(1.0);

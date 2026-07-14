@@ -30,10 +30,6 @@ impl Plugin for AudioCommonPlugin {
                 LoadingStateConfig::new(ProgramState::Initializing)
                     .load_collection::<CommonFxAssets>()
             )
-            .configure_loading_state(
-                LoadingStateConfig::new(ProgramState::LoadingSave)
-                    .load_collection::<CommonFxAssets>()
-            )
 
             .add_systems(FixedPreUpdate,
                 (
@@ -154,7 +150,7 @@ pub fn initialize_audio(master: Single<Entity, With<MainBus>>, mut commands: Com
     .connect(MusicNode)
     ;
 
-    commands.spawn((
+    let sfx_bus = commands.spawn((
         // Marker for the bus.
         SfxNode,
 
@@ -162,7 +158,8 @@ pub fn initialize_audio(master: Single<Entity, With<MainBus>>, mut commands: Com
             volume: DEFAULT_POOL_VOLUME,
             muted: false,
         },
-    ));
+    ))
+    .id();
 
     let send = commands.spawn((
         SfxReverbNode,
@@ -174,7 +171,7 @@ pub fn initialize_audio(master: Single<Entity, With<MainBus>>, mut commands: Com
             ..default()
         },
     ))
-    // .connect(sfx_bus)
+    .connect(sfx_bus)
     .head();
 
     // All the desired effects must be placed in the pool.

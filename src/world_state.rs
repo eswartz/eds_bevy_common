@@ -13,21 +13,20 @@ impl Plugin for WorldStatePlugin {
         app
             .insert_resource(Gravity(9.8 * Vector::NEG_Y))
 
-            // Runs basically once after startup.
-            .add_systems(OnEnter(GameplayState::AssetsLoaded),
+            // Spawn the [WorldMarker] once per game.
+            .add_systems(OnEnter(GameplayState::Setup),
                 (
-                    transition_from_loading,
                     setup_world_marker,
                 )
-                .run_if(in_state(ProgramState::InGame))
             )
 
-            // Despawn on exiting out of a game.
+            // Despawn the whole world [WorldMarker] on down,
+            // on exiting a game. This is the last-ditch cleanup which
+            // a game should handle instead in [GameplayState::]
             .add_systems(OnTransition{ exited: ProgramState::InGame, entered: ProgramState::LaunchMenu },
                 (
                     despawn_world,
                 )
-                .chain()
             )
         ;
     }
@@ -53,12 +52,6 @@ impl Default for WorldMarker {
 #[reflect(Resource)]
 #[type_path = "game"]
 pub struct WorldMarkerEntity(pub Entity);
-
-fn transition_from_loading(
-    mut commands: Commands,
-) {
-    commands.set_state(GameplayState::Setup);
-}
 
 /// This marker is created once and marks where game level content is swapped out.
 pub fn setup_world_marker(
