@@ -501,13 +501,8 @@ fn check_player_environment_fps(
     parent_q: Query<&ChildOf>,
     mut raycast: MeshRayCast,
     settings: Res<PlayerInputSettings>,
-    mode: Res<PlayerMode>,
     gravity: Res<Gravity>,
 ) {
-    if *mode != PlayerMode::Fps {
-        return
-    }
-
     for (player_ent, mut movement, mut vel, gxfrm, aabb) in player_q.iter_mut() {
         if movement.state == MovementState::Scripted {
             continue;
@@ -673,12 +668,7 @@ fn check_player_environment_space(
         With<Player>,
     >,
     settings: Res<PlayerInputSettings>,
-    mode: Res<PlayerMode>,
 ) {
-    if *mode != PlayerMode::Space {
-        return
-    }
-
     for (_player_ent, movement, mut vel) in player_q.iter_mut() {
         if movement.state == MovementState::Scripted {
             continue;
@@ -1088,7 +1078,11 @@ pub fn process_player_input_movement_for_space(
 
 pub fn process_player_input_look(
     mut player_q: Query<
-        &mut PlayerLook,
+        (
+            &mut PlayerMovement,
+            &mut PlayerLook,
+            &mut Transform,
+        ),
         With<Player>,
     >,
     mut inputs: MessageReader<PlayerInput>,
@@ -1099,12 +1093,16 @@ pub fn process_player_input_look(
     for input in inputs.read() {
         let res = player_q.get_mut(input.player_entity());
 
-        let Ok(mut look) = res else { continue };
+        let Ok((mut movement, mut look, mut transform)) = res else { continue };
 
         match input {
             PlayerInput::HeadTurn(_, turn) => {
                 let euler = turn.get_euler() * settings.turn_scale;
                 look.apply_turn(dt, euler);
+            }
+            PlayerInput::BodyTurn(_, turn) => {
+                let euler = turn.get_euler() * settings.turn_scale;
+                movement.apply_turn(dt, euler, &mut transform);
             }
             _ => ()
         }
@@ -1116,26 +1114,20 @@ pub fn process_player_input_misc(
         (
             &mut PlayerMovement,
             &mut PlayerLook,
-            &mut Transform,
+            &Transform,
         ),
         With<Player>,
     >,
     mut inputs: MessageReader<PlayerInput>,
-    time: Res<Time>,
     settings: Res<PlayerInputSettings>,
     mut next_fire_time: Local<Option<Duration>>,
 ) {
-    let dt = time.delta_secs();
     for input in inputs.read() {
         let res = player_q.get_mut(input.player_entity());
 
-        let Ok((mut movement, mut look, mut transform)) = res else { continue };
+        let Ok((mut movement, mut look, transform)) = res else { continue };
 
         match input {
-            PlayerInput::BodyTurn(_, turn) => {
-                let euler = turn.get_euler() * settings.turn_scale;
-                movement.apply_turn(dt, euler, &mut transform);
-            }
             PlayerInput::TurnAround(_player) => {
                 if !movement.is_turning() {
                     let ey = transform.rotation.to_euler(EulerRot::YXZ).0;
@@ -1176,6 +1168,7 @@ pub fn process_player_input_misc(
             // Handled above.
             PlayerInput::Move(..) => (),
             PlayerInput::HeadTurn(..) => (),
+            PlayerInput::BodyTurn(..) => (),
         }
     }
 }
