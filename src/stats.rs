@@ -1,3 +1,4 @@
+use avian3d::dynamics::rigid_body::LinearVelocity;
 use bevy::ecs::world::CommandQueue;
 use bevy::prelude::*;
 use avian3d::dynamics::solver::SolverDiagnostics;
@@ -337,11 +338,11 @@ impl StatsProvider for PlayerMoveProvider {
     fn priority(&self) -> i32 { -4 }
 
     fn fetch_value(&self, world: &mut World) -> StatsValue {
-        let mut query = world.query_filtered::<&PlayerMovement, With<Player>>();
-        if let Some(movement) = query.iter(world).next() {
+        let mut query = world.query_filtered::<(&PlayerMovement, &LinearVelocity), With<Player>>();
+        if let Some((movement, vel)) = query.iter(world).next() {
             StatsValue::new(format!("{:?}|{:.3} m/s|{:?}",
                 movement.state,
-                movement.velocity_ramp,
+                vel.0.xy().length(),
                 movement.area,
             ))
 
