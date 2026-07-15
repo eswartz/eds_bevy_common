@@ -157,15 +157,32 @@ static ENT_RX: LazyLock<regex::Regex> = LazyLock::new(||
 
 pub fn update_egui_inspector_ui(
     world: &mut World,
+    mut pin_selection: Local<bool>,
     mut show_tree: Local<bool>,
     mut show_all: Local<bool>,
+    mut last_selected: Local<Vec<Entity>>,
 ) {
     use bevy_inspector_egui::bevy_inspector::*;
     use egui::*;
 
-    let now_selected_opt = world.query_filtered::<
-        Entity, (With<CrosshairTargetable>, Added<Highlighted>)
-    >().iter(world).next();
+    // Select a new entry if it was not selected before.
+    let new_selected_opt = {
+        let selected = world
+            .query_filtered::<Entity, With<Highlighted>>()
+            .iter(world)
+            .collect::<Vec<_>>();
+        let mut new = None::<Entity>;
+        if selected != *last_selected {
+            for ent in selected.iter() {
+                if !last_selected.contains(ent) {
+                    new = Some(*ent);
+                    *last_selected = selected;
+                    break;
+                }
+            }
+        }
+        new
+    };
 
     // Find the current context using the world's querying.
     // We'll need to clone this to avoid double-borrow of `world` below.
@@ -180,13 +197,13 @@ pub fn update_egui_inspector_ui(
         .default_size(Vec2::new(250.0, 300.0))
         .show(egui_context.clone().get_mut(), |ui| {
 
-            if let Some(selected) = now_selected_opt {
+            if let Some(selected) = new_selected_opt {
                 // Set up selection filter if new.
 
                 // Copied from BIE.
                 let id = egui::Id::new(ENTITY_FILTER_ID).with("word");
 
-                let (filter, last_filter) = ui.memory_mut(|mem| {
+                let (filter, last_auto_filter) = ui.memory_mut(|mem| {
                     let filter = mem.data.get_persisted_mut_or_default::<String>(
                         id).clone();
                     let last_filter = mem.data.get_persisted_mut_or_default::<String>(
@@ -194,18 +211,17 @@ pub fn update_egui_inspector_ui(
                     (filter, last_filter)
                 });
 
-                let new_filter = format!("{selected}");
-                if filter.is_empty() || (
-                    last_filter != new_filter && {
-                        ENT_RX.find(&last_filter).is_none()
-                    }
-                ) {
+                let new_auto_filter = format!("{selected}");
+                let is_new_selection = last_auto_filter != new_auto_filter;
+                let is_important = *pin_selection && !filter.is_empty();
+                let last_was_auto_or_empty = filter.is_empty() || ENT_RX.is_match(&filter);
+                if !is_important && is_new_selection && last_was_auto_or_empty {
                     ui.memory_mut(|mem| {
                         let filter: &mut String = mem.data.get_persisted_mut_or_default(id);
-                        *filter = new_filter.clone();
+                        *filter = new_auto_filter.clone();
 
                         *mem.data.get_persisted_mut_or_default::<String>(
-                            egui::Id::new(SELECTED_ENTITY_FILTER_ID)) = new_filter;
+                            egui::Id::new(SELECTED_ENTITY_FILTER_ID)) = new_auto_filter;
                     });
                 }
             }
@@ -214,6 +230,7 @@ pub fn update_egui_inspector_ui(
                 ui.style_mut().override_text_style = Some(TextStyle::Small);
                 ui.horizontal_wrapped(|ui| {
                     ui.label(RichText::new("Entities:").strong());
+                    ui.checkbox(&mut pin_selection, RichText::new("Pin"));
                     ui.checkbox(&mut show_tree, RichText::new("As Tree"));
                     ui.checkbox(&mut show_all, RichText::new("All"))
                         .on_hover_text("When unset, hides entities without Names, which are usually behind-the-scenes entities.");
