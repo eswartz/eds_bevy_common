@@ -393,7 +393,7 @@ pub fn assign_stock_menu_actions(
         include.clone(),
 
         Action::<actions::MoveUpDown>::new(),
-        Pulse::new(0.125).with_time_kind(TimeKind::Real).trigger_on_start(true),
+        Pulse::new(0.125).with_time_kind(TimeKind::Real),
         DeadZone::default(),
         ActionSettings {
             require_reset: true,
@@ -408,7 +408,7 @@ pub fn assign_stock_menu_actions(
         include.clone(),
 
         Action::<actions::MoveRightLeft>::new(),
-        Pulse::new(0.125).with_time_kind(TimeKind::Real).trigger_on_start(true),
+        Pulse::new(0.125).with_time_kind(TimeKind::Real),
         DeadZone::default(),
         ActionSettings {
             require_reset: true,
