@@ -143,7 +143,6 @@ fn create_input_map(mut commands: Commands) {
     )).id();
     let include = (
         ActionOf::<MenuContext>::new(menu_entity),
-        MenuAction,
     );
     assign_stock_common_actions(commands.reborrow(), include.clone());
     assign_stock_menu_actions(commands.reborrow(), include.clone());
@@ -157,7 +156,6 @@ fn create_input_map(mut commands: Commands) {
 
     let include = (
         ActionOf::<PlayerContext>::new(player_entity),
-        PlayerAction,
     );
     assign_stock_common_actions(commands.reborrow(), include.clone());
     assign_stock_player_actions(commands.reborrow(), include.clone());

@@ -288,7 +288,7 @@ fn on_start_grab(
     #[cfg(feature = "highlighting")]
     mut highlighting_mode: If<ResMut<HighlightingMode>>,
     release_q: Query<&ActionEvents, (
-        With<ActionOf::<PlayerContext>>,
+        With<ActionOf<PlayerContext>>,
         Or<(With<Action<actions::ToggleSelect>>, With<Action<actions::AltFiring>>)>,
     )>,
 ) {

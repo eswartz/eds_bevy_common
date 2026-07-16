@@ -370,7 +370,7 @@ pub fn update_player_camera_render(
 #[cfg(feature = "input_bei")]
 pub fn on_player_camera_zoom(
     event: On<Fire<Zoom>>,
-    zoom_camera: Query<&Action<Zoom>, With<ActionOf::<PlayerContext>>>,
+    zoom_camera: Query<&Action<Zoom>, With<ActionOf<PlayerContext>>>,
 
     mut fov_delta: ResMut<FovDelta>,
     mut zoom_state: ResMut<FovZoomState>,

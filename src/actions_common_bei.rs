@@ -38,14 +38,12 @@ impl Plugin for ActionPlugin {
 }
 
 /// Context for gameplay.
-/// Note, this is a parent. Use PlayerAction to detect.
 #[derive(Component, Reflect)]
 #[reflect(Component)]
 #[type_path = "game"]
 pub struct PlayerContext;
 
 /// Context for menu.
-/// Note, this is a parent. Use MenuAction to detect.
 #[derive(Component, Reflect)]
 #[reflect(Component)]
 #[type_path = "game"]
@@ -65,18 +63,6 @@ pub fn is_context_active<Context: Component>(
     // It derefs to its state... can't fetch field, PartialEq, *OR* match on it!
     **activity
 }
-
-/// Marker for Actions on a Player.
-#[derive(Component, Reflect, Clone)]
-#[reflect(Component)]
-#[type_path = "game"]
-pub struct PlayerAction;
-
-/// Marker for Actions during a menu.
-#[derive(Component, Reflect, Clone)]
-#[reflect(Component)]
-#[type_path = "game"]
-pub struct MenuAction;
 
 pub mod actions {
     use super::*;
@@ -446,8 +432,7 @@ pub fn assign_stock_menu_actions(
 
 /// Add Action entities for the common player actions.
 ///
-/// include: should be at least e.g. `(ActionOf::<YourContext>::new(context_entity), {Menu,Player}Action)`
-/// see: [`MenuAction`] [`PlayerAction`]
+/// include: should be at least e.g. `(ActionOf::<YourContext>::new(context_entity)`
 pub fn assign_stock_player_actions(
     mut commands: Commands,
     include: impl Bundle + Clone,
@@ -631,8 +616,7 @@ pub fn assign_stock_player_actions(
 
 /// Add Action entities for InputActions related to editing.
 ///
-/// include: should be at least e.g. `(ActionOf::<YourContext>::new(context_entity), {Menu,Player}Action)`
-/// see: [`MenuAction`] [`PlayerAction`]
+/// include: should be at least e.g. `ActionOf::<YourContext>::new(context_entity)`
 pub fn assign_stock_editing_actions(
     mut commands: Commands,
     include: impl Bundle + Clone,

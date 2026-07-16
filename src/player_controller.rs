@@ -98,12 +98,12 @@ impl PlayerControllerSettings {
 /// We gather relevant inputs and send events indicating our intent.
 #[cfg(feature = "input_bei")]
 fn collect_player_movement(
-    accel_events: Single<&ActionEvents, (With<Action<Accelerate>>, With<ActionOf::<PlayerContext>>)>,
-    crouch_events: Single<&ActionEvents, (With<Action<Crouch>>, With<ActionOf::<PlayerContext>>)>,
-    jump_events: Single<&ActionEvents, (With<Action<Jump>>, With<ActionOf::<PlayerContext>>)>,
-    move_flycam: Single<&Action<MoveFlycam>, With<ActionOf::<PlayerContext>>>,
-    move_down_up: Single<&Action<MoveUpDown>, With<ActionOf::<PlayerContext>>>,
-    move_left_right: Single<&Action<MoveRightLeft>, With<ActionOf::<PlayerContext>>>,
+    accel_events: Single<&ActionEvents, (With<Action<Accelerate>>, With<ActionOf<PlayerContext>>)>,
+    crouch_events: Single<&ActionEvents, (With<Action<Crouch>>, With<ActionOf<PlayerContext>>)>,
+    jump_events: Single<&ActionEvents, (With<Action<Jump>>, With<ActionOf<PlayerContext>>)>,
+    move_flycam: Single<&Action<MoveFlycam>, With<ActionOf<PlayerContext>>>,
+    move_down_up: Single<&Action<MoveUpDown>, With<ActionOf<PlayerContext>>>,
+    move_left_right: Single<&Action<MoveRightLeft>, With<ActionOf<PlayerContext>>>,
 
     ctrl_settings: Res<PlayerControllerSettings>,
     input_settings: Res<PlayerInputSettings>,
