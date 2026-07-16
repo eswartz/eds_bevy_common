@@ -19,8 +19,12 @@ impl Plugin for PlayerMovementPlugin {
                         window_changed_focus
                         .or_else(resource_changed::<PlayerMode>)
                     ),
-                    check_player_environment_fps,
-                    check_player_environment_space,
+                    check_player_environment_fps
+                        .run_if(resource_exists_and_equals(PlayerMode::Fps))
+                    ,
+                    check_player_environment_space
+                        .run_if(resource_exists_and_equals(PlayerMode::Space))
+                    ,
                     process_player_input_movement_for_fps
                         .run_if(not(is_cheating))
                         .run_if(resource_exists_and_equals(PlayerMode::Fps))
@@ -57,7 +61,7 @@ impl Plugin for PlayerMovementPlugin {
 fn is_cheating_or_paused(
     physics_paused: Res<PhysicsPaused>,
 ) -> bool {
-    **physics_paused
+    is_cheating() || **physics_paused
 }
 
 fn is_cheating() -> bool {
@@ -89,6 +93,8 @@ pub struct PlayerInputSettings {
     pub accelerate_scale: f32,
     /// How slowly movement is accelerated when shift-moving.
     pub velocity_ramp_scale: f32,
+    /// When set, up/down movements are relative to rotation.
+    pub move_up_down_abs: bool,
     /// How movement is scaled in air (i.e. usually < 1.0).
     pub air_scale: f32,
     /// Velocity scale for X/Z movement (m/s).
@@ -124,6 +130,7 @@ impl PlayerInputSettings {
             turn_scale: Vec3::splat(0.05),
             velocity_ramp_scale: 1.0 / 8.0,
             accelerate_scale: 1.5,
+            move_up_down_abs: true,
 
             base_xz_speed: 8,
             jump_accel: 256,
@@ -149,6 +156,7 @@ impl PlayerInputSettings {
             turn_scale: Vec3::splat(0.1),
             velocity_ramp_scale: 1.0 / 4.0,
             accelerate_scale: 2.0,
+            move_up_down_abs: false,
 
             base_xz_speed: 8,
             jump_accel: 256,
@@ -254,7 +262,6 @@ pub struct PlayerMovement {
     pub turn_time_secs: f32,
     pub turn_deadline_secs: f32,
     pub turn_curve: Option<EasingCurve<Quat>>,
-    pub turn_sets_look: bool,
     /// Current area of feet.
     pub area: AreaContent,
 }
@@ -273,7 +280,6 @@ impl Default for PlayerMovement {
             turn_time_secs: 0.0,
             turn_deadline_secs: 0.0,
             turn_curve: None,
-            turn_sets_look: false,
             area: AreaContent::Air,
         }
     }
@@ -567,7 +573,8 @@ fn check_player_environment_fps(
             movement.medium_friction = 1.0;
             try_to_land = true;
 
-            if vel.y >= 0.0 && gravity.0.y < 0.0 {
+            // I.e. stop flying.
+            if vel.y > 0.0 && gravity.0.y < 0.0 {
                 vel.y *= 0.99;
             }
         }
@@ -785,7 +792,6 @@ pub fn process_player_input_movement_for_fps(
     mut inputs: MessageReader<PlayerInput>,
     time: Res<Time>,
     input_settings: Res<PlayerInputSettings>,
-    camera_settings: Res<PlayerCameraSettings>,
 ) {
     let dt = time.delta_secs();
     for input in inputs.read() {
@@ -811,7 +817,7 @@ pub fn process_player_input_movement_for_fps(
 
                 // Extract up/down.
                 let mut up_down = instant_thrust.y;
-                if camera_settings.move_up_down_abs {
+                if input_settings.move_up_down_abs {
                     instant_thrust.y = 0.0;
                 }
 
@@ -847,8 +853,7 @@ pub fn process_player_input_movement_for_fps(
 
                 // Do we want to?
                 if up_down > 0. {
-                    if (jump_grounded || extra_jump_allowed)
-                    && up_down > 0. && !movement.had_jump_event {
+                    if (jump_grounded || extra_jump_allowed) && !movement.had_jump_event {
                         movement.had_jump_event = true;
                         movement.allowed_jumps = movement.allowed_jumps.saturating_sub(1);
                         let sluggishness = move_scale.min(1.0);
@@ -877,7 +882,7 @@ pub fn process_player_input_movement_for_fps(
                 }
 
                 // Apply unconsumed strict up/down movement.
-                if up_down != 0. && camera_settings.move_up_down_abs {
+                if up_down != 0. && input_settings.move_up_down_abs {
                     dir_velocity.y = up_down;
                 }
 
@@ -977,13 +982,7 @@ pub fn process_player_input_movement_for_space(
     mut inputs: MessageReader<PlayerInput>,
     time: Res<Time>,
     input_settings: Res<PlayerInputSettings>,
-    camera_settings: Res<PlayerCameraSettings>,
-    mode: Res<PlayerMode>,
 ) {
-    if *mode != PlayerMode::Space {
-        return
-    }
-
     let dt = time.delta_secs();
     for input in inputs.read() {
         let res = player_q.get_mut(input.player_entity());
@@ -1005,7 +1004,7 @@ pub fn process_player_input_movement_for_space(
                 instant_thrust.z = Into::<f32>::into(input.forward_back) * input_settings.move_scale.z;
 
                 let up_down = instant_thrust.y;
-                if camera_settings.move_up_down_abs {
+                if input_settings.move_up_down_abs {
                     instant_thrust.y = 0.0;
                 }
 
@@ -1025,11 +1024,11 @@ pub fn process_player_input_movement_for_space(
                 overall_speed *= accel_scale;
 
                 // Apply unconsumed strict up/down movement.
-                if up_down != 0. && camera_settings.move_up_down_abs {
+                if up_down != 0. && input_settings.move_up_down_abs {
                     instant_thrust.y = up_down;
                 }
 
-                let dir_velocity = if camera_settings.freecam {
+                let dir_velocity = if !input_settings.move_up_down_abs {
                     look.rotation * instant_thrust
                 } else {
                     transform.rotation * instant_thrust

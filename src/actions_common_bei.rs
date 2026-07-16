@@ -22,9 +22,10 @@ impl Plugin for ActionPlugin {
 
             // All the time!
             .add_systems(Update, handle_escape)
-            .add_systems(Last, mask_and_unmask_inputs)
 
-            .add_systems(Update, toggle_context.run_if(resource_changed::<State<OverlayState>>))
+            .add_systems(Last, mask_and_unmask_inputs)
+            .add_systems(Last, toggle_context.run_if(resource_changed::<State<OverlayState>>))
+
             .add_observer(handle_pause_gameplay)
             .add_observer(handle_toggle_physics)
             .add_observer(handle_toggle_physics_gizmos)
@@ -49,6 +50,21 @@ pub struct PlayerContext;
 #[reflect(Component)]
 #[type_path = "game"]
 pub struct MenuContext;
+
+pub fn is_context_active<Context: Component>(
+    context_opt: Option<Single<Entity, With<Context>>>,
+    activities: Query<&ContextActivity<Context>>,
+) -> bool {
+    let Some(context) = context_opt else {
+        return false
+    };
+    let Ok(activity) = activities.get(*context) else {
+        warn!("no ActivityContext?");
+        return false;
+    };
+    // It derefs to its state... can't fetch field, PartialEq, *OR* match on it!
+    **activity
+}
 
 /// Marker for Actions on a Player.
 #[derive(Component, Reflect, Clone)]
@@ -105,6 +121,11 @@ pub mod actions {
     #[action_output(bool)]
     pub struct Firing;
 
+    /// Alt-firing (usually the opposite mouse/controller button).
+    #[derive(InputAction)]
+    #[action_output(bool)]
+    pub struct AltFiring;
+
     /// Basic world object interaction.
     #[derive(InputAction)]
     #[action_output(bool)]
@@ -145,7 +166,7 @@ pub mod actions {
     #[action_output(Vec2)]
     pub struct MoveFlycam;
 
-    /// Move in the Y axis (fly/crouch/dive).
+    /// Move in the Y axis (+jump/fly/ -crouch/dive).
     #[derive(InputAction)]
     #[action_output(f32)]
     pub struct MoveUpDown;
@@ -155,7 +176,7 @@ pub mod actions {
     #[action_output(f32)]
     pub struct MoveRightLeft;
 
-    /// Change camera see closer/further.
+    /// Change camera to see closer/further.
     #[derive(InputAction)]
     #[action_output(Vec2)]
     pub struct Zoom;
@@ -169,11 +190,6 @@ pub mod actions {
     #[derive(InputAction)]
     #[action_output(bool)]
     pub struct ToggleSelect(pub Entity);
-
-    /// (Try to) grab selected item(s).
-    #[derive(InputAction)]
-    #[action_output(bool)]
-    pub struct AltFiring;
 
     /// Switch to the next item (forward or back) available to select.
     #[derive(InputAction)]
@@ -233,6 +249,9 @@ fn toggle_context(
     }
 }
 
+/// Handle the primary pause action.
+///
+/// (note, scripting plugin needs to handle [actions::PauseScripting] instead.)
 pub(crate) fn handle_pause_gameplay(_event: On<Start<actions::PauseGameplay>>, keys: Res<ButtonInput<KeyCode>>, mut pause_state: ResMut<PauseState>) {
     // Ignore overlap with PauseScripting
     if keys.any_pressed([KeyCode::ShiftLeft, KeyCode::ShiftRight]) {
@@ -244,7 +263,6 @@ pub(crate) fn handle_pause_gameplay(_event: On<Start<actions::PauseGameplay>>, k
     pause_state.set_user_paused(paused);
 }
 
-// note, ^^^ scripting plugin needs to handle PauseScripting
 
 pub(crate) fn handle_toggle_physics(_event: On<Start<actions::TogglePhysics>>, mut pause_state: ResMut<PhysicsPaused>) {
     **pause_state ^= true;
@@ -672,7 +690,8 @@ pub fn default_mouse_wheel_scale(factor: f32) -> Scale {
     }
 }
 
-/// Hide inputs from BEI when, e.g., a window is not focused or egui input
+/// Hide inputs from BEI when, e.g., a window is not focused or egui input is active.
+///
 /// (This is to avoid having such inputs be passed when the window is re-focused
 /// by the mouse on window managers with "activate and pass click" enabled.)
 fn mask_and_unmask_inputs(

@@ -21,23 +21,26 @@ impl Plugin for PlayerControllerPlugin {
         app.init_resource::<PlayerControllerSettings>();
 
         #[cfg(feature = "input_bei")]
-        app.add_systems(
+        {
+            app.add_systems(
                 FixedPreUpdate,
                 (
                     collect_player_movement,
                     collect_player_look,
                     collect_player_input,
                 )
+                .run_if(is_context_active::<PlayerContext>)
                 .run_if(not(is_paused))
                 .run_if(not(debug_gui_wants_direct_input))
-            )
-            .add_systems(
-                FixedPostUpdate,
-                center_mouse
-                .run_if(not(is_paused))
-                .run_if(not(debug_gui_wants_direct_input))
-            )
-        ;
+            );
+        }
+
+        app.add_systems(
+            FixedPostUpdate,
+            center_mouse
+            .run_if(not(is_paused))
+            .run_if(not(debug_gui_wants_direct_input))
+        );
     }
 }
 
@@ -90,15 +93,17 @@ impl PlayerControllerSettings {
 
 /// Handles movement from inputs.
 ///
+/// (Why is this not observers? Because we want the state as reified
+/// at a given time rather than resp)
 /// We gather relevant inputs and send events indicating our intent.
 #[cfg(feature = "input_bei")]
 fn collect_player_movement(
-    accel_events: Query<&ActionEvents, (With<Action<Accelerate>>/* , With<PlayerAction> */)>,
-    crouch_events: Query<&ActionEvents, (With<Action<Crouch>>/* , With<PlayerAction> */)>,
-    jump_events: Query<&ActionEvents, (With<Action<Jump>>/* , With<PlayerAction> */)>,
-    move_flycam: Query<&Action<MoveFlycam>/* , With<PlayerAction> */>,
-    move_down_up: Query<&Action<MoveUpDown>/* , With<PlayerAction> */>,
-    move_left_right: Query<&Action<MoveRightLeft>/* , With<PlayerAction> */>,
+    accel_events: Single<&ActionEvents, (With<Action<Accelerate>>, With<ActionOf::<PlayerContext>>)>,
+    crouch_events: Single<&ActionEvents, (With<Action<Crouch>>, With<ActionOf::<PlayerContext>>)>,
+    jump_events: Single<&ActionEvents, (With<Action<Jump>>, With<ActionOf::<PlayerContext>>)>,
+    move_flycam: Single<&Action<MoveFlycam>, With<ActionOf::<PlayerContext>>>,
+    move_down_up: Single<&Action<MoveUpDown>, With<ActionOf::<PlayerContext>>>,
+    move_left_right: Single<&Action<MoveRightLeft>, With<ActionOf::<PlayerContext>>>,
 
     ctrl_settings: Res<PlayerControllerSettings>,
     input_settings: Res<PlayerInputSettings>,
@@ -111,26 +116,19 @@ fn collect_player_movement(
 ) {
     let mut instant_thrust = Vec3::ZERO;
 
-    let speed = if let Some(event) = accel_events.iter().next()
-    && event.contains(ActionEvents::START | ActionEvents::FIRE) {
+    let speed = if (*accel_events).contains(ActionEvents::START | ActionEvents::ONGOING) {
         Speed::Fast
-    } else if let Some(event) = crouch_events.iter().next()
-    && event.contains(ActionEvents::START | ActionEvents::FIRE) {
+    } else if (*crouch_events).contains(ActionEvents::START | ActionEvents::ONGOING) {
         Speed::Slow
     } else {
         Speed::Normal
     };
 
-    if let Some(move_axis) = move_flycam.iter().next()
-    && let Some(down_up_axis) = move_down_up.iter().next()
-    && let Some(left_right_axis) = move_left_right.iter().next() {
-        instant_thrust.x = (**left_right_axis + move_axis.x) * ctrl_settings.move_scale.x;
-        instant_thrust.y = **down_up_axis * ctrl_settings.move_scale.y;
-        instant_thrust.z = move_axis.y * ctrl_settings.move_scale.z;
-    }
+    instant_thrust.x = (***move_left_right + move_flycam.x) * ctrl_settings.move_scale.x;
+    instant_thrust.y = ***move_down_up * ctrl_settings.move_scale.y;
+    instant_thrust.z = move_flycam.y * ctrl_settings.move_scale.z;
 
-    if let Some(event) = jump_events.iter().next()
-    && event.contains(ActionEvents::START | ActionEvents::FIRE) {
+    if jump_events.contains(ActionEvents::START | ActionEvents::FIRE) {
         instant_thrust.y += ctrl_settings.move_scale.y;
     }
 
@@ -148,8 +146,7 @@ fn collect_player_movement(
         actual_speed as _,
     );
 
-    if let Some(event) = crouch_events.iter().next()
-    && event.contains(ActionEvents::START) {
+    if **crouch_events == ActionEvents::START | ActionEvents::FIRE {
         writer.write(PlayerInput::ToggleCrouch(player));
     }
     writer.write(PlayerInput::Move(
@@ -191,10 +188,10 @@ fn center_mouse(
 fn collect_player_look(
     primary_window: Query<&Window, With<PrimaryWindow>>,
 
-    look: Query<&Action<Look>, (With<Action<Look>>/* , With<PlayerAction> */)>,
-    turn_around_events: Query<&ActionEvents, (With<Action<TurnAround>>/* , With<PlayerAction> */)>,
-    reset_events: Query<&ActionEvents, (With<Action<Reset>>, /* With<PlayerAction> */)>,
-    // alt_fire_events: Query<&ActionEvents, (With<Action<Firing>>, With<PlayerAction>)>,
+    look_axis: Single<&Action<Look>, (With<Action<Look>>, With<ActionOf<PlayerContext>>)>,
+    turn_around_events: Single<&ActionEvents, (With<Action<TurnAround>>, With<ActionOf<PlayerContext>>)>,
+    reset_events: Single<&ActionEvents, (With<Action<Reset>>, With<ActionOf<PlayerContext>>)>,
+    // alt_fire_events: Single<&ActionEvents, (With<Action<Firing>>, With<ActionOf<PlayerContext>>))>,
     mouse_button_events: Res<ButtonInput<MouseButton>>,
 
     settings: Res<PlayerControllerSettings>,
@@ -212,10 +209,6 @@ fn collect_player_look(
     // Only accept player-look movement in debug mode if right MB held.
     let alt_fire = mouse_button_events.pressed(MouseButton::Right);
     let ignore_mouse = gui_state.is_debug_ui_inspector_visible() && !alt_fire;
-
-    let Ok(look_axis) = look.single() else {
-        return
-    };
 
     let mut instant_body_turn = Vec3::ZERO;
     let mut instant_head_turn = Vec3::ZERO;
@@ -239,12 +232,10 @@ fn collect_player_look(
     // instant_head_turn.z = tilt * settings.turn_scale.z;
 
     // Don't repeat, else it's just a 360 on the slightest lingering touch.
-    if let Some(event) = turn_around_events.iter().next()
-    && event.contains(ActionEvents::START) {
+    if turn_around_events.contains(ActionEvents::START) {
         writer.write(PlayerInput::TurnAround(*player_q));
         return;
-    } else if let Some(event) = reset_events.iter().next()
-    && event .contains(ActionEvents::START) {
+    } else if reset_events.contains(ActionEvents::START) {
         writer.write(PlayerInput::Straighten(*player_q));
         return;
     }
@@ -262,7 +253,7 @@ fn collect_player_look(
 #[cfg(feature = "input_bei")]
 fn collect_player_input(
     mut commands: Commands,
-    fire_events: Query<&ActionEvents, (With<Action<Firing>>/* , With<PlayerAction> */)>,
+    fire_events: Single<&ActionEvents, (With<Action<Firing>>, With<ActionOf<PlayerContext>>)>,
     player_q: Single<Entity, With<OurPlayer>>,
 
     mut focused: MessageReader<WindowFocused>,
@@ -282,13 +273,11 @@ fn collect_player_input(
         return;
     }
 
-    if let Some(event) = fire_events.iter().next()
-    && event.contains(ActionEvents::START) {
+    if fire_events.contains(ActionEvents::START) {
         debug!("press Fire");
         commands.write_message(PlayerInput::StartFire(*player_q));
     }
-    if let Some(event) = fire_events.iter().next()
-    && event.contains(ActionEvents::COMPLETE) {
+    if fire_events.contains(ActionEvents::COMPLETE) {
         debug!("release Fire");
         commands.write_message(PlayerInput::StopFire(*player_q));
     }

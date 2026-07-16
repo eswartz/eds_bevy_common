@@ -172,7 +172,7 @@ fn check_actions(
     mut commands: Commands,
 
     crosshair_targets: Res<CrosshairTargets>,
-    cycle_action_q: Query<(&ActionEvents, &Action<actions::CycleHighlightedItem>)/* , With<PlayerAction> */>,
+    cycle_action_q: Query<(&ActionEvents, &Action<actions::CycleHighlightedItem>), With<ActionOf<PlayerContext>>>,
     mut cycle_ctr: ResMut<CountAccumulator<HighlightedItemCycle>>,
 ) {
     if let Some((cycle_events, cycle_action)) = cycle_action_q.iter().next() {

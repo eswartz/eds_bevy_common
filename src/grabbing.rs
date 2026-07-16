@@ -26,6 +26,7 @@ use crate::Highlighted;
 #[cfg(feature = "highlighting")]
 use crate::HighlightingMode;
 use crate::PhysicsPaused;
+use crate::PlayerContext;
 #[cfg(feature = "input_bei")]
 use crate::ProgramState;
 #[cfg(feature = "input_bei")]
@@ -286,7 +287,10 @@ fn on_start_grab(
     grabbed_opt: Option<Res<GrabbedItem>>,
     #[cfg(feature = "highlighting")]
     mut highlighting_mode: If<ResMut<HighlightingMode>>,
-    release_q: Query<&ActionEvents, Or<(With<Action<actions::ToggleSelect>>, With<Action<actions::AltFiring>>)>>,
+    release_q: Query<&ActionEvents, (
+        With<ActionOf::<PlayerContext>>,
+        Or<(With<Action<actions::ToggleSelect>>, With<Action<actions::AltFiring>>)>,
+    )>,
 ) {
     if grabbed_opt.is_some()
     // be careful with these keys triggering false re-starts e.g. on tabbing into a window

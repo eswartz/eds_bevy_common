@@ -26,19 +26,26 @@ impl Plugin for PlayerCameraPlugin {
                 OnEnter(LevelState::Playing),
                 update_player_camera_render
             )
-            .add_systems(FixedPostUpdate,
-                (
-                    // HACK: we "know" zoom and move-while-grabbed use the same actions
-                    handle_player_camera_actions.run_if(not(is_grabbing_item)),
-                )
-                .chain()
-                .after(PhysicsSystems::Writeback)
-                .before(TransformSystems::Propagate)
-                .run_if(not(is_menu_paused))
-                .run_if(not(debug_gui_wants_input))
-                .run_if(is_game_active)
-                ,
-            )
+            // .add_systems(FixedPostUpdate,
+            //     (
+            //         handle_player_camera_actions
+            //             .run_if(is_context_active::<PlayerContext>)
+            //             // HACK: we "know" zoom and move-while-grabbed use the same actions
+            //             .run_if(not(is_grabbing_item))
+            //         ,
+            //     )
+            //     .chain()
+            //     .after(PhysicsSystems::Writeback)
+            //     .before(TransformSystems::Propagate)
+            //     .run_if(not(is_menu_paused))
+            //     .run_if(not(debug_gui_wants_input))
+            //     .run_if(is_game_active)
+            //     ,
+            // )
+
+            .add_observer(on_player_camera_change)
+            .add_observer(on_player_camera_zoom)
+
             .add_systems(FixedPostUpdate,
                 (
                     sync_world_camera_to_player,
@@ -83,8 +90,6 @@ pub struct PlayerCameraSettings {
     /// When set, move in direction you're looking, no matter the angle.
     /// Otherwise, align Y as up if possible.
     pub freecam: bool,
-    /// When set, up/down movements are relative to rotation.
-    pub move_up_down_abs: bool,
     /// Max roll (side-to-side, strafing) angle in degrees.
     pub roll_degrees: f32,
     /// Time to reach or decay roll target.
@@ -110,7 +115,6 @@ impl Default for PlayerCameraSettings {
     fn default() -> Self {
         Self {
             freecam: false,
-            move_up_down_abs: true,
             roll_degrees: 1.0,
             roll_angle_time: Duration::from_secs_f32(0.25),
             pitch_degrees: 2.0,
@@ -326,37 +330,22 @@ pub fn sync_view_camera_to_player(
     view_camera_q.rotation = target_rot;
 }
 
-pub fn handle_player_camera_actions(
-    #[cfg(feature = "input_bei")]
-    change_camera: Query<&ActionEvents, (With<Action<ChangeCamera>>/* , With<PlayerAction> */)>,
+#[cfg(feature = "input_bei")]
+pub fn on_player_camera_change(
+    _event: On<Start<ChangeCamera>>,
+
     mut camera_q: Single<&mut PlayerCamera, (With<WorldCamera>, With<OurCamera>)>,
-    #[cfg(feature = "input_bei")]
-    zoom_camera: Query<&Action<Zoom>, /* (With<PlayerAction>,) */>,
-    mut fov_delta: ResMut<FovDelta>,
-    mut zoom_state: ResMut<FovZoomState>,
-    settings: Res<PlayerCameraSettings>,
-    time: Res<Time>,
     mut commands: Commands,
+
+    is_grabbing_item: Option<Res<GrabbedItem>>
 ) {
-    #[cfg(feature = "input_bei")]
-    {
-        if let Some(change_camera) = change_camera.iter().next()
-        && change_camera.contains(ActionEvents::START) {
-            camera_q.0 = camera_q.0.next();
-            commands.run_system_cached(update_player_camera_render);
-        }
-        if let Some(zoom_camera) = zoom_camera.iter().next()
-        && zoom_camera.length() > 0. {
-            let q = ops::exp(-time.delta_secs());
-            **fov_delta = fov_delta.lerp(**fov_delta + zoom_camera.y, q).clamp(-90.0, 90.0);
-            *zoom_state = FovZoomState::Zooming;
-        } else {
-            if *zoom_state == FovZoomState::Zooming {
-                // No longer zooming, reset eventually.
-                *zoom_state = FovZoomState::AtZoom(settings.fov_delta_hold_time)
-            }
-        }
-    }
+    // HACK: we "know" zoom and move-while-grabbed use the same actions (new context!)
+    if is_grabbing_item.is_some() { return };
+
+    // Switch the PlayerMode.
+    camera_q.0 = camera_q.0.next();
+
+    commands.run_system_cached(update_player_camera_render);
 }
 
 pub fn update_player_camera_render(
@@ -375,6 +364,34 @@ pub fn update_player_camera_render(
         });
     } else {
         commands.entity(player_ent).try_remove::<DebugRender>();
+    }
+}
+
+#[cfg(feature = "input_bei")]
+pub fn on_player_camera_zoom(
+    event: On<Fire<Zoom>>,
+    zoom_camera: Query<&Action<Zoom>, With<ActionOf::<PlayerContext>>>,
+
+    mut fov_delta: ResMut<FovDelta>,
+    mut zoom_state: ResMut<FovZoomState>,
+    settings: Res<PlayerCameraSettings>,
+    time: Res<Time>,
+
+    is_grabbing_item: Option<Res<GrabbedItem>>
+) {
+    // HACK: we "know" zoom and move-while-grabbed use the same actions (new context!)
+    if is_grabbing_item.is_some() { return };
+
+    if let zoom_camera = zoom_camera.get(event.action).unwrap()
+    && zoom_camera.length() > 0. {
+        let q = ops::exp(-time.delta_secs());
+        **fov_delta = fov_delta.lerp(**fov_delta + zoom_camera.y, q).clamp(-90.0, 90.0);
+        *zoom_state = FovZoomState::Zooming;
+    } else {
+        if *zoom_state == FovZoomState::Zooming {
+            // No longer zooming, reset eventually.
+            *zoom_state = FovZoomState::AtZoom(settings.fov_delta_hold_time)
+        }
     }
 }
 
