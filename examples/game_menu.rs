@@ -274,6 +274,7 @@ impl MenuItemHandler for SimpleMenuActions {
                 }
                 SimpleMenuActions::PlayGame => {
                     // Do not modify current_level LevelIndex, etc. here, but in client.
+                    commands.set_state(LevelState::Advance);
                     start_game(commands.reborrow());
                 }
                 SimpleMenuActions::GameMenu => {
@@ -531,6 +532,7 @@ impl MenuItemHandler for EnumMenuActions {
         if let MenuActionMessage::Activate(_) = event
             && let EnumMenuActions::SelectStartLevelEnum = self
         {
+            commands.set_state(LevelState::Advance);
             start_game(commands.reborrow());
         }
         queue.apply(world);

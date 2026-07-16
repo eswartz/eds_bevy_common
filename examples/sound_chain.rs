@@ -1,6 +1,7 @@
 //! This is a demo program showing the integration of various "ebc" features,
 //! focusing on spawning a lot of sounds.
 use bevy::asset::AssetMetaCheck;
+use bevy::render::renderer::RenderDevice;
 use eds_bevy_common::*;
 use avian3d::PhysicsPlugins;
 use avian3d::prelude::Physics;
@@ -19,6 +20,7 @@ use bevy::winit::WinitSettings;
 use rand::RngExt;
 use rand::Rng;
 use strum::VariantArray;
+use std::sync::Arc;
 use std::time::Duration;
 
 #[cfg(target_arch = "wasm32")]
@@ -89,6 +91,7 @@ fn main() -> AppExit {
         .add_plugins(GrabbingPlugin)
         .insert_resource(HighlightingMode::Disabled)
 
+        .add_plugins(EffectsPlugin)
         .add_plugins(AudioCommonPlugin)
         .add_plugins(MidiSynthPlugin)
         .add_plugins(SynthPlugin)
@@ -118,10 +121,6 @@ fn main() -> AppExit {
             accelerate_scale: 3.0,
             .. PlayerInputSettings::for_space()
         })
-        .insert_resource(PlayerCameraSettings {
-            freecam: true,
-            ..default()
-        })
         .add_plugins(MyMenuPlugin)
         .init_resource::<LevelDifficulty>()
 
@@ -131,13 +130,14 @@ fn main() -> AppExit {
 
         .add_systems(Startup, (
             register_dummy_level,
+            initialize_audio,
+            setup_adapter,
         ))
+
         .add_systems(
             OnEnter(GameplayState::Playing),
             ensure_3d_camera,
         )
-
-        .add_systems(Startup, initialize_audio)
 
         .add_systems(Update,
             ensure_midi_synths.run_if(resource_exists::<CommonSoundFontAssets>)
@@ -189,6 +189,12 @@ fn main() -> AppExit {
     }
 
     app.run()
+}
+
+fn setup_adapter(device: Res<RenderDevice>) {
+    device.wgpu_device().on_uncaptured_error(Arc::new(|err| {
+        error!("{err}");
+    }));
 }
 
 fn is_trigger_pressed(
@@ -292,6 +298,7 @@ fn configure_world_camera(mut ent_commands: EntityCommands) {
             },
             PlayerCamera(CameraMode::FirstPerson),
             OurCamera::default(),
+            Msaa::Off,
         ),
 
         // Audio is from the perspective of the camera.
@@ -312,6 +319,7 @@ impl Plugin for MyMenuPlugin {
             .add_systems(OnEnter(OverlayState::GameMenu), on_enter_game_menu)
             .add_systems(OnEnter(OverlayState::OptionsMenu), on_enter_options_menu)
             .add_systems(OnEnter(OverlayState::AudioMenu), on_enter_audio_menu)
+            .add_systems(OnEnter(OverlayState::VideoMenu), on_enter_video_menu)
             .add_systems(OnEnter(OverlayState::ControlsMenu), on_enter_controls_menu);
     }
 }
@@ -322,6 +330,7 @@ pub(crate) enum SimpleMenuActions {
     GameMenu,
     OptionsMenu,
     AudioMenu,
+    VideoMenu,
     ControlsMenu,
     Quit,
     Back,
@@ -347,6 +356,7 @@ impl MenuItemHandler for SimpleMenuActions {
                 }
                 SimpleMenuActions::PlayGame => {
                     // Do not modify current_level LevelIndex, etc. here, but in client.
+                    commands.set_state(LevelState::Advance);
                     start_game(commands.reborrow());
                 }
                 SimpleMenuActions::GameMenu => {
@@ -357,6 +367,9 @@ impl MenuItemHandler for SimpleMenuActions {
                 }
                 SimpleMenuActions::AudioMenu => {
                     commands.insert_resource(GoIntoMenuRequest(OverlayState::AudioMenu));
+                }
+                SimpleMenuActions::VideoMenu => {
+                    commands.insert_resource(GoIntoMenuRequest(OverlayState::VideoMenu));
                 }
                 SimpleMenuActions::ControlsMenu => {
                     commands.insert_resource(GoIntoMenuRequest(OverlayState::ControlsMenu));
@@ -532,6 +545,7 @@ fn on_enter_options_menu(
         &history,
     )
     .add_item("Audio", (), SimpleMenuActions::AudioMenu)
+    .add_item("Video", (), SimpleMenuActions::VideoMenu)
     .add_item("Controls", (), SimpleMenuActions::ControlsMenu)
     .add_item("Back", (), SimpleMenuActions::Back)
     .finish(&mut history);
@@ -557,6 +571,7 @@ fn on_enter_escape_menu(
     )
     // (), SimpleMenuActions::ResumeGame)
     .add_item("Audio", (), SimpleMenuActions::AudioMenu)
+    .add_item("Video", (), SimpleMenuActions::VideoMenu)
     .add_item("Controls", (), SimpleMenuActions::ControlsMenu)
     .add_item("Stop", (), SimpleMenuActions::StopGame)
     .add_item(format!("Resume ({})", current_level.label), (), SimpleMenuActions::ResumeGame)
@@ -571,6 +586,7 @@ fn on_exit_escape_menu(mut pause: ResMut<PauseState>) {
 
 #[derive(Debug, Clone)]
 pub(crate) enum SliderMenuActions {
+    FovSlider,
     MoveSensitivityXSlider,
     MoveSensitivityYSlider,
     MoveSensitivityZSlider,
@@ -594,6 +610,7 @@ impl MenuItemHandler for EnumMenuActions {
         if let MenuActionMessage::Activate(_) = event
             && let EnumMenuActions::SelectStartLevelEnum = self
         {
+            commands.set_state(LevelState::Advance);
             start_game(commands.reborrow());
         }
         queue.apply(world);
@@ -866,6 +883,101 @@ fn on_enter_controls_menu(
         ),
         SliderMenuActions::TurnSensitivityZSlider,
     )
+    .add_item("Back", (), SimpleMenuActions::Back)
+    .finish(&mut history);
+}
+
+fn on_enter_video_menu(
+    font: Res<UiFont>,
+    program_state: Res<State<ProgramState>>,
+    mut commands: Commands,
+    mut history: ResMut<MenuItemSelectionHistory>,
+) {
+    let get_fov = commands.register_system(IntoSystem::into_system(
+        |In(entity): In<Entity>, s: Res<VideoSettings>, mut slider_q: Query<&mut MenuSlider>| {
+            slider_q.get_mut(entity).unwrap().current = Some(s.fov_degrees);
+        },
+    ));
+    let set_fov = commands.register_system(IntoSystem::into_system(
+        |In(v): In<f32>, mut s: ResMut<VideoSettings>| {
+            s.fov_degrees = v;
+        },
+    ));
+
+    macro_rules! make_res_enum_getter_setter {
+        ($getter:ident $setter:ident => $enum:ident $res:ident $field:tt) => {
+            let $getter = commands.register_system(IntoSystem::into_system(
+                |In(entity): In<Entity>, mut enum_q: Query<&mut MenuEnum>, res: Res<$res>| {
+                    enum_q.get_mut(entity).unwrap().current = Some(
+                        $enum::VARIANTS
+                            .iter()
+                            .position(|e| *e == res.$field)
+                            .unwrap(),
+                    );
+                },
+            ));
+            let $setter = commands.register_system(IntoSystem::into_system(
+                |In(v): In<usize>, mut res: ResMut<$res>| {
+                    res.$field = $enum::VARIANTS[v];
+                },
+            ));
+        };
+    }
+
+    // make_res_enum_getter_setter!(get_anti set_anti => Antialiasing VideoSettings antialiasing);
+    // make_res_enum_getter_setter!(get_tex_qual set_tex_qual => TextureQuality VideoSettings texture_quality);
+
+    MenuItemBuilder::new(
+        commands,
+        OverlayState::VideoMenu,
+        *program_state.get(),
+        font.0.clone(),
+        1.0,
+        &history,
+    )
+    .add_item(
+        "Field of View",
+        MenuSlider::new(
+            get_fov,
+            set_fov,
+            || Some(VideoSettings::default().fov_degrees),
+            |v| v,
+            |v| v.round(),
+            5.0f32..=120.0f32,
+            5.0,
+        ),
+        SliderMenuActions::FovSlider,
+    )
+    // .add_item(
+    //     "Antialiasing",
+    //     MenuEnum::new(
+    //         get_anti,
+    //         set_anti,
+    //         || Antialiasing::VARIANTS.len(),
+    //         |index| Antialiasing::VARIANTS[index].to_string(),
+    //     ),
+    //     EnumMenuActions::AntialiasingEnum,
+    // )
+    // .add_item(
+    //     "Mesh Quality",
+    //     MenuEnum::new(
+    //         get_mesh_qual,
+    //         set_mesh_qual,
+    //         || MeshQuality::VARIANTS.len(),
+    //         |index| MeshQuality::VARIANTS[index].to_string(),
+    //     ),
+    //     EnumMenuActions::MeshQualityEnum,
+    // )
+    // .add_item(
+    //     "Texture Quality",
+    //     MenuEnum::new(
+    //         get_tex_qual,
+    //         set_tex_qual,
+    //         || TextureQuality::VARIANTS.len(),
+    //         |index| TextureQuality::VARIANTS[index].to_string(),
+    //     ),
+    //     EnumMenuActions::TextureQualityEnum,
+    // )
     .add_item("Back", (), SimpleMenuActions::Back)
     .finish(&mut history);
 }
