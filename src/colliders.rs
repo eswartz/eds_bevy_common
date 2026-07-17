@@ -77,6 +77,7 @@ impl Default for LayerConfig {
 
 /// Marker that tells a system to generate and apply collision properties to a Mesh.
 #[derive(Component, Reflect, Default, Debug, Clone)]
+#[require(RigidBody::Static)]
 #[reflect(Component, Default)]
 #[type_path = "game"]
 pub struct EnsureCollider {
