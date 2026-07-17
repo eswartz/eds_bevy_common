@@ -20,7 +20,7 @@ pub(crate) fn handle_escape(
     program_state: Res<State<ProgramState>>,
     going_back: Option<Res<GoBackInMenuRequest>>,
     mut previous_menu: ResMut<PreviousMenuStack>,
-    mut keyboard_reader: MessageReader<KeyboardInput>,
+    mut key_codes: Res<ButtonInput<KeyCode>>,
     mut gamepad_reader: MessageReader<GamepadButtonChangedEvent>,
 ) {
     if going_back.is_some() {
@@ -34,11 +34,8 @@ pub(crate) fn handle_escape(
 
     let mut menu_detected = false;
 
-    for key_event in keyboard_reader.read() {
-        if key_event.state == ButtonState::Pressed && key_event.key_code == KeyCode::Escape {
-            menu_detected = true;
-            break;
-        }
+    if key_codes.just_pressed(KeyCode::Escape) {
+        menu_detected = true;
     }
 
     for button_event in gamepad_reader.read() {

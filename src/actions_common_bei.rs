@@ -21,7 +21,7 @@ impl Plugin for ActionPlugin {
             .add_input_context::<MenuContext>()
 
             // All the time!
-            .add_systems(Update, handle_escape)
+            .add_systems(FixedUpdate, handle_escape)
 
             .add_systems(Last, mask_and_unmask_inputs)
             .add_systems(Last, toggle_context.run_if(resource_changed::<State<OverlayState>>))
