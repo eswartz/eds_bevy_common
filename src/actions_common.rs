@@ -20,7 +20,7 @@ pub(crate) fn handle_escape(
     program_state: Res<State<ProgramState>>,
     going_back: Option<Res<GoBackInMenuRequest>>,
     mut previous_menu: ResMut<PreviousMenuStack>,
-    mut key_codes: Res<ButtonInput<KeyCode>>,
+    key_codes: Res<ButtonInput<KeyCode>>,
     mut gamepad_reader: MessageReader<GamepadButtonChangedEvent>,
 ) {
     if going_back.is_some() {
