@@ -591,8 +591,6 @@ fn move_grabbed_item(
             // in sync with the camera movement.
             *forces.linear_velocity_mut() = new_vel.adjust_precision();
             *forces.angular_velocity_mut() = default();
-            // *forces.
-            // forces.apply_linear_impulse(new_vel.adjust_precision() * 100.0);
         } else {
             // Non-physical, just move.
             item_xfrm.translation += new_vel * time.delta_secs().min(1.0);

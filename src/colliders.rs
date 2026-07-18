@@ -10,7 +10,7 @@ impl Plugin for CollidersPlugin {
         app
             .init_resource::<BaseVhacdParameters>()
             .add_systems(
-                PreUpdate,
+                FixedPreUpdate,
                 apply_colliders,
             )
         ;
@@ -85,10 +85,18 @@ pub struct EnsureCollider {
     pub layer_config: LayerConfig,
 }
 
+
+#[derive(Component, Reflect)]
+#[component(storage = "SparseSet")]
+#[reflect(Component)]
+#[type_path = "game"]
+struct EnsureColliderStop;
+
 fn apply_colliders(
     mut commands: Commands,
     ensure_collider_q: Query<(Entity, &EnsureCollider)>,
     changed_collider_q: Query<Entity, Changed<EnsureCollider>>,
+    stop_collider_q: Query<&EnsureColliderStop>,
     vhacd: Res<BaseVhacdParameters>,
     child_q: Query<&Children>,
     mesh_q: Query<&Mesh3d>,
@@ -106,6 +114,9 @@ fn apply_colliders(
         }
 
         for kid in child_q.iter_descendants(ent) {
+            if stop_collider_q.contains(kid) {
+                break
+            }
             if changed_collider_q.contains(kid) || vhacd.is_changed()
             {
                 apply_collider(
