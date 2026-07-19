@@ -112,9 +112,9 @@ avian3d = { version = "0.7.0", default-features = false, features = [
     "xpbd_joints", # optional
     "serialize",
 ] }
-bevy-inspector-egui = { version = "0.37", default-features = false, features = ["bevy", "bevy_gizmos", "egui_clipboard" ] } #, "documentation"] } #"highlight_changes"] }
-bevy_egui = { version = "0.40", features = ["render", "serde"] }
-egui = { version = "0.34", features = ["bytemuck"] }
+bevy-inspector-egui = { git = "ssh://git@github.com/eswartz/bevy-inspector-egui-fork.git", branch = "main", default-features = false, features = ["bevy", "bevy_gizmos", "egui_clipboard" ] } #, "documentation"] } #"highlight_changes"] }
+bevy_egui = { version = "0.41", features = ["render", "serde"] }
+egui = { version = "0.35", features = ["bytemuck"] }
 
 # # We must mention it and maintain the version because of the override below for wasm.
 # firewheel = { version = "0.10", optional = true }
@@ -187,7 +187,7 @@ console_log = "1"
 wasm_thread = "0.3"
 wasm-bindgen = { version = "0.2.120" }
 
-timestretch = "0.4.0"
+timestretch = "0.5.0"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 firewheel = {  git = "https://github.com/BillyDM/Firewheel", rev = "fdf9fbb", optional = true, default-features = false, features = [
