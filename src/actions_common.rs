@@ -1,7 +1,6 @@
 use crate::*;
 use bevy::input::ButtonState;
 use bevy::input::gamepad::GamepadButtonChangedEvent;
-use bevy::input::keyboard::KeyboardInput;
 use bevy::prelude::*;
 
 pub const GAMEPAD_BUTTON_MENU: GamepadButton = GamepadButton::Start;

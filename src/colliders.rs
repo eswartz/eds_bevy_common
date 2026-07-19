@@ -25,7 +25,19 @@ pub struct BaseVhacdParameters(pub VhacdParameters);
 
 impl Default for BaseVhacdParameters {
     fn default() -> Self {
-        Self(default())
+        Self(VhacdParameters {
+            resolution: 256,          // Higher = more detail (but slower)
+            concavity: 0.001,         // Lower = more parts but better fit
+            max_convex_hulls: 64,     // Maximum number of convex parts
+            plane_downsampling: 4,    // Precision of plane search
+            convex_hull_downsampling: 4, // Precision of convex hull generation
+            alpha: 0.05,              // Bias toward symmetrical splits
+            beta: 0.05,               // Bias toward revolution axis splits
+            convex_hull_approximation: true, // Approximate for speed
+            fill_mode: FillMode::FloodFill {
+                detect_cavities: false,
+            },
+        })
     }
 }
 
@@ -146,15 +158,17 @@ fn apply_collider(
                 )
             } else {
                 let vhacd = &vhacd.0;
-                let resolution = (vhacd.resolution as f32 * downscale).ceil() as u32;
-                let max_convex_hulls = (vhacd.max_convex_hulls as f32 * downscale).ceil() as u32;
+                let resolution = ((vhacd.resolution as f32 * downscale).ceil() as u32).max(16);
+                let max_convex_hulls = ((vhacd.max_convex_hulls as f32 * downscale).ceil() as u32).max(16);
+                let concavity = (vhacd.concavity as f32 / downscale / downscale).min(1.0);
                 ColliderConstructor::ConvexDecompositionFromMeshWithConfig(
                     // Apply base parameters but correct for some panic-inducing range errors.
                     VhacdParameters {
-                        resolution: resolution.max(16),
-                        plane_downsampling: vhacd.plane_downsampling.max(1),
-                        convex_hull_downsampling: vhacd.convex_hull_downsampling.max(1),
-                        max_convex_hulls: max_convex_hulls.max(16),
+                        concavity,
+                        resolution,
+                        // plane_downsampling: vhacd.plane_downsampling.max(1),
+                        // convex_hull_downsampling: vhacd.convex_hull_downsampling.max(1),
+                        max_convex_hulls,
                         ..vhacd.clone()
                     }
                 )
