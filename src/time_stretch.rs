@@ -32,16 +32,15 @@ impl AudioNode for TimeStretchNode {
         cx: ConstructProcessorContext,
     ) -> Result<impl AudioNodeProcessor, NodeError> {
         if (self.stretch_factor - 1.0).abs() < 0.01 {
-           return Ok(TimeStretchProcessor { processor: None, output_chunk: default() })
+           return Ok(TimeStretchProcessor { params: None, output_chunk: default() })
         }
 
         let params = StretchParams::new(self.stretch_factor as _)
-            .with_preset(EdmPreset::DjBeatmatch)
             .with_sample_rate(cx.stream_info.sample_rate.get() as _)
             .with_channels(1);
 
         Ok(TimeStretchProcessor {
-            processor: Some(StreamProcessor::new(params)),
+            params: Some(params),
             output_chunk: Vec::with_capacity(cx.stream_info.sample_rate.get() as usize),
         })
     }
@@ -50,7 +49,7 @@ impl AudioNode for TimeStretchNode {
 // You'll typically define a separate type for
 // your audio processor calculations.
 pub(crate) struct TimeStretchProcessor {
-    pub(crate) processor: Option<StreamProcessor>,
+    pub(crate) params: Option<StretchParams>,
     output_chunk: Vec<f32>,
 }
 
@@ -61,13 +60,12 @@ impl AudioNodeProcessor for TimeStretchProcessor {
             match patch {
                 TimeStretchNodePatch::StretchFactor(stretch_factor) => {
                     if (stretch_factor - 1.0).abs() < 0.01 {
-                        self.processor = None;
+                        self.params = None;
                     } else {
                         let params = StretchParams::new(stretch_factor as _)
-                            .with_preset(EdmPreset::DjBeatmatch)
                             .with_sample_rate(info.sample_rate.get() as _)
                             .with_channels(1);
-                        self.processor = Some(StreamProcessor::new(params));
+                        self.params = Some(params);
                     }
                 }
             }
@@ -88,8 +86,8 @@ impl AudioNodeProcessor for TimeStretchProcessor {
         }
 
         for (input, output) in inputs.iter().zip(outputs.iter_mut()) {
-            if let Some(processor) = self.processor.as_mut() {
-                match processor.process(input) {
+            if let Some(params) = self.params.as_ref() {
+                match timestretch::stretch(input, params) {
                     Err(e) => {
                         error!("stretch issue flush: {e}");
                         return ProcessStatus::ClearAllOutputs;
