@@ -7,8 +7,6 @@ pub use avian3d::prelude::Physics;
 pub use avian3d::prelude::PhysicsTime as _;
 pub use avian3d::dynamics::rigid_body::LinearVelocity;
 pub use avian3d::dynamics::solver::SolverDiagnostics;
-// use avian3d::{dynamics::rigid_body::{AngularVelocity, mass_properties::components::Mass}, parry::glamx::approx::AbsDiffEq, prelude::{Collisions, LinearVelocity}};
-
 pub use avian3d::dynamics::solver::SolverConfig;
 
 pub type Scalar = Real;
@@ -20,3 +18,4 @@ pub type Quaternion = bevy::math::Quat;
 // pub type AdjustPrecision = ToRealPrecision;
 pub use avian3d::math::ToF32Precision as _;
 pub use avian3d::math::ToRealPrecision as _;
+pub use avian3d::parry::glamx::approx::AbsDiffEq;
