@@ -2,15 +2,12 @@
 //!
 //! Items with the [crate::Selected] component can be grabbed.
 
-use avian3d::math::AdjustPrecision;
-use avian3d::math::Scalar;
 #[cfg(feature = "input_bei")]
 use bevy::color::palettes::tailwind;
 use bevy_mod_outline::ComputedOutline;
 use bevy_mod_outline::InheritOutline;
 use bevy_mod_outline::OutlineStencil;
 
-use avian3d::prelude::*;
 use bevy::prelude::*;
 
 use bevy_mod_outline::{OutlinePlugin, OutlineVolume};
@@ -18,6 +15,7 @@ use bevy_mod_outline::{OutlinePlugin, OutlineVolume};
 #[cfg(feature = "input_bei")]
 use bevy_enhanced_input::prelude::*;
 
+use crate::physics::*;
 use crate::GameLayer;
 #[cfg(feature = "input_bei")]
 use crate::Grabbed;
@@ -494,7 +492,7 @@ fn process_grab_commands(
 
                     if is_rigid && let Some(vel) = vel {
                         // ent_commands.try_remove::<Sleeping>();
-                        ent_commands.try_insert(LinearVelocity(vel.adjust_precision()));
+                        ent_commands.try_insert(LinearVelocity(*vel));
                     }
 
                     styler.remove_from(ent_commands);
@@ -589,7 +587,7 @@ fn move_grabbed_item(
             // Convert movement in world space to an effective impulse.
             // We directly set the linear velocity so it will move
             // in sync with the camera movement.
-            *forces.linear_velocity_mut() = new_vel.adjust_precision();
+            *forces.linear_velocity_mut() = new_vel;
             *forces.angular_velocity_mut() = default();
         } else {
             // Non-physical, just move.

@@ -3,8 +3,6 @@ use std::any::TypeId;
 use std::path::PathBuf;
 use std::time::Duration;
 
-use avian3d::prelude::PhysicsGizmos;
-use avian3d::prelude::PhysicsTime;
 use bevy::asset::AssetPath;
 use bevy::camera::visibility::RenderLayers;
 use bevy::color::palettes::tailwind;
@@ -20,6 +18,7 @@ use bevy::window::WindowFocused;
 use bevy_asset_loader::prelude::*;
 use bevy_seedling::prelude::MainBus;
 
+use crate::physics::*;
 use crate::*;
 
 use super::audio::UserVolume;

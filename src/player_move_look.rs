@@ -1,10 +1,9 @@
 /// Server-side player movement.
 use std::time::Duration;
 
-use avian3d::math::*;
-use avian3d::prelude::*;
 use bevy::prelude::*;
 
+use crate::physics::*;
 use crate::*;
 
 pub struct PlayerMovementPlugin;
@@ -529,7 +528,7 @@ fn check_player_environment_fps(
                 for manifold in pair.manifolds.iter() {
                     if manifold
                         .normal
-                        .dot(gxfrm.rotation().adjust_precision() * Vector::Y)
+                        .dot(gxfrm.rotation() * Vector::Y)
                         .abs()
                         <= 0.25
                     {
@@ -589,7 +588,7 @@ fn check_player_environment_fps(
                 // See if we're on a floor or close enough.
 
                 for manifold in coll.manifolds.iter() {
-                    let angle = manifold.normal.adjust_precision().angle_between(Vec3::NEG_Y);
+                    let angle = manifold.normal.angle_between(Vec3::NEG_Y);
                     let steepness = 1.0 - angle / std::f32::consts::PI;
                     if steepness > 0.25 {
                         // Ignore very steep floors, walls, etc.
@@ -737,7 +736,7 @@ pub fn process_player_input_movement_for_cheats(
             let delta = dir_velocity * overall_speed;
             if delta.length_squared() > 0.01 {
                 // Go!
-                vel = delta.adjust_precision();
+                vel = delta;
             } else {
                 // Slow down when not actively moving.
                 let decay = (-0.5 * time.delta_secs()
@@ -1036,7 +1035,7 @@ pub fn process_player_input_movement_for_space(
 
                 let delta = dir_velocity * overall_speed;
                 if delta.length_squared() > 0.01 {
-                    vel = delta.adjust_precision();
+                    vel = delta;
                 } else {
                     let decay = (-0.5 * time.delta_secs()
                         * input_settings.movement_decay_time_secs
@@ -1193,11 +1192,10 @@ fn sync_player_movement(
 
     for (mut xfrm, mut pos, mut vel, grav_opt) in player_q.iter_mut() {
         let orig = xfrm.translation;
-        let offs = vel.adjust_precision();
-        let offs = offs + grav_opt.map_or(1.0, |g| **g) * grav.0.adjust_precision();
+        let offs = vel.0;
+        let offs = offs + grav_opt.map_or(1.0, |g| **g) * grav.0;
         let xfrm_delta = offs * time.delta_secs();
         xfrm.translation += xfrm_delta;
-        // **pos = xfrm.translation.adjust_precision();
         pos.x = xfrm.translation.x;
         // pos.y = xfrm.translation.y;
         pos.y = orig.y;

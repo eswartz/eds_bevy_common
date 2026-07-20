@@ -1,10 +1,12 @@
-use avian3d::dynamics::rigid_body::LinearVelocity;
 use bevy::ecs::world::CommandQueue;
 use bevy::prelude::*;
-use avian3d::dynamics::solver::SolverDiagnostics;
+
 use std::collections::VecDeque;
 use std::time::Duration;
+
 use sysinfo;
+
+use crate::physics::*;
 
 use crate::Player;
 use crate::PlayerLook;

@@ -1,6 +1,6 @@
 use bevy::prelude::*;
-use avian3d::prelude::*;
 
+use crate::physics::*;
 use crate::*;
 
 pub struct CollidersPlugin;

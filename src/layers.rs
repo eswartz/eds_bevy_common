@@ -1,6 +1,6 @@
 /// Common render and physics layers.
-use avian3d::prelude::PhysicsLayer;
 use bevy::prelude::*;
+use crate::physics::*;
 
 #[derive(PhysicsLayer, Clone, Copy, Debug, Default)]
 #[derive(Reflect)]

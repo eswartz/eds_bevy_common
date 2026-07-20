@@ -1,8 +1,7 @@
-use avian3d::math::Scalar;
 use bevy::ecs::system::SystemParam;
 use bevy::ecs::system::lifetimeless::Read;
 use bevy::prelude::*;
-use avian3d::prelude::*;
+use crate::physics::*;
 use crate::*;
 
 /// Define a `SystemParam` for modifying collision hooks.

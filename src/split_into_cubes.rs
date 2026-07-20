@@ -1,13 +1,12 @@
-use avian3d::math::Vector;
 use bevy::asset::RenderAssetUsages;
 use bevy::camera::primitives::Aabb;
 use bevy::mesh::VertexAttributeValues;
 
 use std::ops::Mul;
 
-use avian3d::prelude::*;
 use bevy::prelude::*;
 
+use crate::physics::*;
 use crate::AssignDetailNormal;
 use crate::ConfigureBeforePlaying;
 use crate::LevelState;

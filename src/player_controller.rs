@@ -1,6 +1,4 @@
 use bevy::prelude::*;
-use avian3d::prelude::*;
-use avian3d::math::*;
 use bevy::window::CursorOptions;
 use bevy::window::PrimaryWindow;
 use bevy::window::WindowFocused;
@@ -11,6 +9,7 @@ use bevy_enhanced_input::prelude::*;
 #[cfg(feature = "input_bei")]
 use crate::actions_common_bei::actions::*;
 
+use crate::physics::*;
 use crate::*;
 
 /// This plugin monitors user input and sends PlayerInput events.

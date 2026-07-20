@@ -1,10 +1,9 @@
-use avian3d::math::Vector;
 use bevy::math::bounding::Aabb3d;
 use bevy::prelude::*;
-use avian3d::prelude::*;
 
 use super::states_sets::GameplayState;
 use super::states_sets::ProgramState;
+use crate::physics::*;
 
 pub struct WorldStatePlugin;
 

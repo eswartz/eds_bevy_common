@@ -1,6 +1,6 @@
 use crate::*;
+use crate::physics::*;
 
-use avian3d::prelude::{CollidingEntities, PhysicsSystems};
 use bevy::prelude::*;
 
 use bevy_tweening::lens::TransformPositionLens;

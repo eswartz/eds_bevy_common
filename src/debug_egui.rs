@@ -194,7 +194,8 @@ pub fn update_egui_inspector_ui(
 
     Window::new("Inspector")
         .default_pos(Pos2::new(5.0, 150.0))
-        .default_size(Vec2::new(250.0, 300.0))
+        .default_size(Vec2::new(300.0, 600.0))
+        .resizable(true)
         .show(egui_context.clone().get_mut(), |ui| {
 
             if let Some(selected) = new_selected_opt {
@@ -399,10 +400,6 @@ pub fn update_egui_settings_ui(
 
     egui::Window::new("Settings")
         .default_open(true)
-        .default_rect(egui::Rect::from_min_size(
-            ctx.content_rect().right_bottom() - egui::Vec2::new(400., 700.),
-            egui::Vec2::new(400., 600.))
-        )
         .resizable(true)
         .show(ctx, |ui| {
             egui::CollapsingHeader::new("UI")

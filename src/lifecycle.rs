@@ -1,12 +1,11 @@
 use std::time::Duration;
 
-use avian3d::prelude::Physics;
-use avian3d::prelude::PhysicsTime as _;
 use bevy::prelude::*;
 use bevy::winit::UpdateMode;
 use bevy::winit::WinitSettings;
 use bevy_tweening::TweenAnim;
 
+use crate::physics::*;
 use crate::*;
 
 use super::markers::DespawnAfter;

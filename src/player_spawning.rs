@@ -1,7 +1,6 @@
-use avian3d::math::*;
-use avian3d::prelude::*;
 use bevy::asset::uuid::Uuid;
 use bevy::prelude::*;
+use crate::physics::*;
 
 use crate::*;
 

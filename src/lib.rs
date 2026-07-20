@@ -1,5 +1,6 @@
 #![feature(iter_array_chunks)]
 
+pub mod physics;
 pub mod app;
 pub mod states_sets;
 pub mod conditions;
