@@ -14,8 +14,8 @@ use bevy_enhanced_input::prelude::*;
 ///
 /// Note: [`Complete`] only fires when the repeat limit is reached or when input is released
 /// immediately after being triggered. Otherwise, [`Cancel`] is fired when input is released.
-#[derive(Component, Debug, Clone)]
-#[cfg_attr(feature = "reflect", derive(Reflect), reflect(Clone, Component, Debug))]
+#[derive(Component, Debug, Clone, Reflect)]
+#[reflect(Clone, Component, Debug)]
 pub struct BetterPulse {
     /// Number of times the condition can be triggered (0 means no limit).
     pub trigger_limit: u32,
@@ -128,6 +128,7 @@ impl InputCondition for BetterPulse {
 
             // Where is the time scaling? *shrug*
             // Anyway, if the time is zero, that means either (1) multiple fires per tick or (2) clock is paused.
+            #[expect(deprecated)]
             let fire_time_elapsed = match self.time_kind {
                 TimeKind::Real => if time.real.elapsed().is_zero() { Duration::ZERO } else { fire_time_elapsed }
                 TimeKind::Auto |
