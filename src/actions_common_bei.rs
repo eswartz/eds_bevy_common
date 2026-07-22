@@ -20,6 +20,8 @@ impl Plugin for ActionPlugin {
             .add_input_context::<PlayerContext>()
             .add_input_context::<MenuContext>()
 
+            .add_input_condition::<BetterPulse>()
+
             // All the time!
             .add_systems(FixedUpdate, handle_escape)
 
@@ -393,7 +395,7 @@ pub fn assign_stock_menu_actions(
         include.clone(),
 
         Action::<actions::MoveUpDown>::new(),
-        Pulse::new(0.125).with_time_kind(TimeKind::Real).trigger_on_start(true),
+        BetterPulse::new(0.125),
         DeadZone::default(),
         ActionSettings {
             require_reset: true,
@@ -408,7 +410,7 @@ pub fn assign_stock_menu_actions(
         include.clone(),
 
         Action::<actions::MoveRightLeft>::new(),
-        Pulse::new(0.125).with_time_kind(TimeKind::Real).trigger_on_start(true),
+        BetterPulse::new(0.125),
         DeadZone::default(),
         ActionSettings {
             require_reset: true,

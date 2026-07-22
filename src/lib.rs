@@ -23,6 +23,8 @@ pub mod model_utils;
 
 #[cfg(feature = "input_bei")]
 pub mod actions_common_bei;
+#[cfg(feature = "input_bei")]
+pub mod bei_better_pulse;
 pub mod actions_common;
 pub mod audio;
 pub mod debug_egui;
@@ -74,6 +76,8 @@ pub mod surface_material;
 pub use base_dir::*;
 #[cfg(feature = "input_bei")]
 pub use actions_common_bei::*;
+#[cfg(feature = "input_bei")]
+pub use bei_better_pulse::*;
 pub use actions_common::*;
 pub use audio::*;
 pub use despawn_on_reset::*;

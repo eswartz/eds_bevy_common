@@ -830,7 +830,6 @@ fn on_focused_left_right(
 ) {
     if !overlay.is_menu() { return };
     let Some(entity) = focus.get() else { return };
-    if event.elapsed_secs < 0.0625 { return };
 
     let dir = event.value.signum() as i32;
     if slider_q.contains(entity) {
@@ -876,7 +875,6 @@ fn on_menu_down_up(
 ) {
     if !overlay.is_menu() { return };
     if focus.get().is_none() { return };
-    if event.elapsed_secs < 0.0625 { return };
 
     let dir = event.value.signum() as i32;
     // Move in menu?
