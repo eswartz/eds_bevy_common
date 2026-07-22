@@ -19,13 +19,12 @@ impl Plugin for MenuAudioPlugin {
 }
 
 fn spawn_menu_fx(mut commands: Commands,
-    fx: Option<Res<CommonFxAssets>>,
+    fx: If<Res<CommonFxAssets>>,
     mut reader: MessageReader<MenuActionMessage>,
 ) {
     if reader.is_empty() {
         return
     }
-    let Some(fx) = fx else { return };
 
     let any = reader.read().any(is_menu_action_click_bait);
 
@@ -38,13 +37,12 @@ fn spawn_menu_fx(mut commands: Commands,
 }
 
 fn handle_menu_actions(mut commands: Commands,
-    fx: Option<Res<CommonFxAssets>>,
+    fx: If<Res<CommonFxAssets>>,
     mut reader: MessageReader<MenuActionMessage>,
 ) {
     if reader.is_empty() {
         return
     }
-    let Some(fx) = fx else { return };
 
     // See if a menu action happened and play a click
     let any = reader.read().any(is_menu_action_click_bait);
@@ -62,7 +60,6 @@ fn is_menu_action_click_bait(event: &MenuActionMessage) -> bool {
     match event {
         MenuActionMessage::Activate(_) => false,
         MenuActionMessage::Navigate(_) |
-        // MenuActionMessage::Activate(_) |
         MenuActionMessage::Next(_) |
         MenuActionMessage::Reset(_) | MenuActionMessage::Previous(_) => true,
         MenuActionMessage::Slide(..) => false,
