@@ -97,6 +97,8 @@ pub fn spawn_fps_player(world: &mut World, user_id: Uuid, player_scale: Vec3, in
             MaxLinearSpeed(4096.0),
 
             GravityScale(if mode.is_some_and(|m| *m == PlayerMode::Fps) { 1.0 } else { 0.0 }),
+
+            TransformInterpolation,
         ),
     ))
     .id()
