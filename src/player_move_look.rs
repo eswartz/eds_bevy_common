@@ -12,7 +12,7 @@ impl Plugin for PlayerMovementPlugin {
     fn build(&self, app: &mut App) {
         app
             .add_systems(
-                FixedPostUpdate,
+                FixedPreUpdate,
                 (
                     clear_player_velocity.run_if(
                         window_changed_focus
@@ -43,7 +43,7 @@ impl Plugin for PlayerMovementPlugin {
                 .run_if(in_state(GameplayState::Playing))
             )
             .add_systems(
-                FixedPostUpdate,
+                FixedPreUpdate,
                 (
                     process_player_input_movement_for_cheats
                         .run_if(is_cheating_or_paused)
@@ -240,7 +240,8 @@ impl MovementState {
 #[type_path = "game"]
 pub struct PlayerMovement {
     /// Current velocity. (FIXME, not used)
-    pub velocity: f32,
+    // pub velocity: f32,
+    pub velocity: Vec3,
     /// Current velocity rampup.
     pub velocity_ramp: f32,
     /// Current state.
@@ -268,7 +269,8 @@ pub struct PlayerMovement {
 impl Default for PlayerMovement {
     fn default() -> Self {
         Self {
-            velocity: 0.0,
+            // velocity: 0.0,
+            velocity: default(),
             velocity_ramp: 0.0,
             state: MovementState::Falling,
             prev_state: MovementState::Falling,
@@ -680,7 +682,7 @@ fn check_player_environment_space(
             continue;
         }
 
-        if movement.velocity < 0.01 {
+        if movement.velocity.length() < 0.01 {
             // Lose speed gradually.
             vel.0 *= settings.air_scale as Scalar;
         }
@@ -799,6 +801,7 @@ pub fn process_player_input_movement_for_fps(
         let Ok((mut forces, mut movement, mut look, mut transform)) = res else { continue };
 
         let mut vel = forces.linear_velocity();
+        // let mut vel = forces.linear_velocity() + movement.velocity;
         let mut jump_impulse = Vector::ZERO;
 
         let mut instant_thrust = Vec3::ZERO;
@@ -950,7 +953,15 @@ pub fn process_player_input_movement_for_fps(
             -(input_settings.max_down_speed as Scalar), // i.e. air/fluid resistance
             input_settings.max_up_speed as Scalar,      // i.e. flying/jumping
         );
-        *forces.linear_velocity_mut() = Vector::new(clamped_vel_xz.x, clamped_y, clamped_vel_xz.y);
+
+        let clamped_vel = Vector::new(clamped_vel_xz.x, clamped_y, clamped_vel_xz.y);
+        let cur_vel = forces.linear_velocity();
+        if clamped_vel.length() > cur_vel.length() {
+            *forces.linear_velocity_mut() = (cur_vel + clamped_vel) / 2.0;
+        } else {
+            *forces.linear_velocity_mut() = clamped_vel;
+        }
+
         // Add this outside since it modifies the velocity and we don't want it to clamp Y.
         forces.apply_linear_impulse(jump_impulse);
 
