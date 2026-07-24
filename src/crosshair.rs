@@ -215,7 +215,6 @@ fn update_crosshair(
     }
 }
 
-
 /// This tracks the [CrosshairTargetable]s in view of a [WorldCamera]-oriented raycast.
 /// The module's systems perform a periodic scan in [FixedUpdate]
 /// which changes this value as the raycast hits change.
@@ -237,14 +236,16 @@ pub fn update_crosshair_targets(
     parent_q: Query<&ChildOf>,
     mut raycast: MeshRayCast,
     mut crosshair_targets: ResMut<CrosshairTargets>,
+    name_q: Query<&Name>,
 ) {
     let gxfrm = *camera_q;
     let ray = Ray3d::new(gxfrm.translation(), gxfrm.rotation() * Dir3::NEG_Z);
-    let filter = |ent: Entity| {
+
+    let targetable_of = |ent: Entity| -> Option<Entity> {
         let mut step = ent;
         loop {
             if targetable_q.contains(step) {
-                return true
+                return Some(step)
             }
             if let Ok(parent) = parent_q.get(step) {
                 step = parent.0
@@ -252,27 +253,38 @@ pub fn update_crosshair_targets(
                 break
             }
         }
-        false
+        None
     };
+
     let settings = MeshRayCastSettings::default()
         .with_visibility(RayCastVisibility::Any)    // allow for hidden controller ents
-        .never_early_exit()
-        .with_filter(&filter)
+        .with_early_exit_test(&|_| false)
         ;
     let hits = raycast.cast_ray(ray, &settings);
-    let targets = hits.iter().map(|(target, _)| *target).collect::<Vec<_>>();
+
+    let mut stopped = false;
+    let targets = hits
+        .iter()
+        // .map(|(target, _)| *target )
+        .map_while(|(target, _)|
+            targetable_of(*target)
+        )
+        .collect::<Vec<_>>();
+
     let target_opt = crosshair_targets.targets.get(crosshair_targets.index);
     let index = if let Some(old_target) = target_opt.cloned() {
         targets.iter().position(|t| *t == old_target)
     } else {
         None
     };
+
     let new_crosshair_targets = CrosshairTargets{ targets, index: index.unwrap_or(0) };
     crosshair_targets.set_if_neq(new_crosshair_targets);
 }
 
 /// Format a string reporting which items are currently visible
 /// in the crosshair, indicating the selected index.
+/// Returns None if there are no targets.
 pub fn report_crosshair_targets(
     crosshair_target: &CrosshairTargets,
     targets_q: &Query<Option<&Name>>,
