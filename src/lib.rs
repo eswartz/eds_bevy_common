@@ -12,7 +12,8 @@ pub mod product;
 pub mod levels;
 pub mod despawn_on_reset;
 
-pub mod player_spawning;
+pub mod player_types;
+pub mod player_environment;
 pub mod collision_hooks;
 
 pub mod deathbox;
@@ -103,7 +104,7 @@ pub use crosshair::*;
 pub use effects::*;
 pub use assets::*;
 pub use levels::*;
-pub use player_spawning::*;
+pub use player_types::*;
 pub use collision_hooks::*;
 pub use areas::*;
 pub use deathbox::*;

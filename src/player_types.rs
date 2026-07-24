@@ -1,11 +1,49 @@
+//! Types and functions related to the [`Player`] entity.
+//!
 use bevy::asset::uuid::Uuid;
 use bevy::prelude::*;
 use crate::physics::*;
-
 use crate::*;
 
 // This matches the eye height of a Quake-like player. A small figure.
 pub const QUAKE_SCALE: Vec3 = Vec3::new(0.5, 1.5, 0.3);
+
+
+/// Get the local position of the player's feet relative to the given player transform.
+pub fn player_feet(world_pos: Vec3, aabb: &ColliderAabb) -> Vec3 {
+    Vec3::new(
+        world_pos.x,
+        aabb.min.y,
+        world_pos.z,
+    )
+}
+
+/// Get the local position of the player's eyes relative to the given player transform.
+pub fn player_eyes(world_pos: Vec3, aabb: &ColliderAabb, look: &PlayerLook) -> Vec3 {
+    // let center = aabb.center().as_vec3();
+    // Eyes are in the middle of the head.
+    // let inside_head_pt = Vec3::new(center.x, aabb.max.y as f32 - 0.5, center.z);
+    // inside_head_pt
+    // // // Eyes are a little in front of the middle of the head,
+    // // // but not so far that it clips through walls we collide with.
+    // // inside_head_pt + transform.rotation * (Vec3::NEG_Z * 0.125)
+
+    Vec3::new(
+        world_pos.x,
+        aabb.max.y - 0.25 + look.crouch_y,
+        world_pos.z - 0.25,
+    )
+}
+
+/// Get the local position of the player's gun relative to the given player transform.
+///
+// A real gun would be halfway down the body length,
+// but since FPSes usually show the gun coming from chest height,
+// estimate based on that.
+pub fn player_gun(rotation: &Quat, aabb: &ColliderAabb, eyes: Vec3) -> Vec3 {
+    let dist = (aabb.half_size().y * 2.0) * 0.25;
+    (eyes + Vec3::new(0., -dist, 0.)) + rotation * Vec3::NEG_Z * 0.25
+}
 
 
 /// Spawn (or respawn) a player entity into the world.
