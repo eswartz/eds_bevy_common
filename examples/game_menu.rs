@@ -1,5 +1,6 @@
 //! This is a demo program showing the integration of various "ebc" features,
 //! focusing on a game menu.
+use eds_bevy_common::colliders::CollidersPlugin;
 use eds_bevy_common::*;
 
 use avian3d::PhysicsPlugins;
@@ -58,6 +59,7 @@ fn main() -> AppExit {
         .add_plugins(LightsPlugin)
         .add_plugins(LevelsPlugin)
         .add_plugins(DeathboxPlugin::default())
+        .add_plugins(CollidersPlugin)
 
         .add_plugins(CrosshairPlugin)
         .insert_resource(CrosshairMode::AimFromCenter)
@@ -76,8 +78,10 @@ fn main() -> AppExit {
         .add_plugins(PlayerMovementPlugin)
         .add_plugins(PlayerControllerPlugin)
 
-        // req'd by GuiPlugin
-        .insert_resource(UiFontPath(std::path::Path::new("fonts/Hack-Regular.ttf").to_path_buf()))
+        .insert_resource(GuiState {
+            show_stats: true,
+            ..default()
+        })
 
         // req'd by player plugins
         .insert_resource(OurUser(default()))
