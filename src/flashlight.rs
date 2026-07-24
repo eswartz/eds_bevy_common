@@ -54,7 +54,7 @@ pub struct FlashlightRotation(pub Vec3);
 
 impl Default for FlashlightOffset {
     fn default() -> Self {
-        Self(Vec3::new(0.5, 0.5, -0.5))
+        Self(Vec3::new(0.5, 0.5, 0.0))
     }
 }
 
