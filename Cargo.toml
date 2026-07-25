@@ -95,9 +95,9 @@ rand = { version = "0.10.0" }
 # Overridden above; need some record to override.
 gltf = { version = "*" }
 
-avian3d = { git = "https://github.com/Jondolf/avian.git", branch = "main", default-features = false, features = [
+# avian3d = { git = "https://github.com/Jondolf/avian.git", branch = "main", default-features = false, features = [
 # avian3d = { git = "https://github.com/Jondolf/avian.git", rev = "442af791512dfc369b41bd8718878df7e0ab26dd", default-features = false, features = [
-# avian3d = { version = "0.7.0", default-features = false, features = [
+avian3d = { version = "0.8.0-dev", default-features = false, features = [
 	"3d",
 	"collider-from-mesh",
     # "f32",
