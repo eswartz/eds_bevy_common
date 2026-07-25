@@ -236,7 +236,6 @@ pub fn update_crosshair_targets(
     parent_q: Query<&ChildOf>,
     mut raycast: MeshRayCast,
     mut crosshair_targets: ResMut<CrosshairTargets>,
-    name_q: Query<&Name>,
 ) {
     let gxfrm = *camera_q;
     let ray = Ray3d::new(gxfrm.translation(), gxfrm.rotation() * Dir3::NEG_Z);
@@ -262,13 +261,9 @@ pub fn update_crosshair_targets(
         ;
     let hits = raycast.cast_ray(ray, &settings);
 
-    let mut stopped = false;
     let targets = hits
         .iter()
-        // .map(|(target, _)| *target )
-        .map_while(|(target, _)|
-            targetable_of(*target)
-        )
+        .map_while(|(target, _)| targetable_of(*target))
         .collect::<Vec<_>>();
 
     let target_opt = crosshair_targets.targets.get(crosshair_targets.index);
