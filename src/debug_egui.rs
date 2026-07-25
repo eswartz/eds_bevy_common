@@ -1,7 +1,7 @@
 use std::{collections::BTreeMap, sync::LazyLock};
 
 use bevy::{ecs::{query::QueryFilter, system::SystemParam}, prelude::*};
-use bevy_egui::{EguiContext, EguiContexts, EguiGlobalSettings, EguiPlugin, EguiPrimaryContextPass, PrimaryEguiContext, input::{EguiWantsInput, egui_wants_any_keyboard_input, egui_wants_any_pointer_input}};
+use bevy_egui::{EguiContext, EguiContexts, EguiGlobalSettings, EguiPlugin, EguiPrimaryContextPass, PrimaryEguiContext, helpers::*, input::{EguiWantsInput, egui_wants_any_keyboard_input, egui_wants_any_pointer_input}};
 use bevy_inspector_egui::{DefaultInspectorConfigPlugin};
 use fuzzy_matcher::skim::SkimMatcherV2;
 
@@ -14,6 +14,29 @@ use super::gui::GuiState;
 /// this plugin will do so with default settings.
 ///
 pub struct DebugPlugin;
+
+#[derive(Resource, Reflect)]
+#[reflect(Resource, Default)]
+#[type_path = "game"]
+pub struct DebugLayout {
+    pub dev_settings_rect: Rect,
+    pub inspector_rect: Rect,
+}
+
+impl Default for DebugLayout {
+    fn default() -> Self {
+        Self {
+            inspector_rect: Rect::from_center_size(
+                Vec2::new(160.0, 400.0),
+                Vec2::new(300.0, 400.0),
+            ),
+            dev_settings_rect: Rect::from_center_size(
+                Vec2::new(1000.0, 160.0),
+                Vec2::new(300.0, 300.0),
+            ),
+        }
+    }
+}
 
 impl Plugin for DebugPlugin {
     fn build(&self, app: &mut App) {
@@ -30,6 +53,7 @@ impl Plugin for DebugPlugin {
 
         app
             .init_resource::<DebugEguiCamera>()
+            .init_resource::<DebugLayout>()
 
             .add_systems(
                 PreUpdate,
@@ -149,20 +173,26 @@ pub fn setup_egui_style(
 pub fn update_egui_settings_ui(
     mut contexts: EguiContexts,
     mut in_state: ResMut<GuiState>,
+    debug_layout: Res<DebugLayout>,
 ) {
-    use egui::*;
-
     let Ok(ctx) = contexts.ctx_mut() else { return };
 
     // Work on clones to avoid firing mutable change listeners
     // (as they will simply by virtue of passing their `mut`s into egui).
     let mut state = in_state.clone();
 
-    egui::Window::new("Dev Settings")
+    let rect = rect_into_egui_rect(debug_layout.dev_settings_rect);
+
+    let mut window = egui::Window::new("Dev Settings")
         .default_open(true)
-        .default_pos(Pos2::new(1000.0, 20.0))
-        .default_size(Vec2::new(300.0, 300.0))
-        .resizable(true)
+        .default_rect(rect)
+        .resizable(true);
+
+    if debug_layout.is_changed() {
+        window = window.current_pos(rect.min);
+    }
+
+    window
         .show(ctx, |ui| {
             egui::CollapsingHeader::new("UI")
                 .default_open(true)
@@ -200,8 +230,6 @@ pub fn update_egui_settings_ui(
     );
 
     in_state.set_if_neq(state);
-    // audio.audio_ctrl.set_if_neq(audio_ctrl);
-    // synth.set_if_neq(synth_ctrl);
 }
 
 /// egui filter
@@ -242,6 +270,18 @@ pub fn update_egui_inspector_ui(
         new
     };
 
+    let debug_layout = world.resource_ref::<DebugLayout>();
+    let rect = rect_into_egui_rect(debug_layout.inspector_rect);
+
+    let mut window = egui::Window::new("World Inspector")
+        .default_open(true)
+        .default_rect(rect)
+        .resizable(true);
+
+    if debug_layout.is_changed() {
+        window = window.current_pos(rect.min);
+    }
+
     // Find the current context using the world's querying.
     // We'll need to clone this to avoid double-borrow of `world` below.
     // (Don't use SystemState or World::with_scope here to avoid
@@ -250,12 +290,9 @@ pub fn update_egui_inspector_ui(
         .query_filtered::<&mut EguiContext, (With<Camera3d>, With<ViewerCamera>)>()
         .single_mut(world) else { return };
 
-    Window::new("World Inspector")
-        .default_pos(Pos2::new(5.0, 200.0))
-        .default_size(Vec2::new(300.0, 400.0))
-        .resizable(true)
-        .show(egui_context.clone().get_mut(), |ui| {
-
+    window.show(
+        egui_context.clone().get_mut(),
+        |ui| {
             if let Some(selected) = new_selected_opt {
                 // Set up selection filter if new.
 
