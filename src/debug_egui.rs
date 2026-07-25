@@ -160,20 +160,16 @@ pub fn update_egui_settings_ui(
 
     egui::Window::new("Dev Settings")
         .default_open(true)
-        .default_pos(Pos2::new(5.0, 300.0))
-        .default_size(Vec2::new(300.0, 600.0))
+        .default_pos(Pos2::new(1000.0, 20.0))
+        .default_size(Vec2::new(300.0, 300.0))
         .resizable(true)
         .show(ctx, |ui| {
             egui::CollapsingHeader::new("UI")
                 .default_open(true)
 
                 .show(ui, |ui| {
-                // ui.checkbox(&mut state.show_player_status, "Show Player Status")
-                //     .on_hover_text("Show first Player status (position/movement)");
                 ui.checkbox(&mut state.show_stats, "Always Show Stats")
                     .on_hover_text("Show stats overlay even during play.");
-                // ui.checkbox(&mut state.show_skybox, "Show Skybox")
-                //     .on_hover_text("Show skybox.");
                 ui.checkbox(&mut state.show_inspector, "Show World Inspector")
                     .on_hover_text("Show World Inspector.");
                 ui.add_enabled_ui(state.show_inspector, |ui|
@@ -255,8 +251,8 @@ pub fn update_egui_inspector_ui(
         .single_mut(world) else { return };
 
     Window::new("World Inspector")
-        .default_pos(Pos2::new(5.0, 750.0))
-        .default_size(Vec2::new(300.0, 600.0))
+        .default_pos(Pos2::new(5.0, 200.0))
+        .default_size(Vec2::new(300.0, 400.0))
         .resizable(true)
         .show(egui_context.clone().get_mut(), |ui| {
 

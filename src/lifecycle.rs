@@ -23,8 +23,9 @@ impl Plugin for LifecyclePlugin {
                 check_pause_request,
                 reset_pause_on_enter_launch_menu
                     .run_if(resource_changed::<State<ProgramState>>),
-                    check_despawners.run_if(not(is_paused)),
-                    check_configure_before_playing,
+                check_despawners
+                    .run_if(not(is_paused)),
+                check_configure_before_playing,
                 update_frame_rate_on_pause
                     .run_if(resource_changed::<PauseState>),
             ))

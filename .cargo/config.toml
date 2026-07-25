@@ -1,5 +1,5 @@
 [build]
-rustflags = ["-Z", "threads=8",
+rustflags = ["-Z", "threads=4",
  # (Nightly) Make the current crate share its generic instantiations
   "-Zshare-generics=y",
 ]
