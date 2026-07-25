@@ -160,7 +160,7 @@ pub fn update_egui_settings_ui(
 
     egui::Window::new("Dev Settings")
         .default_open(true)
-        .default_pos(Pos2::new(5.0, 150.0))
+        .default_pos(Pos2::new(5.0, 300.0))
         .default_size(Vec2::new(300.0, 600.0))
         .resizable(true)
         .show(ctx, |ui| {
