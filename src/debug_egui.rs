@@ -146,6 +146,68 @@ pub fn setup_egui_style(
     });
 }
 
+pub fn update_egui_settings_ui(
+    mut contexts: EguiContexts,
+    mut in_state: ResMut<GuiState>,
+) {
+    use egui::*;
+
+    let Ok(ctx) = contexts.ctx_mut() else { return };
+
+    // Work on clones to avoid firing mutable change listeners
+    // (as they will simply by virtue of passing their `mut`s into egui).
+    let mut state = in_state.clone();
+
+    egui::Window::new("Dev Settings")
+        .default_open(true)
+        .default_pos(Pos2::new(5.0, 150.0))
+        .default_size(Vec2::new(300.0, 600.0))
+        .resizable(true)
+        .show(ctx, |ui| {
+            egui::CollapsingHeader::new("UI")
+                .default_open(true)
+
+                .show(ui, |ui| {
+                // ui.checkbox(&mut state.show_player_status, "Show Player Status")
+                //     .on_hover_text("Show first Player status (position/movement)");
+                ui.checkbox(&mut state.show_stats, "Always Show Stats")
+                    .on_hover_text("Show stats overlay even during play.");
+                // ui.checkbox(&mut state.show_skybox, "Show Skybox")
+                //     .on_hover_text("Show skybox.");
+                ui.checkbox(&mut state.show_inspector, "Show World Inspector")
+                    .on_hover_text("Show World Inspector.");
+                ui.add_enabled_ui(state.show_inspector, |ui|
+                    ui.indent("inspector", |ui| {
+                        ui.checkbox(&mut state.show_inspector_always, "Always Show")
+                        .on_hover_text("Show even in gameplay.");
+                    })
+                );
+                ui.checkbox(&mut state.show_physics_gizmos, "Show Physics Gizmos")
+                    .on_hover_text("Show Avian physics gizmo overlays.");
+
+            });
+
+            // if let Ok((player, cheats)) = player_cheat_q.single_mut() {
+            //     let mut enabled = cheats.has(Cheats::Noclip);
+            //     if ui.checkbox(&mut enabled, "Enable Noclip")
+            //         .on_hover_text("Toggle collision bounds for player.")
+            //         .changed() {
+
+            //         commands.write_message(PlayerRequestMessage{
+            //             request: PlayerRequest::SetCheat(Cheats::Noclip, enabled),
+            //             player,
+            //         });
+            //     }
+            // }
+
+        }
+    );
+
+    in_state.set_if_neq(state);
+    // audio.audio_ctrl.set_if_neq(audio_ctrl);
+    // synth.set_if_neq(synth_ctrl);
+}
+
 /// egui filter
 pub(crate) const ENTITY_FILTER_ID: &str = "my_inspector_entity_filter";
 pub(crate) const SELECTED_ENTITY_FILTER_ID: &str = "selected_inspector_entity_filter";
@@ -192,8 +254,8 @@ pub fn update_egui_inspector_ui(
         .query_filtered::<&mut EguiContext, (With<Camera3d>, With<ViewerCamera>)>()
         .single_mut(world) else { return };
 
-    Window::new("Inspector")
-        .default_pos(Pos2::new(5.0, 150.0))
+    Window::new("World Inspector")
+        .default_pos(Pos2::new(5.0, 750.0))
         .default_size(Vec2::new(300.0, 600.0))
         .resizable(true)
         .show(egui_context.clone().get_mut(), |ui| {
@@ -388,59 +450,4 @@ pub fn debug_gui_wants_input(r: Option<Res<EguiWantsInput>>) -> bool {
     } else {
         false
     }
-}
-
-pub fn update_egui_settings_ui(
-    mut contexts: EguiContexts,
-    mut in_state: ResMut<GuiState>,
-) {
-    let Ok(ctx) = contexts.ctx_mut() else { return };
-    // Work on clones to avoid firing mutable change listeners
-    let mut state = in_state.clone();
-
-    egui::Window::new("Settings")
-        .default_open(true)
-        .resizable(true)
-        .show(ctx, |ui| {
-            egui::CollapsingHeader::new("UI")
-                .default_open(true)
-                .show(ui, |ui| {
-                // ui.checkbox(&mut state.show_player_status, "Show Player Status")
-                //     .on_hover_text("Show first Player status (position/movement)");
-                ui.checkbox(&mut state.show_stats, "Always Show Stats")
-                    .on_hover_text("Show stats overlay even during play.");
-                // ui.checkbox(&mut state.show_skybox, "Show Skybox")
-                //     .on_hover_text("Show skybox.");
-                ui.checkbox(&mut state.show_inspector, "Show Inspector")
-                    .on_hover_text("Show Bevy inspector.");
-                ui.add_enabled_ui(state.show_inspector, |ui|
-                    ui.indent("inspector", |ui| {
-                        ui.checkbox(&mut state.show_inspector_always, "Always Show Bevy Inspector")
-                        .on_hover_text("Always show Bevy inspector.");
-                    })
-                );
-                ui.checkbox(&mut state.show_physics_gizmos, "Show Physics Gizmos")
-                    .on_hover_text("Show Avian physics gizmo overlays.");
-
-            });
-
-            // if let Ok((player, cheats)) = player_cheat_q.single_mut() {
-            //     let mut enabled = cheats.has(Cheats::Noclip);
-            //     if ui.checkbox(&mut enabled, "Enable Noclip")
-            //         .on_hover_text("Toggle collision bounds for player.")
-            //         .changed() {
-
-            //         commands.write_message(PlayerRequestMessage{
-            //             request: PlayerRequest::SetCheat(Cheats::Noclip, enabled),
-            //             player,
-            //         });
-            //     }
-            // }
-
-        }
-    );
-
-    in_state.set_if_neq(state);
-    // audio.audio_ctrl.set_if_neq(audio_ctrl);
-    // synth.set_if_neq(synth_ctrl);
 }

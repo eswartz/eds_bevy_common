@@ -2,6 +2,7 @@
 //! focusing on spawning a lot of sounds.
 use bevy::asset::AssetMetaCheck;
 use bevy::render::renderer::RenderDevice;
+use eds_bevy_common::player_environment::PlayerEnvironmentPlugin;
 use eds_bevy_common::*;
 use avian3d::PhysicsPlugins;
 use avian3d::prelude::Physics;
@@ -103,6 +104,7 @@ fn main() -> AppExit {
         .add_plugins(PlayerClientPlugin)
         .add_plugins(PlayerMovementPlugin)
         .add_plugins(PlayerControllerPlugin)
+        .add_plugins(PlayerEnvironmentPlugin)
 
         // req'd by GuiPlugin
         .insert_resource(UiFontPath(std::path::Path::new("fonts/Hack-Regular.ttf").to_path_buf()))

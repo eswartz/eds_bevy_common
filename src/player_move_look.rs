@@ -18,9 +18,16 @@ impl Plugin for PlayerMovementPlugin {
                         window_changed_focus
                         .or_else(resource_changed::<PlayerMode>)
                     ),
-                    process_player_input_movement
-                        .run_if(not(is_cheating))
-                    ,
+                    process_player_input_movement,
+                    // process_player_input_movement_for_fps
+                    //     .run_if(not(is_cheating))
+                    //     .run_if(resource_exists_and_equals(PlayerMode::Fps))
+                    // ,
+                    // process_player_input_movement_for_space
+                    //     .run_if(not(is_cheating))
+                    //     .run_if(resource_exists_and_equals(PlayerMode::Space))
+                    // ,
+
                     process_player_input_look,
                     process_player_input_misc
                         .run_if(not(is_grabbing_item)),
@@ -614,7 +621,9 @@ pub fn process_player_input_movement(
                 // See if we could jump.
                 let jump_grounded = movement.state.is_on_surface()   // but not OnSlope
                     && movement.medium_friction >= MAX_JUMP_MEDIUM_FRICTION;
-                let extra_jump_allowed = vel.y >= 0. && input_settings.jump_max_count > 1 && movement.allowed_jumps > 0;
+                let extra_jump_allowed = vel.y >= 0.
+                    && input_settings.jump_max_count > 1
+                    && movement.allowed_jumps > 0;
 
                 // Do we want to?
                 if up_down > 0. {
@@ -717,15 +726,11 @@ pub fn process_player_input_movement(
             input_settings.max_up_speed as Scalar,      // i.e. flying/jumping
         );
 
+        // Don't try to interpolate here.
         let clamped_vel = Vector::new(clamped_vel_xz.x, clamped_y, clamped_vel_xz.y);
-        let cur_vel = forces.linear_velocity();
-        if clamped_vel.length() > cur_vel.length() {
-            *forces.linear_velocity_mut() = (cur_vel + clamped_vel) / 2.0;
-        } else {
-            *forces.linear_velocity_mut() = clamped_vel;
-        }
+        *forces.linear_velocity_mut() = clamped_vel;
 
-        // Add this outside since it modifies the velocity and we don't want it to clamp Y.
+        // Add this force's contribution afterwards.
         forces.apply_linear_impulse(jump_impulse);
 
         if movement.state.is_on_surface() {
@@ -922,6 +927,7 @@ pub fn process_player_input_movement_for_fps(
         } else {
             *forces.linear_velocity_mut() = clamped_vel;
         }
+        // *forces.linear_velocity_mut() = clamped_vel;
 
         // Add this outside since it modifies the velocity and we don't want it to clamp Y.
         forces.apply_linear_impulse(jump_impulse);

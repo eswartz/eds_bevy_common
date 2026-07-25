@@ -1,6 +1,7 @@
 //! This is a demo program showing the integration of various "ebc" features,
 //! focusing on a game menu.
 use eds_bevy_common::colliders::CollidersPlugin;
+use eds_bevy_common::player_environment::PlayerEnvironmentPlugin;
 use eds_bevy_common::*;
 
 use avian3d::PhysicsPlugins;
@@ -77,6 +78,7 @@ fn main() -> AppExit {
         .add_plugins(PlayerClientPlugin)
         .add_plugins(PlayerMovementPlugin)
         .add_plugins(PlayerControllerPlugin)
+        .add_plugins(PlayerEnvironmentPlugin)
 
         .insert_resource(GuiState {
             show_stats: true,

@@ -1,12 +1,9 @@
-use std::time::Duration;
-
 use bevy::prelude::*;
 
 use crate::physics::*;
 use crate::*;
 
 pub struct PlayerEnvironmentPlugin;
-
 
 impl Plugin for PlayerEnvironmentPlugin {
     fn build(&self, app: &mut App) {
@@ -30,7 +27,7 @@ impl Plugin for PlayerEnvironmentPlugin {
     }
 }
 
-fn check_player_environment_fps(
+pub(crate) fn check_player_environment_fps(
     mut player_q: Query<
         (
             Entity,
@@ -204,7 +201,7 @@ fn check_player_environment_fps(
     }
 }
 
-fn check_player_environment_space(
+pub(crate) fn check_player_environment_space(
     mut player_q: Query<
         (
             Entity,

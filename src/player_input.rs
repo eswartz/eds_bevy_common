@@ -1,3 +1,6 @@
+//! This defines the types representing "player input".
+//!
+//! This represents the state
 use std::f32::consts::TAU;
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -9,6 +12,49 @@ impl Plugin for PlayerInputPlugin {
         app
             .add_message::<PlayerInput>()
         ;
+    }
+}
+
+/// This represents logical inputs that control a [`Player`].
+/// That Entity is represented by in first element of each arm.
+#[derive(Message, Debug, Clone, Copy, Serialize, Deserialize, Reflect)]
+#[reflect(Clone)]
+#[type_path = "game"]
+pub enum PlayerInput {
+    /// Player movement (relative).
+    /// This is an uninterpreted result of all inputs (jump, move, strafe, etc).
+    /// The server determines what actual physical movement results.
+    Move(Entity, PlayerMove),
+    /// Player body turn (relative).
+    /// In an FPS context, normally only Y is edited. Mouselook goes into Look.
+    BodyTurn(Entity, PlayerBodyTurn),
+    /// Player head turn (relative).
+    /// This doesn't affect body orientation.
+    HeadTurn(Entity, PlayerHeadTurn),
+    /// About-face turn.
+    TurnAround(Entity),
+    /// Remove tilt.
+    Straighten(Entity),
+    /// Start holding fire button.
+    StartFire(Entity),
+    /// Stop holding fire button.
+    StopFire(Entity),
+    /// Toggle crouching.
+    ToggleCrouch(Entity),
+}
+
+impl PlayerInput {
+    pub fn player_entity(&self) -> Entity {
+        match self {
+            PlayerInput::Move(entity, _) |
+            PlayerInput::BodyTurn(entity, _) |
+            PlayerInput::HeadTurn(entity, _) |
+            PlayerInput::TurnAround(entity) |
+            PlayerInput::Straighten(entity) |
+            PlayerInput::StartFire(entity) |
+            PlayerInput::StopFire(entity) |
+            PlayerInput::ToggleCrouch(entity) => *entity
+        }
     }
 }
 
@@ -131,48 +177,5 @@ impl PlayerHeadTurn {
         let to = |f: FloatFixedOne8| -> f32 { Into::<f32>::into(f) * TAU };
         let (y, x, z) : (f32, f32, f32) = (to(self.1), to(self.0), to(self.2));
         Vec3::new(x, y, z)
-    }
-}
-
-/// Client input.
-/// The first entry is the Player entity who generated the event.
-#[derive(Message, Debug, Clone, Copy, Serialize, Deserialize, Reflect)]
-#[reflect(Clone)]
-#[type_path = "game"]
-pub enum PlayerInput {
-    /// Player movement (relative).
-    /// This is an uninterpreted result of all inputs (jump, move, strafe, etc).
-    /// The server determines what actual physical movement results.
-    Move(Entity, PlayerMove),
-    /// Player body turn (relative).
-    /// In an FPS context, normally only Y is edited. Mouselook goes into Look.
-    BodyTurn(Entity, PlayerBodyTurn),
-    /// Player head turn (relative).
-    /// This doesn't affect body orientation.
-    HeadTurn(Entity, PlayerHeadTurn),
-    /// About-face turn.
-    TurnAround(Entity),
-    /// Remove tilt.
-    Straighten(Entity),
-    /// Start holding fire button.
-    StartFire(Entity),
-    /// Stop holding fire button.
-    StopFire(Entity),
-    /// Toggle crouching.
-    ToggleCrouch(Entity),
-}
-
-impl PlayerInput {
-    pub fn player_entity(&self) -> Entity {
-        match self {
-            PlayerInput::Move(entity, _) |
-            PlayerInput::BodyTurn(entity, _) |
-            PlayerInput::HeadTurn(entity, _) |
-            PlayerInput::TurnAround(entity) |
-            PlayerInput::Straighten(entity) |
-            PlayerInput::StartFire(entity) |
-            PlayerInput::StopFire(entity) |
-            PlayerInput::ToggleCrouch(entity) => *entity
-        }
     }
 }
