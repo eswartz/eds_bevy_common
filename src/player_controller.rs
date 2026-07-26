@@ -115,9 +115,9 @@ fn collect_player_movement(
 ) {
     let mut instant_thrust = Vec3::ZERO;
 
-    let speed = if (*accel_events).contains(ActionEvents::START | ActionEvents::ONGOING) {
+    let speed = if !(*accel_events).is_empty() {
         Speed::Fast
-    } else if (*crouch_events).contains(ActionEvents::START | ActionEvents::ONGOING) {
+    } else if !(*crouch_events).is_empty() {
         Speed::Slow
     } else {
         Speed::Normal

@@ -92,8 +92,7 @@ fn main() -> AppExit {
         // .insert_resource(PlayerMode::Space)
         // .insert_resource(PlayerInputSettings::for_space())
         .insert_resource(PlayerInputSettings {
-            max_xz_speed: 64,
-            accelerate_scale: 2.0,
+            max_xz_speed: 64.0,
             .. PlayerInputSettings::for_fps()
         })
 

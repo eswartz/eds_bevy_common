@@ -119,8 +119,8 @@ fn main() -> AppExit {
         // .insert_resource(PlayerInputSettings::for_fps())
         .insert_resource(PlayerMode::Space)
         .insert_resource(PlayerInputSettings {
-            max_xz_speed: 128,
-            accelerate_scale: 3.0,
+            max_xz_speed: 128.0,
+            accelerate_scale: 2.0,
             .. PlayerInputSettings::for_space()
         })
         .add_plugins(MyMenuPlugin)
