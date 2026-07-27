@@ -1,61 +1,52 @@
 /// Server-side player movement.
 use std::time::Duration;
 
+use bevy::ecs::system::{SystemParam, lifetimeless};
+use bevy::ecs::system::lifetimeless::Write;
 use bevy::prelude::*;
 
-use crate::physics::*;
-use crate::*;
+use crate::prelude::*;
 
 pub struct PlayerMovementPlugin;
 
 impl Plugin for PlayerMovementPlugin {
     fn build(&self, app: &mut App) {
-        app
-            .add_systems(
-                FixedPreUpdate,
-                (
-                    clear_player_velocity.run_if(
-                        window_changed_focus
-                        .or_else(resource_changed::<PlayerMode>)
-                    ),
-                    process_player_input_movement,
-                    // process_player_input_movement_for_fps
-                    //     .run_if(not(is_cheating))
-                    //     .run_if(resource_exists_and_equals(PlayerMode::Fps))
-                    // ,
-                    // process_player_input_movement_for_space
-                    //     .run_if(not(is_cheating))
-                    //     .run_if(resource_exists_and_equals(PlayerMode::Space))
-                    // ,
-
-                    process_player_input_look,
-                    process_player_input_misc
-                        .run_if(not(is_grabbing_item)),
-                    sync_player_movement,
-                ).chain()
+        app.add_systems(
+            FixedPreUpdate,
+            (
+                clear_player_velocity
+                    .run_if(window_changed_focus.or_else(resource_changed::<PlayerMode>)),
+                process_player_input_movement,
+                // process_player_input_movement_for_fps
+                //     .run_if(not(is_cheating))
+                //     .run_if(resource_exists_and_equals(PlayerMode::Fps))
+                // ,
+                // process_player_input_movement_for_space
+                //     .run_if(not(is_cheating))
+                //     .run_if(resource_exists_and_equals(PlayerMode::Space))
+                // ,
+                process_player_input_look,
+                process_player_input_misc.run_if(not(is_grabbing_item)),
+                sync_player_movement,
+            )
+                .chain()
                 .before(TransformSystems::Propagate)
                 .after(PhysicsSystems::Writeback)
                 .run_if(not(is_paused))
-                .run_if(in_state(GameplayState::Playing))
-            )
-            .add_systems(
-                FixedPreUpdate,
-                (
-                    process_player_input_movement_for_cheats
-                        .run_if(is_cheating_or_paused)
-                    ,
-                ).chain()
+                .run_if(in_state(GameplayState::Playing)),
+        )
+        .add_systems(
+            FixedPreUpdate,
+            (process_player_input_movement_for_cheats.run_if(is_cheating_or_paused),)
+                .chain()
                 .before(TransformSystems::Propagate)
                 .after(PhysicsSystems::Writeback)
-                .run_if(in_state(GameplayState::Playing))
-            )
-        ;
+                .run_if(in_state(GameplayState::Playing)),
+        );
     }
 }
 
-fn is_cheating_or_paused(
-    physics_paused: Res<PhysicsPaused>,
-) -> bool {
+fn is_cheating_or_paused(physics_paused: Res<PhysicsPaused>) -> bool {
     is_cheating() || **physics_paused
 }
 
@@ -211,9 +202,7 @@ impl MovementState {
     pub fn is_moving(&self) -> bool {
         matches!(
             *self,
-                MovementState::Walking
-                | MovementState::Running
-                | MovementState::OnSlope
+            MovementState::Walking | MovementState::Running | MovementState::OnSlope
         )
     }
 
@@ -300,12 +289,7 @@ impl PlayerMovement {
         self.turn_curve = Some(EasingCurve::new(from_rot, to_rot, EaseFunction::CubicInOut));
     }
 
-    pub fn apply_turn(
-        &mut self,
-        dt: f32,
-        rot_delta: Vec3,
-        transform: &mut Transform,
-    ) -> bool {
+    pub fn apply_turn(&mut self, dt: f32, rot_delta: Vec3, transform: &mut Transform) -> bool {
         if let Some(turn_curve) = &mut self.turn_curve {
             // Scripted case.
             if rot_delta != Vec3::ZERO {
@@ -461,28 +445,74 @@ pub fn clear_player_velocity(mut player_q: Query<&mut LinearVelocity, With<Playe
     }
 }
 
-pub fn process_player_input_movement(
-    mut player_q: Query<
+#[derive(SystemParam)]
+pub struct PlayerInputParams<'w, 's> {
+    // player_q: Query<'w, 's, Read<PlayerMovement>, With<Player>>,
+    // projectile_q: Query<'w, 's, (), With<Projectile>>,
+    // parent_q: Query<'w, 's, Read<ChildOf>>,
+
+    pub player_q: Query<'w, 's,
         (
             Forces,
-            &mut PlayerMovement,
-            &mut PlayerLook,
-            &mut Transform,
+            lifetimeless::Write<PlayerMovement>,
+            lifetimeless::Write<PlayerLook>,
+            lifetimeless::Write<Transform>,
         ),
         With<Player>,
     >,
+
+    pub time: Res<'w, Time>,
+    pub input_settings: Res<'w, PlayerInputSettings>,
+    // pub forces: Query<'w, 's, Forces>,
+    // pub movement: Query<'w, 's, &'static mut PlayerMovement>,
+    // pub look: Query<'w, 's, &'static mut PlayerLook>,
+    // pub transform: Query<'w, 's, &'static mut Transform>,
+}
+
+/// Implement to
+pub trait PlayerInputHandler: Send + Sync + 'static {
+    fn handle(&mut self,
+        entity: Entity,
+        event: &PlayerInput,
+        params: &PlayerInputParams<'_, '_>,
+    ) -> bool;
+}
+
+#[derive(Resource)]
+pub struct PlayerInputHandlers {
+    pub common: Vec<Box<dyn PlayerInputHandler>>,
+    pub fps: Vec<Box<dyn PlayerInputHandler>>,
+    pub space: Vec<Box<dyn PlayerInputHandler>>,
+    pub scripted: Vec<Box<dyn PlayerInputHandler>>,
+}
+
+
+pub fn process_player_input_movement(
+    mut params: PlayerInputParams,
+    // input_settings: Res<PlayerInputSettings>,
+    // handlers: Res<PlayerInputHandlers>,
     mut inputs: MessageReader<PlayerInput>,
-    time: Res<Time>,
     mode: Option<Res<PlayerMode>>,
-    input_settings: Res<PlayerInputSettings>,
 ) {
     let player_mode = mode.map_or(PlayerMode::Fps, |mode| *mode);
 
-    let dt = time.delta_secs();
+    let dt = params.time.delta_secs();
     for input in inputs.read() {
-        let res = player_q.get_mut(input.player_entity());
+        let player_entity = input.player_entity();
+        let res = params.player_q.get_mut(player_entity);
 
-        let Ok((mut forces, mut movement, mut look, mut transform)) = res else { continue };
+        let Ok((mut forces, mut movement, mut look, mut transform)) = res else {
+            continue
+        };
+        // let Ok(mut forces) = params.forces.get_mut(player_entity) else {
+        //     continue
+        // };
+
+        // for mut handler in &mut handlers.common {
+        //     handler.handle(player_entity, input, &*input_settings);
+        // }
+
+        let input_settings = &*params.input_settings;
 
         let mut vel = forces.linear_velocity();
         // let mut vel = forces.linear_velocity() + movement.velocity;
@@ -497,9 +527,11 @@ pub fn process_player_input_movement(
             }
 
             PlayerInput::Move(_, input) => {
-                instant_thrust.x = Into::<f32>::into(input.right_left) * input_settings.move_scale.x;
+                instant_thrust.x =
+                    Into::<f32>::into(input.right_left) * input_settings.move_scale.x;
                 instant_thrust.y = Into::<f32>::into(input.up_down) * input_settings.move_scale.y;
-                instant_thrust.z = Into::<f32>::into(input.forward_back) * input_settings.move_scale.z;
+                instant_thrust.z =
+                    Into::<f32>::into(input.forward_back) * input_settings.move_scale.z;
 
                 // Extract up/down.
                 let mut up_down = instant_thrust.y;
@@ -535,9 +567,8 @@ pub fn process_player_input_movement(
                 // See if we could jump.
                 let jump_grounded = movement.state.is_on_surface()   // but not OnSlope
                     && movement.medium_friction >= MAX_JUMP_MEDIUM_FRICTION;
-                let extra_jump_allowed = vel.y >= 0.
-                    && input_settings.jump_max_count > 1
-                    && movement.allowed_jumps > 0;
+                let extra_jump_allowed =
+                    vel.y >= 0. && input_settings.jump_max_count > 1 && movement.allowed_jumps > 0;
 
                 // Do we want to?
                 if up_down > 0. {
@@ -593,7 +624,7 @@ pub fn process_player_input_movement(
                 } else {
                     // Apply friction while touching surface.
                     if movement.state.is_on_surface() {
-                        let decay = (-0.5 * time.delta_secs()
+                        let decay = (-0.5 * dt
                             / input_settings.movement_decay_time_secs
                             / move_scale)
                             .exp() as Scalar;
@@ -603,13 +634,13 @@ pub fn process_player_input_movement(
                 }
             }
 
-            PlayerInput::HeadTurn(..) |
-            PlayerInput::BodyTurn(..) |
-            PlayerInput::TurnAround(..) |
-            PlayerInput::Straighten(_) |
-            PlayerInput::ToggleCrouch(..) |
-            PlayerInput::StartFire(_) |
-            PlayerInput::StopFire(_) => {
+            PlayerInput::HeadTurn(..)
+            | PlayerInput::BodyTurn(..)
+            | PlayerInput::TurnAround(..)
+            | PlayerInput::Straighten(_)
+            | PlayerInput::ToggleCrouch(..)
+            | PlayerInput::StartFire(_)
+            | PlayerInput::StopFire(_) => {
                 // Ignore.
             }
         }
@@ -660,17 +691,8 @@ pub fn process_player_input_movement(
     }
 }
 
-
 pub fn process_player_input_movement_for_cheats(
-    mut player_q: Query<
-        (
-            Forces,
-            &mut PlayerMovement,
-            &PlayerLook,
-            &mut Transform,
-        ),
-        With<Player>,
-    >,
+    mut player_q: Query<(Forces, &mut PlayerMovement, &PlayerLook, &mut Transform), With<Player>>,
     mut inputs: MessageReader<PlayerInput>,
     time: Res<Time>,
     input_settings: Res<PlayerInputSettings>,
@@ -678,7 +700,9 @@ pub fn process_player_input_movement_for_cheats(
     for input in inputs.read() {
         let res = player_q.get_mut(input.player_entity());
 
-        let Ok((mut forces, mut movement, look, mut transform)) = res else { continue };
+        let Ok((mut forces, mut movement, look, mut transform)) = res else {
+            continue;
+        };
 
         let mut vel = forces.linear_velocity();
 
@@ -729,7 +753,9 @@ pub fn process_player_input_movement_for_cheats(
             vel.clamp_length_max(input_settings.max_xz_speed as Scalar)
         };
 
-        if true /* !**physics_paused */ {
+        if true
+        /* !**physics_paused */
+        {
             *forces.linear_velocity_mut() = clamped_vel;
         } else {
             transform.translation += clamped_vel * time.delta_secs();
@@ -737,15 +763,27 @@ pub fn process_player_input_movement_for_cheats(
     }
 }
 
+impl PlayerInputHandlers {
+    pub fn new() -> Self {
+        Self {
+            common: vec![
+
+            ],
+            fps: vec![
+
+            ],
+            space: vec![
+
+            ],
+            scripted: vec![
+
+            ],
+        }
+    }
+}
+
 pub fn process_player_input_look(
-    mut player_q: Query<
-        (
-            &mut PlayerMovement,
-            &mut PlayerLook,
-            &mut Transform,
-        ),
-        With<Player>,
-    >,
+    mut player_q: Query<(&mut PlayerMovement, &mut PlayerLook, &mut Transform), With<Player>>,
     mut inputs: MessageReader<PlayerInput>,
     time: Res<Time>,
     settings: Res<PlayerInputSettings>,
@@ -754,7 +792,9 @@ pub fn process_player_input_look(
     for input in inputs.read() {
         let res = player_q.get_mut(input.player_entity());
 
-        let Ok((mut movement, mut look, mut transform)) = res else { continue };
+        let Ok((mut movement, mut look, mut transform)) = res else {
+            continue;
+        };
 
         match input {
             PlayerInput::HeadTurn(_, turn) => {
@@ -765,20 +805,13 @@ pub fn process_player_input_look(
                 let euler = turn.get_euler() * settings.turn_scale;
                 movement.apply_turn(dt, euler, &mut transform);
             }
-            _ => ()
+            _ => (),
         }
     }
 }
 
 pub fn process_player_input_misc(
-    mut player_q: Query<
-        (
-            &mut PlayerMovement,
-            &mut PlayerLook,
-            &Transform,
-        ),
-        With<Player>,
-    >,
+    mut player_q: Query<(&mut PlayerMovement, &mut PlayerLook, &Transform), With<Player>>,
     mut inputs: MessageReader<PlayerInput>,
     settings: Res<PlayerInputSettings>,
     mut next_fire_time: Local<Option<Duration>>,
@@ -786,7 +819,9 @@ pub fn process_player_input_misc(
     for input in inputs.read() {
         let res = player_q.get_mut(input.player_entity());
 
-        let Ok((mut movement, mut look, transform)) = res else { continue };
+        let Ok((mut movement, mut look, transform)) = res else {
+            continue;
+        };
 
         match input {
             PlayerInput::TurnAround(_player) => {
@@ -850,7 +885,7 @@ fn sync_player_movement(
     physics_paused: Res<PhysicsPaused>,
 ) {
     if !**physics_paused {
-        return
+        return;
     }
 
     for (mut xfrm, mut pos, mut vel, grav_opt) in player_q.iter_mut() {

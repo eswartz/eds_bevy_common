@@ -16,30 +16,31 @@ use bevy_mod_outline::{OutlinePlugin, OutlineVolume};
 use bevy_enhanced_input::prelude::*;
 
 use crate::physics::*;
-use crate::GameLayer;
+
+use crate::prelude::GameLayer;
 #[cfg(feature = "input_bei")]
-use crate::Grabbed;
+use crate::prelude::Grabbed;
 #[cfg(feature = "input_bei")]
-use crate::Highlighted;
+use crate::prelude::Highlighted;
 #[cfg(feature = "highlighting")]
-use crate::HighlightingMode;
-use crate::PhysicsPaused;
-use crate::PlayerContext;
+use crate::prelude::HighlightingMode;
+use crate::prelude::PhysicsPaused;
+use crate::prelude::PlayerContext;
 #[cfg(feature = "input_bei")]
-use crate::ProgramState;
+use crate::prelude::ProgramState;
 #[cfg(feature = "input_bei")]
-use crate::WorldCamera;
+use crate::prelude::WorldCamera;
 #[cfg(feature = "input_bei")]
-use crate::actions;
+use crate::prelude::actions;
 #[cfg(feature = "input_bei")]
-use crate::debug_gui_wants_direct_input;
-use crate::debug_gui_wants_input;
+use crate::prelude::debug_gui_wants_direct_input;
+use crate::prelude::debug_gui_wants_input;
 #[cfg(feature = "input_bei")]
-use crate::is_in_menu;
+use crate::prelude::is_in_menu;
 #[cfg(feature = "input_bei")]
-use crate::is_level_active;
+use crate::prelude::is_level_active;
 #[cfg(feature = "input_bei")]
-use crate::is_paused;
+use crate::prelude::is_paused;
 
 pub struct GrabbingPlugin;
 

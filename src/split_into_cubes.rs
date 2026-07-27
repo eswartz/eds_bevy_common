@@ -7,9 +7,9 @@ use std::ops::Mul;
 use bevy::prelude::*;
 
 use crate::physics::*;
-use crate::AssignDetailNormal;
-use crate::ConfigureBeforePlaying;
-use crate::LevelState;
+use crate::prelude::AssignDetailNormal;
+use crate::prelude::ConfigureBeforePlaying;
+use crate::prelude::LevelState;
 
 pub struct SplitIntoCubesPlugin;
 

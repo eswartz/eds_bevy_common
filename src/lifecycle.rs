@@ -6,7 +6,7 @@ use bevy::winit::WinitSettings;
 use bevy_tweening::TweenAnim;
 
 use crate::physics::*;
-use crate::*;
+use crate::prelude::*;
 
 use super::markers::DespawnAfter;
 

@@ -13,7 +13,7 @@ use bevy_enhanced_input::prelude::*;
 use crate::actions_common_bei::actions::*;
 
 use crate::player_client::OurPlayer;
-use crate::*;
+use crate::prelude::*;
 
 pub struct PlayerCameraPlugin;
 

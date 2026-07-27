@@ -5,7 +5,7 @@ use bevy_egui::{EguiContext, EguiContexts, EguiGlobalSettings, EguiPlugin, EguiP
 use bevy_inspector_egui::{DefaultInspectorConfigPlugin};
 use fuzzy_matcher::skim::SkimMatcherV2;
 
-use crate::*;
+use crate::prelude::*;
 
 use super::gui::GuiState;
 

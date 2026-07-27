@@ -15,9 +15,9 @@ use bevy::pbr::ScreenSpaceAmbientOcclusion;
 use bevy::pbr::ScreenSpaceAmbientOcclusionQualityLevel;
 use bevy::pbr::ScreenSpaceTransmissionQuality;
 
-use crate::GameplayState;
-use crate::LevelState;
-use crate::WorldCamera;
+use crate::prelude::GameplayState;
+use crate::prelude::LevelState;
+use crate::prelude::WorldCamera;
 
 pub struct VideoPlugin;
 

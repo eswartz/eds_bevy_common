@@ -1,4 +1,3 @@
-use crate::*;
 use bevy::input::mouse::MouseScrollUnit;
 use bevy::prelude::*;
 use bevy::window::CursorOptions;
@@ -6,6 +5,8 @@ use bevy::window::PrimaryWindow;
 use bevy::window::WindowMode;
 use bevy_enhanced_input::prelude::*;
 use bevy_seedling::prelude::MainBus;
+
+use crate::prelude::*;
 
 pub const MOD_CTRL_COMMAND: ModKeys = if cfg!(target_os = "macos") {
     ModKeys::SUPER

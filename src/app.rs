@@ -5,7 +5,7 @@ use bevy::prelude::*;
 use bevy_asset_loader::prelude::*;
 
 use crate::despawn_on_reset::DespawnOnResetPlugin;
-use crate::*;
+use crate::prelude::*;
 
 /// This provides common app-level handling.
 /// It registers the main states used in this crate

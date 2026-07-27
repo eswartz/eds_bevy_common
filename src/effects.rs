@@ -2,7 +2,7 @@
 use bevy::prelude::*;
 use bevy_tweening::Lens;
 
-use crate::WorldCamera;
+use crate::prelude::WorldCamera;
 
 /// Various simple ad-hoc effects spawned by
 /// components defined in this module.

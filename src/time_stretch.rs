@@ -19,8 +19,8 @@ impl AudioNode for TimeStretchNode {
         Ok(AudioNodeInfo::new()
             .debug_name("Timeshift")
             .channel_config(ChannelConfig {
-                num_inputs: 2.into(),
-                num_outputs: 2.into(),
+                num_inputs: 1.into(),
+                num_outputs: 1.into(),
             })
         )
 
@@ -31,7 +31,7 @@ impl AudioNode for TimeStretchNode {
         _config: &Self::Configuration,
         cx: ConstructProcessorContext,
     ) -> Result<impl AudioNodeProcessor, NodeError> {
-        if (self.stretch_factor - 1.0).abs() < 0.01 {
+        if (self.stretch_factor - 1.0).abs() < 0.0101 {
            return Ok(TimeStretchProcessor { params: None, output_chunk: default() })
         }
 
@@ -87,7 +87,9 @@ impl AudioNodeProcessor for TimeStretchProcessor {
 
         for (input, output) in inputs.iter().zip(outputs.iter_mut()) {
             if let Some(params) = self.params.as_ref() {
+                // One-shot stretching.
                 match timestretch::stretch(input, params) {
+                // match timestretch::stretch_to_bpm(input, 120.0, (120.0 * params.stretch_ratio), params) {
                     Err(e) => {
                         error!("stretch issue flush: {e}");
                         return ProcessStatus::ClearAllOutputs;

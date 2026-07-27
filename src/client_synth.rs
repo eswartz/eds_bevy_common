@@ -10,7 +10,7 @@ use bevy::ecs::entity::EntityHashSet;
 use bevy::prelude::*;
 use bevy_asset_loader::prelude::*;
 
-use crate::*;
+use crate::prelude::*;
 
 use crate::midi_synth::synth::*;
 

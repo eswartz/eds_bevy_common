@@ -19,7 +19,7 @@ use rand::seq::IndexedRandom as _;
 #[cfg(feature = "input_bei")]
 use bevy_enhanced_input::prelude::*;
 
-use crate::*;
+use crate::prelude::*;
 
 pub struct HighlightingPlugin;
 

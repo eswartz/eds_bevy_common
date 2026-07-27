@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use bevy_seedling::sample::AudioSample;
-use crate::SurfaceMaterial;
 use rustc_hash::FxHashMap;
+use crate::prelude::SurfaceMaterial;
 
 use super::CommonFxAssets;
 

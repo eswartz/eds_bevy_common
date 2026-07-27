@@ -2,7 +2,7 @@
 
 use std::time::Duration;
 use bevy::prelude::*;
-use crate::PlayerMode;
+use crate::prelude::PlayerMode;
 
 /// Mark the object for persistence.
 #[derive(Default, Component, Reflect, Debug)]

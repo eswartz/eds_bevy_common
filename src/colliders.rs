@@ -1,7 +1,6 @@
 use bevy::prelude::*;
 
-use crate::physics::*;
-use crate::*;
+use crate::prelude::*;
 
 pub struct CollidersPlugin;
 

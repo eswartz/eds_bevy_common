@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use bevy_seedling::prelude::SamplePlayer;
 
-use crate::*;
+use crate::prelude::*;
 
 pub struct MenuAudioPlugin;
 

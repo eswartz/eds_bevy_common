@@ -7,10 +7,10 @@ use bevy_tweening::Lens;
 use bevy_seedling::prelude::PlaybackSettings;
 use bevy_seedling::sample::SamplePlayer;
 
-use crate::CommonFxAssets;
-use crate::PauseState;
-use crate::ProgramState;
-use crate::TimeStretchNode as TimeStretchNode;
+use crate::prelude::CommonFxAssets;
+use crate::prelude::PauseState;
+use crate::prelude::ProgramState;
+use crate::prelude::TimeStretchNode as TimeStretchNode;
 
 /// Remember to schedule [initialize_audio] or a local copy
 /// (can be as early as [Startup])

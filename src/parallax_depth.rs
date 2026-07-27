@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::ProgramState;
+use crate::prelude::ProgramState;
 
 pub struct ParallaxDepthPlugin;
 

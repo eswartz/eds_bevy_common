@@ -3,12 +3,12 @@ use bevy::light::CascadeShadowConfigBuilder;
 use bevy::light::ShadowFilteringMethod;
 use bevy::prelude::*;
 
-use crate::Antialiasing;
-use crate::ConfigureBeforePlaying;
-use crate::GameplayState;
-use crate::LevelState;
-use crate::ShadowQuality;
-use crate::VideoSettings;
+use crate::prelude::Antialiasing;
+use crate::prelude::ConfigureBeforePlaying;
+use crate::prelude::GameplayState;
+use crate::prelude::LevelState;
+use crate::prelude::ShadowQuality;
+use crate::prelude::VideoSettings;
 
 pub struct LightsPlugin;
 

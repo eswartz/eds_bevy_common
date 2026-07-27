@@ -4,7 +4,7 @@ use bevy::{
     render::render_resource::*,
 };
 
-use crate::{ProgramState, SplitIntoCubes};
+use crate::prelude::{ProgramState, SplitIntoCubes};
 
 pub struct DetailNormalPlugin;
 

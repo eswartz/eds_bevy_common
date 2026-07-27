@@ -8,11 +8,11 @@ use sysinfo;
 
 use crate::physics::*;
 
-use crate::Player;
-use crate::PlayerLook;
-use crate::PlayerMovement;
-use crate::ProgramState;
-use crate::repeating_with_delay;
+use crate::prelude::Player;
+use crate::prelude::PlayerLook;
+use crate::prelude::PlayerMovement;
+use crate::prelude::ProgramState;
+use crate::prelude::repeating_with_delay;
 
 pub struct StatsOverlayPlugin;
 

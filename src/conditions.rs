@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use bevy::prelude::*;
 use bevy::window::WindowFocused;
-use crate::*;
+use crate::prelude::*;
 
 pub fn dev_tools_enabled() -> bool {
     if let Ok(val) = std::env::var("DEBUG") {

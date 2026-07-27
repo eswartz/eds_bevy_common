@@ -7,9 +7,9 @@ use bevy::core_pipeline::Skybox;
 use bevy_asset_loader::prelude::*;
 use image::imageops::FilterType;
 
-use crate::WorldCamera;
-use crate::ConfigureBeforePlaying;
-use crate::CommonSkyboxAssets;
+use crate::prelude::WorldCamera;
+use crate::prelude::ConfigureBeforePlaying;
+use crate::prelude::CommonSkyboxAssets;
 
 use super::states_sets::ProgramState;
 use super::texutils::CubemapMapping;

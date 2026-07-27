@@ -1,7 +1,7 @@
 use bevy::asset::uuid::Uuid;
 use bevy::prelude::*;
 
-use crate::Saveable;
+use crate::prelude::Saveable;
 
 /// This plugin monitors user input and sends PlayerInput events.
 pub struct PlayerClientPlugin;

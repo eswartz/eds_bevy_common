@@ -2,8 +2,8 @@
 //! focusing on spawning a lot of sounds.
 use bevy::asset::AssetMetaCheck;
 use bevy::render::renderer::RenderDevice;
-use eds_bevy_common::player_environment::PlayerEnvironmentPlugin;
-use eds_bevy_common::*;
+use eds_bevy_common::prelude::player_environment::PlayerEnvironmentPlugin;
+use eds_bevy_common::prelude::*;
 use avian3d::PhysicsPlugins;
 use avian3d::prelude::Physics;
 use bevy::prelude::*;
@@ -27,7 +27,8 @@ use std::time::Duration;
 #[cfg(target_arch = "wasm32")]
 use console_log::log;
 
-use eds_bevy_common::midi_synth::prelude::*;
+use eds_bevy_common::prelude::midi_synth::prelude::*;
+use eds_bevy_common::prelude::*;
 
 fn main() -> AppExit {
     // Toggle to debug startup issues (only)

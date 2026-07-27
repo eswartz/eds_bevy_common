@@ -1,5 +1,4 @@
-use crate::*;
-use crate::physics::*;
+use crate::prelude::*;
 
 use bevy::prelude::*;
 

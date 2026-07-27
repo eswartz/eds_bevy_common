@@ -3,7 +3,7 @@
 use bevy::asset::uuid::Uuid;
 use bevy::prelude::*;
 use crate::physics::*;
-use crate::*;
+use crate::prelude::*;
 
 // This matches the eye height of a Quake-like player. A small figure.
 pub const QUAKE_SCALE: Vec3 = Vec3::new(0.5, 1.5, 0.3);

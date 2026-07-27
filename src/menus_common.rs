@@ -25,10 +25,10 @@ use rustc_hash::FxBuildHasher;
 use bevy_enhanced_input::prelude::*;
 use bevy::picking::events::Press;
 
-use crate::RENDER_LAYER_UI;
+use crate::prelude::RENDER_LAYER_UI;
 #[cfg(feature = "input_bei")]
-use crate::actions;
-use crate::is_in_menu;
+use crate::prelude::actions;
+use crate::prelude::is_in_menu;
 
 use super::states_sets::OverlayState;
 use super::states_sets::ProgramState;

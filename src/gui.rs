@@ -19,7 +19,7 @@ use bevy_asset_loader::prelude::*;
 use bevy_seedling::prelude::MainBus;
 
 use crate::physics::*;
-use crate::*;
+use crate::prelude::*;
 
 use super::audio::UserVolume;
 use super::lifecycle::PauseState;
@@ -946,7 +946,7 @@ fn update_physics_pause_ui(
     gui_area: GuiAreaMarkerLocator,
     mut vis_q: Query<&mut Visibility>,
 
-    mut time: If<ResMut<Time<avian3d::prelude::Physics>>>,
+    mut time: If<ResMut<Time<Physics>>>,
 ) {
     gui_area.with_marker(GuiAreaMarker::PhysicsRunningArea, |ent| {
         if let Ok(mut vis) = vis_q.get_mut(ent) {

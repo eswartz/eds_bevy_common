@@ -14,11 +14,11 @@ use crossbeam_channel::{Receiver, Sender};
 use rustysynth::{Synthesizer, SynthesizerSettings};
 use serde::{Deserialize, Serialize};
 
-use crate::PauseState;
+use crate::prelude::PauseState;
 
 use crate::midi_synth::{asset::{SoundFont, SoundFontLoader}, synth::{MidiMessage, MidiRenderMessage, firewheel_nodes::{MidiSynthPlayerNode, SynthDecoder}}};
-use crate::SfxNode;
-use crate::MusicNode;
+use crate::prelude::SfxNode;
+use crate::prelude::MusicNode;
 
 /// The plugin.
 #[derive(Default, Clone, Copy)]

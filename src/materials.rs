@@ -12,10 +12,10 @@ use rustc_hash::FxHashMap;
 use wgpu::Face;
 use wgpu::TextureFormat;
 
-use crate::LevelState;
-use crate::MeshQuality;
-use crate::VideoSettings;
-use crate::create_uvmapped_mesh_scaled;
+use crate::prelude::LevelState;
+use crate::prelude::MeshQuality;
+use crate::prelude::VideoSettings;
+use crate::prelude::create_uvmapped_mesh_scaled;
 
 pub struct MaterialsPlugin;
 

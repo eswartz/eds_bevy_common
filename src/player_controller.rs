@@ -10,7 +10,7 @@ use bevy_enhanced_input::prelude::*;
 use crate::actions_common_bei::actions::*;
 
 use crate::physics::*;
-use crate::*;
+use crate::prelude::*;
 
 /// This plugin monitors user input and sends PlayerInput events.
 pub struct PlayerControllerPlugin;
