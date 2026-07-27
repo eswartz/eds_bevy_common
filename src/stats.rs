@@ -7,7 +7,6 @@ use std::time::Duration;
 use sysinfo;
 
 use crate::physics::*;
-
 use crate::prelude::Player;
 use crate::prelude::PlayerLook;
 use crate::prelude::PlayerMovement;

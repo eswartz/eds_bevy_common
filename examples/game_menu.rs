@@ -1,7 +1,5 @@
 //! This is a demo program showing the integration of various "ebc" features,
 //! focusing on a game menu.
-use eds_bevy_common::prelude::colliders::CollidersPlugin;
-use eds_bevy_common::prelude::player_environment::PlayerEnvironmentPlugin;
 use eds_bevy_common::prelude::*;
 
 use avian3d::PhysicsPlugins;

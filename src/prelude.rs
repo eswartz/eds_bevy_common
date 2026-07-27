@@ -55,5 +55,3 @@ pub use crate::client_synth::*;
 pub use crate::highlighting::*;
 #[cfg(feature = "grabbing")]
 pub use crate::grabbing::*;
-
-pub use crate::physics::*;

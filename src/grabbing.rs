@@ -16,7 +16,6 @@ use bevy_mod_outline::{OutlinePlugin, OutlineVolume};
 use bevy_enhanced_input::prelude::*;
 
 use crate::physics::*;
-
 use crate::prelude::GameLayer;
 #[cfg(feature = "input_bei")]
 use crate::prelude::Grabbed;
