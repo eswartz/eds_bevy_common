@@ -201,7 +201,7 @@ fn check_configure_before_playing(
         }
 
         // Wait for a given number of frames.
-        if *frames >= 60 {
+        if *frames >= 15 {
             error!("Removing stuck ConfigureBeforePlaying on: {ents:?}");
             // Remove them all.
             for ent in ents {
