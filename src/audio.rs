@@ -10,7 +10,6 @@ use bevy_seedling::sample::SamplePlayer;
 use crate::prelude::CommonFxAssets;
 use crate::prelude::PauseState;
 use crate::prelude::ProgramState;
-use crate::prelude::TimeStretchNode as TimeStretchNode;
 
 /// Remember to schedule [initialize_audio] or a local copy
 /// (can be as early as [Startup])
@@ -20,7 +19,6 @@ impl Plugin for AudioCommonPlugin {
     fn build(&self, app: &mut App) {
         app
             .add_plugins(SeedlingPlugins)
-            .register_node::<TimeStretchNode>()
 
             .insert_resource(AudioContextConfig(FirewheelConfig {
                 ..default()

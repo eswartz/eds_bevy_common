@@ -110,7 +110,7 @@ impl std::fmt::Debug for FloatFixedOne8 {
 impl From<f32> for FloatFixedOne8 {
     fn from(value: f32) -> Self {
         let value = value.clamp(-1., 1.);
-        Self((value * 127.0).floor() as i8)
+        Self((value * 127.0) as i8)
     }
 }
 

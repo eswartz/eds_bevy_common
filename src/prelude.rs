@@ -44,7 +44,7 @@ pub use crate::lights::*;
 pub use crate::materials::*;
 pub use crate::flashlight::*;
 pub use crate::surface_material::*;
-pub use crate::time_stretch::*;
+// pub use crate::time_stretch::*;
 pub use crate::app::*;
 
 #[cfg(feature = "midi_synth")]

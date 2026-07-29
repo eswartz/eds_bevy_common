@@ -68,7 +68,7 @@ pub mod client_synth;
 #[cfg(feature = "midi_synth")]
 pub mod midi_synth;
 
-pub mod time_stretch;
+//pub mod time_stretch;
 
 pub mod colliders;
 pub mod flashlight;
