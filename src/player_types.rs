@@ -42,7 +42,7 @@ pub fn player_eyes(world_pos: Vec3, aabb: &ColliderAabb, look: &PlayerLook) -> V
 // estimate based on that.
 pub fn player_gun(rotation: &Quat, aabb: &ColliderAabb, eyes: Vec3) -> Vec3 {
     let dist = (aabb.half_size().y * 2.0) * 0.125;
-    (eyes + Vec3::new(0., -dist, 0.)) + rotation * Vec3::NEG_Z * 0.333
+    (eyes + Vec3::new(0., -dist, 0.)) + rotation * Vec3::NEG_Z * 0.5
 }
 
 
