@@ -627,7 +627,7 @@ impl<'w, 's> GuiAreaMarkerLocator<'w, 's> {
         }
         None
     }
-    pub fn with_first<R>(&self, marker: GuiAreaMarker, mut cb: impl FnMut(Entity) -> R) -> Option<R> {
+    pub fn with_first<R>(&self, marker: GuiAreaMarker, mut cb: impl FnOnce(Entity) -> R) -> Option<R> {
         for (entity, &a_marker) in self.marker_q.iter() {
             if a_marker == marker {
                 return Some(cb(entity));

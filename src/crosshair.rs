@@ -94,7 +94,6 @@ fn init_crosshair(
     mut commands: Commands,
     gui_assets: Res<CommonGuiAssets>,
 ) {
-    // TODO: make this simpler. It looks like hacks.
     commands.spawn((
         Name::new("Crosshair"),
         DespawnOnReset(ProgramState::InGame),

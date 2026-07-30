@@ -7,7 +7,7 @@ use bevy_seedling::prelude::*;
 use eds_bevy_common::prelude::{
     AppPlugin, AudioCommonPlugin, CommonAssetsPlugin, CommonFxAssets, DEFAULT_POOL_VOLUME,
     DebugPlugin, GameplayState, GuiState, LifecyclePlugin, ProgramState, StatsOverlayPlugin,
-    TimeStretchNode, UserVolume, dev_tools_enabled,
+    UserVolume, dev_tools_enabled,
 };
 
 fn main() {

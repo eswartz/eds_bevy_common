@@ -30,3 +30,7 @@ codegen-backend = "cranelift"
 
 [profile.dev.package."*"]
 codegen-backend = "llvm"
+
+[patch.crates-io]
+avian3d = { git = "https://github.com/Jondolf/avian.git", branch = "main" }
+

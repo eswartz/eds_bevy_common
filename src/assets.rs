@@ -137,8 +137,10 @@ pub struct CommonGuiAssets {
     #[asset(path = "common://textures/crosshair_select.png")]
     pub crosshair_select: Handle<Image>,
 
-    #[asset(path = "common://textures/power.png")]
-    pub power_bar: Handle<Image>,
+    #[asset(path = "common://textures/power_border.png")]
+    pub power_bar_border: Handle<Image>,
+    #[asset(path = "common://textures/power_strength.png")]
+    pub power_bar_strength: Handle<Image>,
 }
 
 #[derive(Resource, AssetCollection)]
