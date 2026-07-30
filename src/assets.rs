@@ -154,7 +154,13 @@ pub struct CommonFxAssets {
     pub deselect: Handle<AudioSample>,
 
     #[asset(path = "common://sounds/260729-uhuh-1.ogg")]
-    pub cannot: Handle<AudioSample>,
+    pub cannot1: Handle<AudioSample>,
+    #[asset(path = "common://sounds/260419-zz-beat.ogg")]
+    pub cannot2: Handle<AudioSample>,
+    #[asset(path = "common://sounds/363186__littleluigi__1-thump-2.ogg")]
+    pub cancel: Handle<AudioSample>,
+    #[asset(path = "common://sounds/260730-release-1.ogg")]
+    pub release: Handle<AudioSample>,
 
     #[asset(path = "common://sounds/257803__xtrgamr__swish-2_swish-178056__eneasz__folder-snapped-shut.ogg")]
     pub swoosh: Handle<AudioSample>,
