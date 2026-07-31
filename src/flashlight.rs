@@ -1,4 +1,13 @@
 use bevy::prelude::*;
+#[cfg(feature = "firewheel")]
+use bevy_seedling::sample::SamplePlayer;
+#[cfg(feature = "firewheel")]
+use firewheel::nodes::volume::VolumeNode;
+#[cfg(feature = "firewheel")]
+use rand::RngExt as _;
+
+#[cfg(feature = "firewheel")]
+use crate::{assets::CommonFxAssets, audio::UiSfx};
 
 pub struct FlashlightPlugin;
 
@@ -70,10 +79,14 @@ fn update_flashlight(
     rot: Res<FlashlightRotation>,
     lights_q: Query<(Entity, &Flashlight)>,
     changed_lights_q: Query<(Entity, &Flashlight), Changed<Flashlight>>,
+    spot_q: Query<&SpotLight>,
+    fx: Option<Res<CommonFxAssets>>,
 ) {
     let offs_rot_changed = offs.is_changed() || rot.is_changed();
     for (ent, light) in lights_q.iter() {
-        if !changed_lights_q.contains(ent) && !offs_rot_changed { continue };
+        let changed = changed_lights_q.contains(ent);
+        if !changed && !offs_rot_changed { continue };
+
         let mut ent_commands = commands.entity(ent);
         if light.enabled {
             ent_commands.try_insert(light.spot.clone());
@@ -85,8 +98,38 @@ fn update_flashlight(
                     rot.0.z.to_radians()
                 )
             ));
-        } else {
+
+            if !spot_q.contains(ent) && cfg!(feature = "firewheel") && let Some(fx) = &fx {
+                let mut rng = rand::rng();
+                commands.spawn((
+                    UiSfx,
+                    SamplePlayer::new(
+                        fx.click_on.clone(),
+                    ),
+                    PlaybackSettings {
+                        speed: rng.random_range(0.9..1.1),
+                        ..default()
+                    },
+                    VolumeNode::from_linear(rng.random_range(0.25..0.5)),
+                ));
+            }
+        } else if spot_q.contains(ent) {
             ent_commands.try_remove::<SpotLight>();
+
+            if cfg!(feature = "firewheel") && let Some(fx) = &fx {
+                let mut rng = rand::rng();
+                commands.spawn((
+                    UiSfx,
+                    SamplePlayer::new(
+                        fx.click_off.clone(),
+                    ),
+                    PlaybackSettings {
+                        speed: rng.random_range(0.9..1.1),
+                        ..default()
+                    },
+                    VolumeNode::from_linear(rng.random_range(0.25..0.5)),
+                ));
+            }
         }
     }
 }

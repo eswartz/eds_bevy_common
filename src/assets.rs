@@ -162,6 +162,11 @@ pub struct CommonFxAssets {
     #[asset(path = "common://sounds/260730-release-1.ogg")]
     pub release: Handle<AudioSample>,
 
+    #[asset(path = "common://sounds/426634__mrh4hn__tactile-button-click-on.ogg")]
+    pub click_on: Handle<AudioSample>,
+    #[asset(path = "common://sounds/426634__mrh4hn__tactile-button-click-off.ogg")]
+    pub click_off: Handle<AudioSample>,
+
     #[asset(path = "common://sounds/257803__xtrgamr__swish-2_swish-178056__eneasz__folder-snapped-shut.ogg")]
     pub swoosh: Handle<AudioSample>,
     #[asset(path = "common://sounds/414763__michorvath__click.ogg")]
