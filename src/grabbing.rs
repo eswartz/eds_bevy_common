@@ -15,6 +15,7 @@ use bevy_mod_outline::{OutlinePlugin, OutlineVolume};
 #[cfg(feature = "input_bei")]
 use bevy_enhanced_input::prelude::*;
 
+use crate::outlines::OutlineStyle;
 use crate::physics::*;
 use crate::prelude::GameLayer;
 #[cfg(feature = "input_bei")]
@@ -76,15 +77,6 @@ impl Plugin for GrabbingPlugin {
         ;
 
         if cfg!(feature = "input_bei") {
-        // app.add_systems(
-        //     FixedUpdate,
-        //     check_grab_actions
-        //     .run_if(not(is_in_menu))
-        //     .run_if(is_level_active)
-        //     .run_if(not(is_paused))
-        //     .run_if(not(debug_gui_wants_direct_input))
-        //     .run_if(in_state(ProgramState::InGame))
-        // )
             app
                 .add_observer(on_start_grab)
                 .add_observer(on_change_grab_distance)
@@ -100,44 +92,20 @@ impl Plugin for GrabbingPlugin {
 #[derive(Resource, Reflect)]
 #[reflect(Resource)]
 #[type_path = "game"]
-pub struct GrabbedItemStyle {
-    pub volume: OutlineVolume,
-    pub stencil: Option<OutlineStencil>,
-    pub inherit: Option<InheritOutline>,
-}
+pub struct GrabbedItemStyle(pub OutlineStyle);
 
 impl Default for GrabbedItemStyle {
     fn default() -> Self {
-        Self {
-            volume: OutlineVolume {
-                visible: true,
-                width: 4.0,
-                colour: tailwind::LIME_500.with_alpha(0.75).into(),
-            },
-            stencil: None,
-            inherit: None,
-        }
+        Self(OutlineStyle::default_grabbing())
     }
 }
 
 impl GrabbedItemStyle {
-    pub fn apply_to<'a>(&self, mut ent_commands: EntityCommands<'a>) {
-        ent_commands.try_insert(self.volume.clone());
-        if let Some(stencil) = &self.stencil {
-            ent_commands.try_insert(stencil.clone());
-        }
-        if let Some(inherit) = &self.inherit {
-            ent_commands.try_insert(inherit.clone());
-        }
+    pub fn apply_to<'a>(&self, ent_commands: EntityCommands<'a>) {
+        self.0.apply_to(ent_commands);
     }
-    pub fn remove_from<'a>(&self, mut ent_commands: EntityCommands<'a>) {
-        ent_commands.try_remove::<(OutlineVolume, ComputedOutline)>();
-        if self.stencil.is_some() {
-            ent_commands.try_remove::<OutlineStencil>();
-        }
-        if self.inherit.is_some() {
-            ent_commands.try_remove::<InheritOutline>();
-        }
+    pub fn remove_from<'a>(&self, ent_commands: EntityCommands<'a>) {
+        self.0.remove_from(ent_commands);
     }
 }
 
@@ -420,7 +388,7 @@ fn process_grab_commands(
                     **mode = HighlightingMode::Busy;
                 }
 
-                // Mark as grabbed
+                // Mark as grabbed...
                 commands.entity(entity).try_insert(Grabbed);
 
                 // ... and make physics user-controllable.

@@ -54,6 +54,7 @@ pub mod detail_normal;
 pub mod parallax_depth;
 pub mod materials;
 
+pub mod outlines;
 #[cfg(feature = "highlighting")]
 pub mod highlighting;
 #[cfg(feature = "grabbing")]

@@ -40,9 +40,9 @@ pub fn player_eyes(world_pos: Vec3, aabb: &ColliderAabb, look: &PlayerLook) -> V
 // A real gun would be halfway down the body length,
 // but since FPSes usually show the gun coming from chest height,
 // estimate based on that.
-pub fn player_gun(rotation: &Quat, aabb: &ColliderAabb, eyes: Vec3, distance: f32) -> Vec3 {
+pub fn player_gun(rotation: &Quat, aabb: &ColliderAabb, eyes: Vec3, fwd_distance: f32) -> Vec3 {
     let dist = (aabb.half_size().y * 2.0) * 0.125;
-    (eyes + Vec3::new(0., -dist, 0.)) + rotation * Vec3::NEG_Z * distance
+    (eyes + Vec3::new(0., -dist, 0.)) + (rotation * Vec3::NEG_Z * fwd_distance)
 }
 
 

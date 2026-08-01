@@ -51,6 +51,7 @@ pub use crate::app::*;
 pub use crate::synth::*;
 #[cfg(feature = "midi_synth")]
 pub use crate::client_synth::*;
+pub use crate::outlines::*;
 #[cfg(feature = "highlighting")]
 pub use crate::highlighting::*;
 #[cfg(feature = "grabbing")]

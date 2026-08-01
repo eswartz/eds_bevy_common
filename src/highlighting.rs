@@ -66,47 +66,23 @@ impl Plugin for HighlightingPlugin {
 
 /// This resource defines the default style for highlighted items.
 /// The given components are added (and removed) as needed.
-#[derive(Resource, Reflect)]
-#[reflect(Resource)]
+#[derive(Resource, Reflect, Clone)]
+#[reflect(Resource, Clone)]
 #[type_path = "game"]
-pub struct HighlightedItemStyle {
-    pub volume: OutlineVolume,
-    pub stencil: Option<OutlineStencil>,
-    pub inherit: Option<InheritOutline>,
-}
+pub struct HighlightedItemStyle(pub OutlineStyle);
 
 impl Default for HighlightedItemStyle {
     fn default() -> Self {
-        Self {
-            volume: OutlineVolume {
-                visible: true,
-                width: 2.0,
-                colour: Color::WHITE.with_alpha(0.5),
-            },
-            stencil: None,
-            inherit: None,
-        }
+        Self(OutlineStyle::default_highlighting())
     }
 }
 
 impl HighlightedItemStyle {
-    pub fn apply_to<'a>(&self, mut ent_commands: EntityCommands<'a>) {
-        ent_commands.try_insert(self.volume.clone());
-        if let Some(stencil) = &self.stencil {
-            ent_commands.try_insert(stencil.clone());
-        }
-        if let Some(inherit) = &self.inherit {
-            ent_commands.try_insert(inherit.clone());
-        }
+    pub fn apply_to<'a>(&self, ent_commands: EntityCommands<'a>) {
+        self.0.apply_to(ent_commands);
     }
-    pub fn remove_from<'a>(&self, mut ent_commands: EntityCommands<'a>) {
-        ent_commands.try_remove::<OutlineVolume>();
-        if self.stencil.is_some() {
-            ent_commands.try_remove::<OutlineStencil>();
-        }
-        if self.inherit.is_some() {
-            ent_commands.try_remove::<InheritOutline>();
-        }
+    pub fn remove_from<'a>(&self, ent_commands: EntityCommands<'a>) {
+        self.0.remove_from(ent_commands);
     }
 }
 
