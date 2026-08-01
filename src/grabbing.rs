@@ -1,21 +1,13 @@
 //! Support user-driven grabbing and movement of items in the world.
 //!
 //! Items with the [crate::Selected] component can be grabbed.
-
-#[cfg(feature = "input_bei")]
-use bevy::color::palettes::tailwind;
-use bevy_mod_outline::ComputedOutline;
-use bevy_mod_outline::InheritOutline;
-use bevy_mod_outline::OutlineStencil;
-
 use bevy::prelude::*;
-
-use bevy_mod_outline::{OutlinePlugin, OutlineVolume};
 
 #[cfg(feature = "input_bei")]
 use bevy_enhanced_input::prelude::*;
 
 use crate::outlines::OutlineStyle;
+use crate::outlines::OutlinesPlugin;
 use crate::physics::*;
 use crate::prelude::GameLayer;
 #[cfg(feature = "input_bei")]
@@ -46,8 +38,8 @@ pub struct GrabbingPlugin;
 
 impl Plugin for GrabbingPlugin {
     fn build(&self, app: &mut App) {
-        if !app.is_plugin_added::<OutlinePlugin>() {
-            app.add_plugins(OutlinePlugin::JUMP_FLOOD);
+        if !app.is_plugin_added::<OutlinesPlugin>() {
+            app.add_plugins(OutlinesPlugin);
         }
         app
             .init_resource::<GrabbingBehavior>()

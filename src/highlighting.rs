@@ -7,8 +7,7 @@
 //!
 //! Highlighting is represented with the [Highlighted] component.
 //!
-use bevy_mod_outline::{InheritOutline, OutlineStencil};
-use bevy_mod_outline::{OutlinePlugin, OutlineVolume};
+use bevy_mod_outline::*;
 use bevy_seedling::sample::PlaybackSettings;
 use bevy_seedling::prelude::*;
 
@@ -25,8 +24,8 @@ pub struct HighlightingPlugin;
 
 impl Plugin for HighlightingPlugin {
     fn build(&self, app: &mut App) {
-        if !app.is_plugin_added::<OutlinePlugin>() {
-            app.add_plugins(OutlinePlugin::JUMP_FLOOD);
+        if !app.is_plugin_added::<OutlinesPlugin>() {
+            app.add_plugins(OutlinesPlugin);
         }
         app
             .add_message::<ChangeHighlightedItem>()

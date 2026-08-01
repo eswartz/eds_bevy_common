@@ -1,15 +1,19 @@
 use bevy::color::palettes::tailwind;
-use bevy_mod_outline::{InheritOutline, OutlineStencil};
-use bevy_mod_outline::{OutlinePlugin, OutlineVolume};
+use bevy_mod_outline::*;
 
 use bevy::prelude::*;
-use rand::RngExt as _;
-use rand::seq::IndexedRandom as _;
 
-#[cfg(feature = "input_bei")]
-use bevy_enhanced_input::prelude::*;
+/// Enable `bevy_mod_outline`.
+/// Added automatically by `HighlightingPlugin` and `GrabbingPlugin`.
+pub struct OutlinesPlugin;
 
-use crate::prelude::*;
+impl Plugin for OutlinesPlugin {
+    fn build(&self, app: &mut App) {
+        if !app.is_plugin_added::<OutlinePlugin>() {
+            app.add_plugins(OutlinePlugin::JUMP_FLOOD);
+        }
+    }
+}
 
 /// This defines the default style items.
 /// The given components are added (and removed) as needed.
