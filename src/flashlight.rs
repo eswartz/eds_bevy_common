@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 #[cfg(feature = "firewheel")]
-use bevy_seedling::sample::SamplePlayer;
+use bevy_seedling::sample::{SamplePlayer, PlaybackSettings};
 #[cfg(feature = "firewheel")]
 use firewheel::nodes::volume::VolumeNode;
 #[cfg(feature = "firewheel")]
