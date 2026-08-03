@@ -314,6 +314,7 @@ fn ensure_font_assets(
             .. default()
         },
         Text::new("🚀\u{1F508}\u{1F6AB}\u{23f1}\u{fe0f}"), // various emoji used below
+        Visibility::Hidden,
     ));
 }
 
