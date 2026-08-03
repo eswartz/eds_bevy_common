@@ -59,7 +59,6 @@ impl Plugin for GrabbingPlugin {
                         .run_if(not(debug_gui_wants_input)),
                 )
                 .chain()
-                .before(PhysicsSystems::Prepare)
                 .run_if(not(is_in_menu))
                 .run_if(is_level_active)
                 .run_if(not(is_paused))
@@ -306,7 +305,7 @@ fn on_change_grab_distance(
     // Still grabbing?
     if let Some(grabbed) = &mut grabbed_opt
     {
-        let new_dist = (grabbed.distance + event.value).clamp(0.1, 100.0);
+        let new_dist = (grabbed.distance + event.value * 10.0).clamp(0.1, 100.0);
         grabbed.distance = new_dist;
     }
 }
@@ -364,7 +363,7 @@ fn process_grab_commands(
 
                 commands.insert_resource(GrabbedItem{
                     entity,
-                    orig_offset: surface_pos - cur_pos,
+                    orig_offset: cam_global_xfrm.rotation().inverse() * (surface_pos - cur_pos),
                     #[cfg(feature = "highlighting")]
                     orig_mode: mode.original_or_enabled(),
                     distance,
@@ -504,7 +503,7 @@ fn move_grabbed_item(
 
     // Compute the desired new location, i.e. the current
     // position plus the camera's position + original distance.
-    let cur_pos = item_global_xfrm.translation() + grabbed.orig_offset;
+    let cur_pos = item_global_xfrm.translation() + cam_global_xfrm.rotation() * grabbed.orig_offset;
 
     let new_pos = cam_global_xfrm.translation() + cam_global_xfrm.rotation() * Vec3::NEG_Z * grabbed.distance;
 
@@ -551,7 +550,7 @@ fn move_grabbed_item(
             *forces.angular_velocity_mut() = default();
         } else {
             // Non-physical, just move.
-            item_xfrm.translation += new_vel * time.delta_secs().min(1.0);
+            item_xfrm.translation += item_global_xfrm.rotation().inverse() * new_vel * time.delta_secs().min(1.0);
         }
 
         grabbed.movement += movement;
