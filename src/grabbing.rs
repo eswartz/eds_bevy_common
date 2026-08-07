@@ -399,7 +399,8 @@ fn process_grab_commands(
                             )
                         } else {
                             CollisionLayers::default()
-                        }
+                        },
+                        TransformInterpolation,
                     ));
                 }
 
@@ -453,6 +454,8 @@ fn process_grab_commands(
                         // ent_commands.try_remove::<Sleeping>();
                         ent_commands.try_insert(LinearVelocity(*vel));
                     }
+
+                    ent_commands.try_remove::<TransformInterpolation>();
 
                     styler.remove_from(ent_commands);
 

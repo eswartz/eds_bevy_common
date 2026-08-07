@@ -26,22 +26,6 @@ impl Plugin for PlayerCameraPlugin {
                 OnEnter(LevelState::Playing),
                 update_player_camera_render
             )
-            // .add_systems(FixedPostUpdate,
-            //     (
-            //         handle_player_camera_actions
-            //             .run_if(is_context_active::<PlayerContext>)
-            //             // HACK: we "know" zoom and move-while-grabbed use the same actions
-            //             .run_if(not(is_grabbing_item))
-            //         ,
-            //     )
-            //     .chain()
-            //     .after(PhysicsSystems::Writeback)
-            //     .before(TransformSystems::Propagate)
-            //     .run_if(not(is_menu_paused))
-            //     .run_if(not(debug_gui_wants_input))
-            //     .run_if(is_game_active)
-            //     ,
-            // )
 
             .add_observer(on_player_camera_change)
             .add_observer(on_player_camera_zoom)
