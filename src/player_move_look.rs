@@ -11,7 +11,8 @@ pub struct PlayerMovementPlugin;
 
 impl Plugin for PlayerMovementPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(
+        app.init_resource::<StationaryCameraTransform>()
+            .add_systems(
             FixedPreUpdate,
             (
                 clear_player_velocity
@@ -339,22 +340,22 @@ pub struct PlayerCamera(pub CameraMode);
 #[reflect(Clone, Default)]
 #[type_path = "game"]
 pub enum CameraMode {
+    /// Camera is inside player's head.
     #[default]
     FirstPerson,
+    /// Camera follows over player's shoulder.
     ThirdPerson,
-    Stationary,
+    /// Looking at player.
     LookingAt,
+    /// Camera fixed at [StationaryCameraTransform].
+    Stationary,
 }
-// impl CameraMode {
-//     pub fn next(&self) -> Self {
-//         match self {
-//             Self::FirstPerson => Self::ThirdPerson,
-//             Self::ThirdPerson => Self::LookingAt,
-//             Self::LookingAt => Self::Stationary,
-//             Self::Stationary => Self::FirstPerson,
-//         }
-//     }
-// }
+
+/// This serves as the world camera position for [CameraMode::Stationary].
+#[derive(Resource, Debug, Default, Clone, PartialEq, Reflect, Deref, DerefMut)]
+#[reflect(Resource, Clone, Default)]
+#[type_path = "game"]
+pub struct StationaryCameraTransform(pub Transform);
 
 #[derive(Debug, Component, Reflect, Clone)]
 #[require(Saveable)]

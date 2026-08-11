@@ -252,6 +252,7 @@ impl OurCamera {
 pub fn sync_world_camera_to_player(
     mut player_q: Single<(&GlobalTransform, &PlayerLook, &ColliderAabb, &mut Visibility), (With<OurPlayer>, Without<Camera3d>)>,
     mut world_camera_q: Single<(&PlayerCamera, &mut Transform, &OurCamera), (With<Camera3d>, With<WorldCamera>)>,
+    stationary_camera_transform: Res<StationaryCameraTransform>,
     time: Res<Time>,
 ) {
     let (player_xfrm, look, player_aabb, ref mut model_visibility) = *player_q;
@@ -289,6 +290,7 @@ pub fn sync_world_camera_to_player(
         }
         CameraMode::Stationary => {
             model_visibility.set_if_neq(Visibility::Inherited);
+            camera_xfrm.set_if_neq(**stationary_camera_transform);
         }
     };
 }
@@ -316,6 +318,8 @@ pub fn sync_view_camera_to_player(
 }
 
 #[derive(Resource, Reflect)]
+#[reflect(Resource, Default)]
+#[type_path = "game"]
 pub struct PlayerCameraViews(pub Vec<CameraMode>);
 
 impl Default for PlayerCameraViews {
