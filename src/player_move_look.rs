@@ -505,18 +505,10 @@ pub fn process_player_input_movement(
         let Ok((mut forces, mut movement, mut look, mut transform)) = res else {
             continue
         };
-        // let Ok(mut forces) = params.forces.get_mut(player_entity) else {
-        //     continue
-        // };
-
-        // for mut handler in &mut handlers.common {
-        //     handler.handle(player_entity, input, &*input_settings);
-        // }
 
         let input_settings = &*params.input_settings;
 
         let mut vel = forces.linear_velocity();
-        // let mut vel = forces.linear_velocity() + movement.velocity;
         let mut jump_impulse = Vector::ZERO;
 
         let mut instant_thrust = Vec3::ZERO;
@@ -561,7 +553,14 @@ pub fn process_player_input_movement(
                     + input_settings.velocity_ramp_scale * move_scale)
                     .clamp(0.0, 1.0);
 
-                let mut dir_velocity = transform.rotation * instant_thrust * movement.velocity_ramp;
+                let move_rotation = match player_mode {
+                    PlayerMode::Fps => {
+                        let (y, z, _) = transform.rotation.to_euler(EulerRot::YZX);
+                        Quat::from_euler(EulerRot::YZX, y, z, 0.)
+                    }
+                    PlayerMode::Space => transform.rotation
+                };
+                let mut dir_velocity = move_rotation * instant_thrust * movement.velocity_ramp;
 
                 const MAX_JUMP_MEDIUM_FRICTION: f32 = 0.25;
 
