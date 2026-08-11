@@ -118,10 +118,10 @@ bevy_egui = { version = "0.41", features = ["render", "serde"] }
 egui = { version = "0.35", features = ["bytemuck"] }
 
 # # We must mention it and maintain the version because of the override below for wasm.
-# firewheel = { version = "0.10", optional = true }
-firewheel = { git = "https://github.com/BillyDM/Firewheel", rev = "fdf9fbb" }
-# We must mention it and reference the repo because there's no published crate of 0.8 to patch.
-bevy_seedling = { git = "https://github.com/CorvusPrudens/bevy_seedling.git", branch = "master", optional = true, default-features = false, features = [
+firewheel = { version = "0.12", optional = true }
+# firewheel = { git = "https://github.com/BillyDM/Firewheel", rev = "fdf9fbb" }
+
+bevy_seedling = { version = "0.8.0", optional = true, default-features = false, features = [
     "wav", "ogg", "rand", "reflect", "diagnostics",
     "hrtf",
     "cpal",
@@ -195,8 +195,8 @@ bwavfile = "2.0.1"
 dasp-rs = "0.5.1"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-firewheel = {  git = "https://github.com/BillyDM/Firewheel", rev = "fdf9fbb", optional = true, default-features = false, features = [
-# firewheel = { version = "0.10", optional = true, default-features = false, features = [
+# firewheel = {  git = "https://github.com/BillyDM/Firewheel", rev = "fdf9fbb", optional = true, default-features = false, features = [
+firewheel = { version = "0.12", optional = true, default-features = false, features = [
   "wasm-bindgen",
 ] }
 
