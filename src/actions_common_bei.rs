@@ -347,6 +347,7 @@ pub fn assign_stock_common_actions(
         bindings![
             KeyCode::F11,
             KeyCode::Enter.with_mod_keys(ModKeys::ALT),
+            KeyCode::NumpadEnter.with_mod_keys(ModKeys::ALT),
         ],
     ));
     commands.spawn((
@@ -367,6 +368,7 @@ pub fn assign_stock_common_actions(
         bindings![
             KeyCode::KeyE,
             KeyCode::Enter,
+            KeyCode::NumpadEnter,
             GamepadButton::South,
         ],
     ));
@@ -536,6 +538,7 @@ pub fn assign_stock_player_actions(
         bindings![
             MouseButton::Left,
             KeyCode::Enter,
+            KeyCode::NumpadEnter,
             GamepadButton::RightTrigger2,
         ],
     ));
