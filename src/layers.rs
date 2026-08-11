@@ -23,6 +23,8 @@ pub enum GameLayer {
     /// Layer 4 - temporary bullets/projectiles/etc.
     /// Assumes [crate::Projectile] component.
     Projectiles,
+    /// Layer 5 - enemy entities.
+    Enemy,
 }
 
 
