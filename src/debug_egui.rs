@@ -1,11 +1,11 @@
-use std::{collections::BTreeMap, sync::LazyLock};
+use std::{collections::BTreeMap, io::Write, sync::LazyLock};
 
 use bevy::{ecs::{query::QueryFilter, system::SystemParam}, prelude::*};
 use bevy_egui::{EguiContext, EguiContexts, EguiGlobalSettings, EguiPlugin, EguiPrimaryContextPass, PrimaryEguiContext, helpers::*, input::{EguiWantsInput, egui_wants_any_keyboard_input, egui_wants_any_pointer_input}};
 use bevy_inspector_egui::{DefaultInspectorConfigPlugin};
 use fuzzy_matcher::skim::SkimMatcherV2;
 
-use crate::prelude::*;
+use crate::{prelude::*, world_load_save::{fetch_saveable_entities, save_world_state}};
 
 use super::gui::GuiState;
 
@@ -282,6 +282,8 @@ pub fn update_egui_inspector_ui(
         window = window.current_pos(rect.min);
     }
 
+    let mut save_state = false;
+
     // Find the current context using the world's querying.
     // We'll need to clone this to avoid double-borrow of `world` below.
     // (Don't use SystemState or World::with_scope here to avoid
@@ -330,6 +332,10 @@ pub fn update_egui_inspector_ui(
                     ui.checkbox(&mut show_tree, RichText::new("As Tree"));
                     ui.checkbox(&mut show_all, RichText::new("All"))
                         .on_hover_text("When unset, hides entities without Names, which are usually behind-the-scenes entities.");
+                    ui.separator();
+                    if ui.button("Save").clicked() {
+                        save_state = true;
+                    }
                 });
             });
 
@@ -400,6 +406,20 @@ pub fn update_egui_inspector_ui(
 
         });
     });
+
+    if save_state {
+        let ents = fetch_saveable_entities(world, true);
+        let _ = match save_world_state(world, ents) {
+            Ok(text) => {
+                let _ = match std::fs::File::create("save_world.scn.ron") {
+                    Ok(mut file) => file.write_all(text.as_bytes()),
+                    Err(e) => Err(e),
+                }
+                .map_err(|e| error!("failed to save: {e}"));
+            }
+            Err(e) => error!("failed to save: {e}")
+        };
+    }
 }
 
 fn name_satisfies_filter(

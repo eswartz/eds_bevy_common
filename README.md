@@ -15,7 +15,7 @@ But ⚠️⚠️⚠️ this is my personal repo and will <span style="color:red"
 
 ## What?
 
-This is an *opinionated* set of plugins that can be used in Bevy game projects (it's not on crates.io). I've got a certain  I've been using this in my own (private) projects since Bevy 0.15. It currently works for 0.19.
+This is an *opinionated* set of plugins that can be used in Bevy game projects (it's not on crates.io). I've been using this in my own (private) projects since Bevy 0.15. It currently works for 0.19.
 
 *It is not documented* but just start from the example `example_menu.rs`.
 
@@ -33,6 +33,7 @@ But it contains:
 ** toggles
 ** sliders
 ** enums
+** main menu vs. escape menu
 
 * Play/pause support (`PauseState`, distinct gameplay and menu flags; pausing only affects `Time<Physics>`)
 * `bevy_inspector_egui` integration
@@ -43,11 +44,13 @@ But it contains:
 ** Any loading errors trigger `OverlayState::ErrorScreen` so users aren't left wondering when loading will end.
 
 * player camera and FPS or space/flying controller
-** keyboard/mouse integration so far
-** support for animated "manual" camera control sections
+** keyboard/mouse/controller integration
 * common action setup using bevy_enhanced_input
 * skybox and reflection probe setup from .exr files which occurs when asset collections are ready
 and performs conversions into cubemaps
+* support for splitting huge meshes into smaller maps to make Avian happy, see `split_into_cubes.rs`
+* bevy_seedling integration
+* random sound selector for footsteps and sliding when collisions occur on entities with `SurfaceMaterial`, see `sound_sampler.rs`
 
 ## Why?
 
@@ -55,7 +58,7 @@ and performs conversions into cubemaps
 
 * Benevolent indifference 🤷: I thought the code was good enough to *be* public, or even be snarfed into training data, and might be useful. Take it or leave it. Nothing here is revolutionary. Some things are bad. Some things are my reluctance to refactor.
 
-* Pragmatism: Being public, I can link to it, share it amongst my projects without needing to have ssh credentials in random OSess and VMs.
+* Pragmatism: Being public, I can link to it, share it amongst my projects without needing to have ssh credentials in random OSes and VMs.
 
 I will continue to update this code and use that game jam entry for testing when I remember to. But I don't recommend linking to this crate without the caveat, beware of sudden changes.
 

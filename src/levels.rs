@@ -25,7 +25,7 @@ pub struct LevelInfo {
     pub id: String,
     /// Label for menus / status screens.
     pub label: String,
-    /// The scene that comprises the level (swapped in to [crate::WorldMarker]).
+    /// The scene that comprises the basic level (swapped in to [crate::WorldMarker]).
     pub scene: Handle<WorldAsset>,
 }
 

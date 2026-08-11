@@ -67,6 +67,8 @@ web = [
 bevy = { version = "0.19.0", default-features = false, features = [
     "3d", "ui",
 
+    "bevy_world_serialization",
+
     # And these optional:
     # "dev",
     "bevy_dev_tools",
@@ -139,9 +141,11 @@ bevy_skein = { version = "0.6.0", optional = true }
 
 bevy_enhanced_input = { version = "0.26", features = ["reflect", "state", "serialize"], optional = true }
 
+bevy_common_assets = { version = "0.17.0", features = ["ron"] }
 bevy_asset_loader = { version = "0.27.0", features = [
     "2d",
     "3d",
+    "standard_dynamic_assets",
     # "progress_tracking",
 ] }
 
@@ -186,8 +190,9 @@ console_log = "1"
 wasm_thread = "0.3"
 wasm-bindgen = { version = "0.2.120" }
 
-# timestretch = "0.8.0"
-# dasp-rs = "0.5.1"
+lru = "0.18.1"
+bwavfile = "2.0.1"
+dasp-rs = "0.5.1"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 firewheel = {  git = "https://github.com/BillyDM/Firewheel", rev = "fdf9fbb", optional = true, default-features = false, features = [

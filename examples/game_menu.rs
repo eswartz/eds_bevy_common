@@ -18,6 +18,7 @@ use bevy::winit::WinitSettings;
 use strum::VariantArray;
 use std::time::Duration;
 
+const GAME_TITLE: &str = "Game Menu";
 
 fn main() -> AppExit {
     let mut app = App::new();
@@ -323,8 +324,6 @@ fn on_enter_main_menu(
     mut commands: Commands,
     font: Res<UiFont>,
     mut history: ResMut<MenuItemSelectionHistory>,
-    // mut glyph_mats: ResMut<Assets<TitleShader>>,
-    product_name: Res<ProductName>,
     current_level: Option<Res<CurrentLevel>>,
 ) {
     // Re-initialize state (on entry and on game exit).
@@ -333,7 +332,7 @@ fn on_enter_main_menu(
 
     commands.spawn((
         DespawnOnExit(OverlayState::MainMenu),
-        Text2d::new(&product_name.0),
+        Text2d::new(GAME_TITLE),
         TextFont {
             font_size: FontSize::Px(128.0),
             font: font.0.clone().into(),

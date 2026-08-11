@@ -145,7 +145,7 @@ pub mod actions {
     #[action_output(bool)]
     pub struct Jump;
 
-    /// Switch camera perspective.
+    /// Switch camera perspective amongst those in [PlayerCameraViews].
     #[derive(InputAction)]
     #[action_output(bool)]
     pub struct ChangeCamera;

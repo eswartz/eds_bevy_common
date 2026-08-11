@@ -404,6 +404,8 @@ fn diagnostic_system(
 
     mut cached: Local<::std::cell::OnceCell<Vec<Entity>>>,
 ) {
+    let mut marker_qs = world.query_filtered::<Entity, With<StatsOverlayMarker>>();
+
     let mut queue = CommandQueue::default();
     let mut commands = Commands::new(&mut queue, world);
 
@@ -413,10 +415,25 @@ fn diagnostic_system(
         let Some(time) = world.get_resource::<Time>() else { return };
 
         // Fetch the [Entity]s for the [Text] nodes to edit.
-        if let Some(prev_ents) = cached.get() && prev_ents.len() != stats_registry.len() {
+        let need_new = if let Some(prev_ents) = cached.get() && prev_ents.len() != stats_registry.len() {
             log::warn!("resetting {} vs {}", prev_ents.len(), stats_registry.len());
-            let _ = cached.take();
+            true
         }
+        else if world.is_resource_changed::<StatsOverlayStyle>() {
+            log::warn!("resetting stats");
+            true
+        } else {
+            false
+        };
+
+        if need_new {
+            let _  = cached.take();
+            let marker_q = marker_qs.iter(world);
+            for ent in marker_q {
+                commands.entity(ent).try_despawn();
+            }
+        }
+
         let text_ents = cached.get_or_init(|| {
             // Generate the UI once.
 

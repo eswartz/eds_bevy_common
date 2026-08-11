@@ -19,6 +19,10 @@ impl Plugin for PlayerControllerPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<PlayerControllerSettings>();
 
+        // Defaults, override as needed.
+        app.insert_resource(PlayerInputSettings::for_fps());
+        app.insert_resource(PlayerMode::Fps);
+
         #[cfg(feature = "input_bei")]
         {
             app.add_systems(

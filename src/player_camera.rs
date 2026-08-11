@@ -21,6 +21,7 @@ impl Plugin for PlayerCameraPlugin {
     fn build(&self, app: &mut App) {
         app
             .init_resource::<PlayerCameraSettings>()
+            .init_resource::<PlayerCameraViews>()
             .init_resource::<FovZoomState>()
             .add_systems(
                 OnEnter(LevelState::Playing),
@@ -314,10 +315,25 @@ pub fn sync_view_camera_to_player(
     view_camera_q.rotation = target_rot;
 }
 
+#[derive(Resource, Reflect)]
+pub struct PlayerCameraViews(pub Vec<CameraMode>);
+
+impl Default for PlayerCameraViews {
+    fn default() -> Self {
+        Self(vec![
+            CameraMode::FirstPerson,
+            CameraMode::ThirdPerson,
+            CameraMode::Stationary,
+            CameraMode::LookingAt,
+        ])
+    }
+}
+
 #[cfg(feature = "input_bei")]
 pub fn on_player_camera_change(
     _event: On<Start<ChangeCamera>>,
 
+    views: Res<PlayerCameraViews>,
     mut camera_q: Single<&mut PlayerCamera, (With<WorldCamera>, With<OurCamera>)>,
     mut commands: Commands,
 
@@ -327,7 +343,17 @@ pub fn on_player_camera_change(
     if is_grabbing_item.is_some() { return };
 
     // Switch the PlayerMode.
-    camera_q.0 = camera_q.0.next();
+    if views.0.is_empty() {
+        warn!("no PlayerCameraViews");
+        return
+    }
+
+    let new_index = if let Some(current) = views.0.iter().position(|x| *x == camera_q.0) {
+        (current + 1) % views.0.len()
+    } else {
+        0
+    };
+    camera_q.0 = views.0.get(new_index).unwrap().clone();
 
     commands.run_system_cached(update_player_camera_render);
 }

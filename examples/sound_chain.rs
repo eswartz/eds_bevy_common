@@ -30,6 +30,8 @@ use console_log::log;
 use eds_bevy_common::prelude::midi_synth::prelude::*;
 use eds_bevy_common::prelude::*;
 
+const GAME_TITLE: &str = "Sound Chain";
+
 fn main() -> AppExit {
     // Toggle to debug startup issues (only)
     // // Init early to catch all the wasm32 logs.
@@ -126,8 +128,6 @@ fn main() -> AppExit {
         })
         .add_plugins(MyMenuPlugin)
         .init_resource::<LevelDifficulty>()
-
-        .insert_resource(ProductName("Sound Chain".to_string()))
 
         .add_plugins(MyGamePlugin)
 
@@ -405,15 +405,13 @@ fn on_enter_main_menu(
     mut commands: Commands,
     font: Res<UiFont>,
     mut history: ResMut<MenuItemSelectionHistory>,
-    // mut glyph_mats: ResMut<Assets<TitleShader>>,
-    product_name: Res<ProductName>,
     current_level: Option<Res<CurrentLevel>>,
 ) {
     // Re-initialize state (on entry and on game exit).
 
     commands.spawn((
         DespawnOnExit(OverlayState::MainMenu),
-        Text2d::new(&product_name.0),
+        Text2d::new(GAME_TITLE),
         TextFont {
             font_size: FontSize::Px(128.0),
             font: font.0.clone().into(),

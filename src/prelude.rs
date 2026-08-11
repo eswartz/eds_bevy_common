@@ -12,7 +12,6 @@ pub use crate::lifecycle::*;
 pub use crate::markers::*;
 pub use crate::layers::*;
 pub use crate::menus_common::*;
-pub use crate::product::*;
 pub use crate::states_sets::*;
 pub use crate::texutils::*;
 pub use crate::video::*;
@@ -44,7 +43,7 @@ pub use crate::lights::*;
 pub use crate::materials::*;
 pub use crate::flashlight::*;
 pub use crate::surface_material::*;
-// pub use crate::time_stretch::*;
+pub use crate::sound_sampler::*;
 pub use crate::app::*;
 
 #[cfg(feature = "midi_synth")]

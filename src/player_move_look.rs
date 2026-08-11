@@ -345,16 +345,16 @@ pub enum CameraMode {
     Stationary,
     LookingAt,
 }
-impl CameraMode {
-    pub fn next(&self) -> Self {
-        match self {
-            Self::FirstPerson => Self::ThirdPerson,
-            Self::ThirdPerson => Self::LookingAt,
-            Self::LookingAt => Self::Stationary,
-            Self::Stationary => Self::FirstPerson,
-        }
-    }
-}
+// impl CameraMode {
+//     pub fn next(&self) -> Self {
+//         match self {
+//             Self::FirstPerson => Self::ThirdPerson,
+//             Self::ThirdPerson => Self::LookingAt,
+//             Self::LookingAt => Self::Stationary,
+//             Self::Stationary => Self::FirstPerson,
+//         }
+//     }
+// }
 
 #[derive(Debug, Component, Reflect, Clone)]
 #[require(Saveable)]

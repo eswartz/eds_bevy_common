@@ -26,7 +26,7 @@ impl Plugin for MaterialsPlugin {
             .insert_resource(SpawnMeshHandles::default())
             .add_message::<RefreshImages>()
             .add_systems(
-                FixedPreUpdate,
+                PreUpdate,
                 (
                     handle_spawn_shape,
                     handle_spawn_texture,
@@ -37,6 +37,7 @@ impl Plugin for MaterialsPlugin {
                 PostUpdate,
                 (
                     refresh_materials,
+                    apply_uv_box_map,
                 )
             )
 
@@ -466,9 +467,9 @@ pub struct ApplyUvBoxMap {
     pub repeats: Vec3,
 }
 
-pub fn apply_uv_box_map(
+fn apply_uv_box_map(
     mut meshes: ResMut<Assets<Mesh>>,
-    mut mesh_q: Query<(Entity, &ApplyUvBoxMap, &mut Mesh3d), Changed<ApplyUvBoxMap>>,
+    mut mesh_q: Query<(Entity, &ApplyUvBoxMap, &mut Mesh3d), Or<(Changed<ApplyUvBoxMap>, Changed<Mesh3d>)>>,
 ) -> Result {
     for (_entity, uv_map, mut mesh3d) in mesh_q.iter_mut() {
         let Some(mesh) = meshes.get(mesh3d.id()) else { continue };

@@ -10,7 +10,6 @@ pub mod markers;
 pub mod layers;
 pub mod areas;
 
-pub mod product;
 pub mod levels;
 pub mod despawn_on_reset;
 
@@ -74,3 +73,6 @@ pub mod midi_synth;
 pub mod colliders;
 pub mod flashlight;
 pub mod surface_material;
+pub mod sound_sampler;
+
+pub mod world_load_save;

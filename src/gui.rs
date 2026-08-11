@@ -939,6 +939,7 @@ fn update_mute_ui(
 
 #[derive(Resource, Debug, Default, Deref, DerefMut, Reflect)]
 #[reflect(Resource, Default)]
+#[type_path = "game"]
 pub struct PhysicsPaused(pub bool);
 
 fn update_physics_pause_ui(
