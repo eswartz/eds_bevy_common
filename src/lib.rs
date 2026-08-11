@@ -51,7 +51,7 @@ pub mod skybox;
 pub mod split_into_cubes;
 pub mod detail_normal;
 pub mod parallax_depth;
-pub mod materials;
+pub mod spawn_helpers;
 
 pub mod outlines;
 #[cfg(feature = "highlighting")]

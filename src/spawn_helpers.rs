@@ -1,3 +1,5 @@
+//! This plugin and systems help spawn items which are modeled
+//! by [SpawnShape] and [SpawnMaterial].
 use std::hash::Hash;
 
 use bevy::image::ImageAddressMode;
@@ -17,9 +19,9 @@ use crate::prelude::MeshQuality;
 use crate::prelude::VideoSettings;
 use crate::prelude::create_uvmapped_mesh_scaled;
 
-pub struct MaterialsPlugin;
+pub struct SpawnHelpersPlugin;
 
-impl Plugin for MaterialsPlugin {
+impl Plugin for SpawnHelpersPlugin {
     fn build(&self, app: &mut App) {
         app
             .insert_resource(SpawnMaterialHandles::default())
@@ -585,7 +587,7 @@ fn handle_spawn_shape(
                             }
                         };
                         let mut mesh = Sphere::new(*rad).mesh().uv(sectors, stacks);
-                        mesh.compute_smooth_normals();
+                        // mesh.compute_smooth_normals();   // BUG: breaks lower hemisphere
                         let _ = mesh.generate_tangents();
                         meshes.add(mesh)
                     });

@@ -41,7 +41,7 @@ pub use crate::menu_utils::*;
 pub use crate::menu_audio::*;
 pub use crate::model_utils::*;
 pub use crate::lights::*;
-pub use crate::materials::*;
+pub use crate::spawn_helpers::*;
 pub use crate::flashlight::*;
 pub use crate::surface_material::*;
 pub use crate::sound_sampler::*;
