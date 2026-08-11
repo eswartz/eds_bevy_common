@@ -127,7 +127,6 @@ pub fn fetch_saveable_entities(world: &mut World, from_world_marker: bool) -> Ve
 
 /// Save world state for the given entities.
 pub fn save_world_state(world: &mut World, ents: Vec<Entity>) -> anyhow::Result<String> {
-    let asset_server = world.resource::<AssetServer>().clone();
     let app_type_registry = world.resource::<AppTypeRegistry>().clone();
 
     let type_registry = app_type_registry.read();
@@ -169,28 +168,26 @@ pub fn load_world_resources(world: &mut World, custom_resources: Handle<DynamicW
     let mut errors = String::new();
     let asset_id = custom_resources.id();
 
-    world.resource_scope::<AppTypeRegistry, ()>(|world, app_type_reg| {
-        let world_assets = world.resource::<Assets<DynamicWorld>>();
-        let world_asset = world_assets.get(asset_id).unwrap();
+    let world_assets = world.resource::<Assets<DynamicWorld>>();
+    let world_asset = world_assets.get(asset_id).unwrap();
 
-        for refl in world_asset.resources.iter() {
-            let Some(type_info) = refl.get_represented_type_info() else {
-                errors += &format!("{asset_id:?}: type {refl:?} not reflectable\n");
+    for refl in world_asset.resources.iter() {
+        let Some(type_info) = refl.get_represented_type_info() else {
+            errors += &format!("{asset_id:?}: type {refl:?} not reflectable\n");
+            continue;
+        };
+        let type_id = type_info.type_id();
+        match refl.reflect_clone() {
+            Ok(resource) => {
+                let resource_id = world.components().get_id(type_id).expect("we checked");
+                new_resources.push((resource_id, resource));
+            }
+            Err(e) => {
+                errors += &format!("{asset_id:?}: {e}\n");
                 continue;
-            };
-            let type_id = type_info.type_id();
-            match refl.reflect_clone() {
-                Ok(resource) => {
-                    let resource_id = world.components().get_id(type_id).expect("we checked");
-                    new_resources.push((resource_id, resource));
-                }
-                Err(e) => {
-                    errors += &format!("{asset_id:?}: {e}\n");
-                    continue;
-                }
             }
         }
-    });
+    }
 
     for (resource_id, resource) in new_resources.into_iter() {
         world.insert_reflect_resource(resource_id, resource);
@@ -199,6 +196,6 @@ pub fn load_world_resources(world: &mut World, custom_resources: Handle<DynamicW
     errors.is_empty().ok_or(errors)
 }
 
-pub fn load_world_state(world: &mut World, text: &str) -> anyhow::Result<()> {
-    Ok(())
+pub fn load_world_state(_world: &mut World, _text: &str) -> anyhow::Result<()> {
+    unimplemented!();
 }
