@@ -576,6 +576,9 @@ fn check_grab_focus_state(
     }
 }
 
+/// This marker annotates a certain managed area of the UI.
+///
+/// See [GuiAreaMarkerLocator] for usage.
 #[derive(Component, Clone, Copy, PartialEq, Hash, Reflect)]
 #[reflect(Component, Clone)]
 #[type_path = "game"]
@@ -1006,7 +1009,7 @@ fn show_instructions(
 
     // Show only if we don't remember showing the instructions for this level.
     let level_id = if let Some(level) = level {
-        level.id.clone()
+        level.info.id.clone()
     } else {
         String::new()
     };

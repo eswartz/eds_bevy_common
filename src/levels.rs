@@ -1,6 +1,6 @@
 //! Provides a data model [LevelList], composed of an ordered [LevelInfo] list.
 //! [LevelIndex] represents the current level.
-//! [NextLevelIndex] is the to-be-spanwed next level once [crate::LevelState::Advance]
+//! [NextLevelIndex] is the to-be-spawned next level once [crate::LevelState::Advance]
 //! is set.
 use bevy::prelude::*;
 
@@ -38,16 +38,19 @@ pub struct LevelList(pub Vec<LevelInfo>);
 pub fn is_in_level(id: &str) -> impl Fn(Option<Res<CurrentLevel>>) -> bool {
     move |level: Option<Res<CurrentLevel>>| -> bool {
         level.is_some_and(|l| {
-            l.0.id == id
+            l.info.id == id
         })
     }
 }
 
-/// The current level, which holds a copy of the current level info.
-#[derive(Resource, Reflect, Debug, Deref, Clone)]
+/// The current level, which holds the index of and a copy of the level info.
+#[derive(Resource, Reflect, Debug, Clone)]
 #[reflect(Resource)]
 #[type_path = "game"]
-pub struct CurrentLevel(pub LevelInfo);
+pub struct CurrentLevel {
+    pub index: usize,
+    pub info: LevelInfo,
+}
 
 /// The level index into [LevelList].
 #[derive(Resource, Debug, Default, Reflect)]

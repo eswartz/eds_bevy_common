@@ -128,6 +128,8 @@ pub enum LevelState {
     Won,
     /// In Lost state.
     Lost,
-    /// Switching to some level (perhaps [crate::NextLevelIndex]).
+    /// Switching to some level ([crate::prelude::NextLevelIndex]).
     Advance,
+    /// Prompt to enter a level from the start ([crate::prelude::CurrentLevel]).
+    Enter,
 }

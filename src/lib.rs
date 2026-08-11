@@ -60,6 +60,7 @@ pub mod highlighting;
 pub mod grabbing;
 
 pub mod menu_audio;
+pub mod menu_utils;
 
 #[cfg(feature = "midi_synth")]
 pub mod synth;

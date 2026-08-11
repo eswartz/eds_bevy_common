@@ -364,7 +364,7 @@ fn on_enter_main_menu(
     )
     .add_item(
         if let Some(level) = current_level {
-            format!("Reset ({})", level.label)
+            format!("Reset ({})", level.info.label)
         } else {
             "Play".to_string()
         },
@@ -494,7 +494,7 @@ fn on_enter_escape_menu(
     .add_item("Video", (), SimpleMenuActions::VideoMenu)
     .add_item("Controls", (), SimpleMenuActions::ControlsMenu)
     .add_item("Stop", (), SimpleMenuActions::StopGame)
-    .add_item(format!("Resume ({})", current_level.label), (), SimpleMenuActions::ResumeGame)
+    .add_item(format!("Resume ({})", current_level.info.label), (), SimpleMenuActions::ResumeGame)
     .finish(&mut history);
 }
 
@@ -532,120 +532,10 @@ impl MenuItemHandler for EnumMenuActions {
         if let MenuActionMessage::Activate(_) = event
             && let EnumMenuActions::SelectStartLevelEnum = self
         {
-            commands.set_state(LevelState::Advance);
-            start_game(commands.reborrow());
+            commands.set_state(LevelState::Enter);
         }
         queue.apply(world);
     }
-}
-
-#[derive(Debug, Clone)]
-pub(crate) enum VolumeMenuActions {
-    MainVolumeSlider,
-    MusicVolumeSlider,
-    EffectsVolumeSlider,
-    UiVolumeSlider,
-    // AmbientVolumeSlider,
-}
-
-impl MenuItemHandler for VolumeMenuActions {}
-
-fn on_enter_audio_menu(
-    font: Res<UiFont>,
-    mut commands: Commands,
-    program_state: Res<State<ProgramState>>,
-    mut history: ResMut<MenuItemSelectionHistory>,
-) {
-    use bevy_seedling::prelude::*;
-
-    macro_rules! make_volume_getter_setter_mute {
-        ($getter:ident $setter:ident $get_mute:ident $set_mute:ident => $bus_or_pool:path) => {
-            let $getter = commands.register_system(IntoSystem::into_system(
-                |In(entity): In<Entity>,
-                 mut slider_q: Query<&mut MenuSlider>,
-                 vol_q: Single<&mut UserVolume, With<$bus_or_pool>>| {
-                    slider_q.get_mut(entity).unwrap().current = Some(vol_q.volume.linear());
-                },
-            ));
-            let $setter = commands.register_system(IntoSystem::into_system(
-                |In(v): In<f32>, mut vol_q: Single<&mut UserVolume, With<$bus_or_pool>>| {
-                    vol_q.volume = Volume::Linear(v);
-                },
-            ));
-            let $get_mute = commands.register_system(IntoSystem::into_system(
-                |In(entity): In<Entity>,
-                 mut toggle_q: Query<&mut MenuToggle>,
-                 vol_q: Single<&mut UserVolume, With<$bus_or_pool>>| {
-                    toggle_q.get_mut(entity).unwrap().current = Some(!vol_q.muted);
-                },
-            ));
-            let $set_mute = commands.register_system(IntoSystem::into_system(
-                |In(v): In<bool>, mut vol_q: Single<&mut UserVolume, With<$bus_or_pool>>| {
-                    vol_q.muted = !v;
-                },
-            ));
-        };
-    }
-
-    make_volume_getter_setter_mute!(get_master set_master get_master_muted set_master_muted => MainBus);
-    make_volume_getter_setter_mute!(get_music set_music  get_music_muted set_music_muted => MusicNode);
-    make_volume_getter_setter_mute!(get_effects set_effects  get_effects_muted set_effects_muted  => SfxNode);
-    make_volume_getter_setter_mute!(get_ui set_ui  get_ui_muted set_ui_muted  => UiSfxNode);
-
-    let make_audio_slider = |getter, setter, defval| -> MenuSlider {
-        MenuSlider::new(
-            getter,
-            setter,
-            move || defval,
-            |v| (v * 100.0).round(),
-            |v| v / 100.0,
-            0.0..=100.0,
-            5.0,
-        )
-    };
-
-    MenuItemBuilder::new(
-        commands,
-        OverlayState::AudioMenu,
-        *program_state.get(),
-        font.0.clone(),
-        1.0,
-        &history,
-    )
-    .add_item(
-        "Master Volume",
-        (
-            make_audio_slider(get_master, set_master, Some(0.7)),
-            MenuToggle::new(get_master_muted, set_master_muted),
-        ),
-        VolumeMenuActions::MainVolumeSlider,
-    )
-    .add_item(
-        "Music Volume",
-        (
-            make_audio_slider(get_music, set_music, Some(0.5)),
-            MenuToggle::new(get_music_muted, set_music_muted),
-        ),
-        VolumeMenuActions::MusicVolumeSlider,
-    )
-    .add_item(
-        "Effects Volume",
-        (
-            make_audio_slider(get_effects, set_effects, Some(0.7)),
-            MenuToggle::new(get_effects_muted, set_effects_muted),
-        ),
-        VolumeMenuActions::EffectsVolumeSlider,
-    )
-    .add_item(
-        "UI Volume",
-        (
-            make_audio_slider(get_ui, set_ui, Some(1.0)),
-            MenuToggle::new(get_ui_muted, set_ui_muted),
-        ),
-        VolumeMenuActions::UiVolumeSlider,
-    )
-    .add_item("Back", (), SimpleMenuActions::Back)
-    .finish(&mut history);
 }
 
 enum ControlMenuToggleActions {
@@ -973,6 +863,10 @@ impl Plugin for MyGamePlugin {
             )
 
             .add_systems(
+                OnEnter(LevelState::Enter),
+                start_game
+            )
+            .add_systems(
                 OnEnter(LevelState::Advance),
                 advance_level
             )
@@ -1221,7 +1115,7 @@ pub(crate) fn setup_level(
     }
 
     let level = &level_list.0[level_index.0];
-    commands.insert_resource(CurrentLevel(level.clone()));
+    commands.insert_resource(CurrentLevel{ index, info: level.clone() });
 }
 
 pub(crate) fn advance_level(
