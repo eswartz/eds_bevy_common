@@ -56,7 +56,6 @@ impl Default for SavedResources {
             TypeId::of::<StatsOverlayStyle>(),
             TypeId::of::<VideoSettings>(),
             TypeId::of::<FovDelta>(),
-            TypeId::of::<WorldMarkerEntity>(),
             TypeId::of::<PlayerCameraViews>(),
             TypeId::of::<StationaryCameraTransform>(),
         ];
