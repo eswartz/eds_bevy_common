@@ -709,7 +709,7 @@ fn setup_gui_nodes(
         Text::default(),
         TextFont {
             font: font.clone(),
-            font_size: FontSize::Px(icon_size),
+            font_size: FontSize::Px(icon_size * 0.75),
             ..default()
         },
         TextColor(Color::Srgba(tailwind::YELLOW_300)),
@@ -719,8 +719,8 @@ fn setup_gui_nodes(
         },
         Node {
             position_type: PositionType::Absolute,
-            top: Val::Px(12.0),
-            right: Val::Px(12.0),
+            top: Val::Px(48.0),
+            right: Val::Px(32.0),
             ..default()
         },
     ));

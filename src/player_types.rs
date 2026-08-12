@@ -175,5 +175,7 @@ pub fn default_player_collision_layers() -> CollisionLayers {
         GameLayer::Default, GameLayer::World,
         // GameLayer::Gameplay, // set this on a child Game Collider does this
         GameLayer::Projectiles,
+        GameLayer::Player,
+        GameLayer::Enemy,
     ])
 }

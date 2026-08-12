@@ -251,6 +251,54 @@ impl RetimedSamples {
 
 }
 
+pub struct SampleSelector {
+    samples: Vec<Handle<AudioSample>>,
+
+    lru: VecDeque<Handle<AudioSample>>,
+    /// Leave this many items in `lru` when clearing history.
+    /// The larger it is, the less likely repeats will occur.
+    lru_cap: NonZeroUsize,
+}
+
+impl SampleSelector {
+    pub fn new(samples: Vec<Handle<AudioSample>>) -> Self {
+        Self {
+            samples,
+            lru: default(),
+            lru_cap: NonZeroUsize::new(4).unwrap(),
+        }
+    }
+
+    pub fn set_repeat_limit(&mut self, limit: NonZeroUsize) {
+        self.lru_cap = limit;
+        // lru adjusted later on demand
+    }
+
+    /// Pick a random sample.
+    pub fn pick_sample(
+        &mut self,
+    ) -> Option<Handle<AudioSample>> {
+        // Our little list of recent samples, so
+        // we maintain uniqueness in sampling.
+        let lru = &mut self.lru;
+        let mut max_iters = 8;
+        loop {
+            let sample = self.samples.choose(&mut rand::rng()).cloned()?;
+            let key = sample.clone();
+            if !lru.contains(&key) || max_iters == 0 {
+                let lru_len = lru.len();
+                let lru_cap = self.lru_cap.get();
+                if lru_len + 1 >= lru_cap {
+                    // Forget old history.
+                    let _ = lru.drain(0 .. lru_cap.min(lru_len));
+                }
+                lru.push_back(key);
+                return Some(sample)
+            }
+            max_iters -= 1;
+        }
+    }
+}
 
 type SurfaceSampleMap = FxHashMap<SurfaceMaterial, Vec<Handle<AudioSample>>>;
 
