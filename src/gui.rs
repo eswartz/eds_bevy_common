@@ -728,6 +728,7 @@ fn setup_gui_nodes(
     // Game Status (win/lose)
     commands.spawn((
         despawn.clone(),
+        GuiAreaMarker::GameStatusArea,
         Node {
             width: Val::Percent(100.),
             height: Val::Percent(100.),
@@ -739,23 +740,20 @@ fn setup_gui_nodes(
         BackgroundColor(Color::NONE),
         RenderLayers::from_layers(&[RENDER_LAYER_UI]),
 
-        children![
-            GuiAreaMarker::GameStatusArea,
-            Text::new(
-                "", // e.g. "You win!"
-            ),
-            TextFont {
-                font: font.clone(),
-                font_size: FontSize::Px(64.0),
-                .. default()
-            },
-            TextColor( Color::linear_rgba(0., 0., 0., 1.0)),
-            TextShadow {
-                offset: Vec2::splat(4.),
-                color: Color::linear_rgba(0., 0., 0., 0.5),
-            },
-            TextLayout::new(Justify::Center, LineBreak::WordBoundary),
-        ],
+        Text::new(
+            "", // e.g. "You win!"
+        ),
+        TextFont {
+            font: font.clone(),
+            font_size: FontSize::Px(64.0),
+            .. default()
+        },
+        TextColor( Color::linear_rgba(0., 0., 0., 1.0)),
+        TextShadow {
+            offset: Vec2::splat(4.),
+            color: Color::linear_rgba(0., 0., 0., 0.5),
+        },
+        TextLayout::new(Justify::Center, LineBreak::WordBoundary),
     ));
 
     // In-hand status
