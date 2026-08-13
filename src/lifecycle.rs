@@ -16,6 +16,7 @@ impl Plugin for LifecyclePlugin {
     fn build(&self, app: &mut App) {
         app
             .init_resource::<PauseState>()
+            .init_resource::<NonPauseTime>()
             .add_systems(Startup,
                 init_phased_winit_settings,
             )
@@ -28,6 +29,8 @@ impl Plugin for LifecyclePlugin {
                 check_configure_before_playing,
                 update_frame_rate_on_pause
                     .run_if(resource_changed::<PauseState>),
+                count_nonpaused_time
+                    .run_if(not(is_paused)),
             ))
 
             .add_systems(
@@ -217,5 +220,22 @@ fn check_configure_before_playing(
     } else if state.is_changed() {
         // Reset whenever we are (now) in some other LevelState.
         *frames = 0;
+    }
+}
+
+#[derive(Resource, Default, Clone, Reflect, PartialEq)]
+#[reflect(Resource, Default)]
+#[type_path = "game"]
+pub struct NonPauseTime(pub Duration);
+
+fn count_nonpaused_time(
+    time: Res<Time>,
+    pause_state: Res<PauseState>,
+    mut pause_time: ResMut<NonPauseTime>,
+) {
+    if !pause_state.is_paused() {
+        pause_time.0 += time.delta();
+    } else {
+        pause_time.set_if_neq(NonPauseTime(Duration::ZERO));
     }
 }
