@@ -27,10 +27,6 @@ pub(crate) fn handle_escape(
         // Escape/etc is being handled elsewhere.
         return;
     }
-    if gui_prereq_opt.is_none() {
-        // Could not load assets, don't try to show menu UI yet.
-        return;
-    }
 
     let mut menu_detected = false;
 
@@ -39,17 +35,39 @@ pub(crate) fn handle_escape(
     }
 
     for button_event in gamepad_reader.read() {
-        if button_event.state == ButtonState::Pressed && button_event.button == GAMEPAD_BUTTON_MENU {
+        if button_event.state == ButtonState::Pressed && button_event.button == GAMEPAD_BUTTON_MENU
+        {
             menu_detected = true;
             break;
         }
     }
 
     // If we reach the root, handle it here.
-    // This is the one case where Escape *opens* the menu the first time.
+
+    // Quit program from Error menu.
+    if menu_detected {
+        if matches!(**overlay_state, OverlayState::ErrorScreen) {
+            info!("... Bye!");
+            commands.insert_resource(ExitRequest);
+            return;
+        } else if matches!(**overlay_state, OverlayState::GameOverScreen) {
+            commands.set_state(ProgramState::LaunchMenu);
+            commands.set_state(GameplayState::New);
+            return;
+        }
+    }
+
+    // If we could not load assets, don't try to show menu UI.
+    if gui_prereq_opt.is_none() {
+        return;
+    }
+
+    // When Escape *opens* the menu the first time
     if menu_detected
-    && (**overlay_state == OverlayState::Hidden || **overlay_state == OverlayState::ErrorScreen)
-    && **program_state == ProgramState::InGame {
+        && matches!(**overlay_state,
+            OverlayState::Hidden | OverlayState::GameOverScreen | OverlayState::ErrorScreen)
+        && **program_state == ProgramState::InGame
+    {
         debug!("... Escape");
         previous_menu.0.clear();
         commands.set_state(OverlayState::EscapeMenu);
