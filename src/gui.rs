@@ -717,6 +717,7 @@ fn setup_gui_nodes(
             offset: Vec2::splat(2.),
             color: Color::linear_rgba(0., 0., 0., 1.0),
         },
+        TextLayout::no_wrap().with_justify(Justify::Right),
         Node {
             position_type: PositionType::Absolute,
             top: Val::Px(48.0),
