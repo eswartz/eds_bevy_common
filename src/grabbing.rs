@@ -17,7 +17,6 @@ use crate::prelude::Highlighted;
 #[cfg(feature = "highlighting")]
 use crate::prelude::HighlightingMode;
 use crate::prelude::PhysicsPaused;
-use crate::prelude::PlayerContext;
 #[cfg(feature = "input_bei")]
 use crate::prelude::ProgramState;
 #[cfg(feature = "input_bei")]
@@ -242,12 +241,12 @@ fn on_start_grab(
     mut commands: Commands,
     grabbable_q: Query<Entity, With<Grabbable>>,
     grabbed_opt: Option<Res<GrabbedItem>>,
-    #[cfg(feature = "highlighting")]
-    mut highlighting_mode: If<ResMut<HighlightingMode>>,
-    release_q: Query<&ActionEvents, (
-        With<ActionOf<PlayerContext>>,
-        Or<(With<Action<actions::ToggleSelect>>, With<Action<actions::AltFiring>>)>,
-    )>,
+    // #[cfg(feature = "highlighting")]
+    // mut highlighting_mode: If<ResMut<HighlightingMode>>,
+    // release_q: Query<&ActionEvents, (
+    //     With<ActionOf<PlayerContext>>,
+    //     Or<(With<Action<actions::ToggleSelect>>, With<Action<actions::AltFiring>>)>,
+    // )>,
 ) {
     if grabbed_opt.is_some()
     // be careful with these keys triggering false re-starts e.g. on tabbing into a window
@@ -257,11 +256,6 @@ fn on_start_grab(
         commands.write_message(GrabbingCommand::ReleaseItems(None));
     } else {
         // Try to grab.
-        let release = release_q.iter().any(|e| e.contains(ActionEvents::START));
-        if release && highlighting_mode.is_disabled() {
-            **highlighting_mode = HighlightingMode::Enabled;
-        }
-
         if let Some(grabbed) = grabbable_q.iter().next() {
             commands.write_message(GrabbingCommand::GrabItem(grabbed));
             commands.entity(grabbed).try_remove::<Grabbable>();

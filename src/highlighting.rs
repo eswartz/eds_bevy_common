@@ -130,7 +130,7 @@ pub fn is_highlighting_enabled(res: Res<HighlightingMode>) -> bool {
 /// Marker for CountAccumulator.
 struct HighlightedItemCycle;
 
-fn clear_highlighted(
+pub fn clear_highlighted(
     mut commands: Commands,
     style: Res<HighlightedItemStyle>,
     hilit_q: Query<Entity, With<Highlighted>>,
