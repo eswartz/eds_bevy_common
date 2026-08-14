@@ -85,6 +85,20 @@ impl Lens<Transform> for TransformPositionRotationLens {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
+pub struct TextColorLens {
+    /// Start color.
+    pub start: Color,
+    /// End color.
+    pub end: Color,
+}
+
+impl Lens<TextColor> for TextColorLens {
+    fn lerp(&mut self, mut target: Mut<TextColor>, ratio: f32) {
+        target.0 = self.start.mix(&self.end, ratio);
+    }
+}
+
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub struct TextShadowColorLens {
     /// Start color.
     pub start: Color,
@@ -95,5 +109,17 @@ pub struct TextShadowColorLens {
 impl Lens<TextShadow> for TextShadowColorLens {
     fn lerp(&mut self, mut target: Mut<TextShadow>, ratio: f32) {
         target.color = self.start.mix(&self.end, ratio);
+    }
+}
+
+#[derive(Debug)]
+pub struct BackgroundColorLens {
+    pub start: Color,
+    pub end: Color,
+}
+
+impl Lens<BackgroundColor> for BackgroundColorLens {
+    fn lerp(&mut self, mut target: Mut<BackgroundColor>, ratio: f32) {
+        target.0 = self.start.mix(&self.end, ratio);
     }
 }
