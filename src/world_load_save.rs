@@ -179,8 +179,11 @@ pub fn load_world_resources(world: &mut World, custom_resources: Handle<DynamicW
         let type_id = type_info.type_id();
         match refl.reflect_clone() {
             Ok(resource) => {
-                let resource_id = world.components().get_id(type_id).expect("we checked");
-                new_resources.push((resource_id, resource));
+                if let Some(resource_id) = world.components().get_id(type_id) {
+                    new_resources.push((resource_id, resource));
+                } else {
+                    log::warn!("can't restore typeid {}", type_info.type_path());
+                }
             }
             Err(e) => {
                 errors += &format!("{asset_id:?}: {e}\n");
