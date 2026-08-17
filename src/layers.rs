@@ -8,22 +8,22 @@ use crate::physics::*;
 #[type_path = "game"]
 pub enum GameLayer {
     #[default]
-    /// Layer 0 - the default layer that objects are assigned to
+    /// Layer 0 (1) - the default layer that objects are assigned to
     Default,
-    /// Layer 1 = player/camera
+    /// Layer 1 (2) = player/camera
     /// Assumes [crate::Player] component.
     Player,
-    /// Layer 2 - static geometry
+    /// Layer 2 (4) - static geometry
     World,
-    /// Layer 3 - components with gameplay-specific behavior
+    /// Layer 3 (8) - components with gameplay-specific behavior
     /// independent of the player body.
     /// (This may be set on a child collider of [crate::Player]
     /// when interacting with e.g. tiles / buttons / etc.)
     Gameplay,
-    /// Layer 4 - temporary bullets/projectiles/etc.
+    /// Layer 4 (16) - temporary bullets/projectiles/etc.
     /// Assumes [crate::Projectile] component.
     Projectiles,
-    /// Layer 5 - enemy entities.
+    /// Layer 5 (32) - enemy entities.
     Enemy,
 }
 
