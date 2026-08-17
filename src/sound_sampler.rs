@@ -392,14 +392,14 @@ fn init_samples(mut commands: Commands, fx: Res<CommonFxAssets>) {
 }
 
 fn spawn_noise_on_collision(
-    surf_mat_q: Query<&SurfaceMaterial>,
+    mut commands: Commands,
 
     collisions: Collisions,
+    time: Res<Time>,
     phys_info_q: Query<(&GlobalTransform, &LinearVelocity, &AngularVelocity, &Mass)>,
     listener_q: Query<&GlobalTransform, With<SpatialListener3D>>,
     player_q: Query<&Player>,
     parent_q: Query<&ChildOf>,
-    paused: Res<PhysicsPaused>,
 
     mut selector: ResMut<CommonSampleSelector>,
 
@@ -407,13 +407,8 @@ fn spawn_noise_on_collision(
     mut retimed_samples: ResMut<RetimedSamples>,
 
     mut footstep_dist: Local<f32>,
-    time: Res<Time>,
-    mut commands: Commands,
+    surf_mat_q: Query<&SurfaceMaterial>,
 ) {
-    if **paused {
-        return
-    }
-
     let mut rng = rand::rng();
     let mut added = 0;
 
@@ -471,7 +466,7 @@ fn spawn_noise_on_collision(
             }
 
             // Distinguish between "small" impulses and "large" impulses using the log scale.
-            let impulse_log = (event.total_normal_impulse_magnitude() + 0.01).log10();
+            let impulse_log = (event.max_normal_impulse_magnitude() + 0.01).log10();
             let silent = impulse_log < 0.05;
             if silent {
                 // Too weak to make a noise.
@@ -538,7 +533,7 @@ fn spawn_noise_on_collision(
                     (event.collider2, phys_mat_b)
                 };
 
-                let vol_mid = ((vel_length + ang_length) / 2.0).min(0.95);
+                let vol_mid = ((vel_length + ang_length).log2()).min(0.95);
                 if vol_mid < 0.01 {
                     continue
                 }
@@ -546,7 +541,7 @@ fn spawn_noise_on_collision(
                 let speed_mid = ang_length / mass.0 * 200.0 / 3.0;
                 speed_range = (speed_mid * 0.75).max(0.5) .. (speed_mid * 2.0).min(2.0);
 
-                if sliding && ang_length < vel_length /*m */ {
+                if !sliding && ang_length < vel_length /*m */ {
                     sample_ty = SampleSelectorType::SurfaceImpact;
                 } else if vel_length > 0.1 {
                     sample_ty = SampleSelectorType::SurfaceSlide;
