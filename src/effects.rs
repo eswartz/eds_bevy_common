@@ -1,4 +1,6 @@
 
+use std::time::Duration;
+
 use bevy::prelude::*;
 use bevy_tweening::Lens;
 
@@ -21,20 +23,54 @@ impl Plugin for EffectsPlugin {
 }
 
 /// Marker for things that should shrink and disappear, at the given rate.
-#[derive(Component, Reflect, Default)]
+#[derive(Component, Reflect)]
 #[reflect(Component, Default)]
 #[type_path = "game"]
-pub struct ShrinkAndDisappear(pub f32);
+pub struct ShrinkAndDisappear {
+    pub time: f32,
+    func: EaseFunction,
+    orig_scale: Option<Vec3>,
+}
+
+impl Default for ShrinkAndDisappear {
+    fn default() -> Self {
+        Self { time: 0.0, func: EaseFunction::Linear, orig_scale: None }
+    }
+}
+
+impl ShrinkAndDisappear {
+    pub fn new(time: Duration) -> Self {
+        Self {
+            time: time.as_secs_f32(),
+            .. default()
+        }
+    }
+    pub fn with_ease_function(self, func: EaseFunction) -> Self {
+        Self {
+            func,
+            .. self
+        }
+    }
+}
 
 fn shrink_and_disappear(mut commands: Commands,
     time: Res<Time>,
-    mut shrink_q: Query<(Entity, &ShrinkAndDisappear, &mut Transform)>
+    mut shrink_q: Query<(Entity, &mut ShrinkAndDisappear, &mut Transform)>
 ) {
-    for (ent, sad, mut xfrm) in shrink_q.iter_mut() {
-        let cur_scale = xfrm.scale.max_element();
-        let new_scale = cur_scale - time.delta_secs() * sad.0.max(0.1);
-        if new_scale >= 0.01 {
-            xfrm.scale = Vec3::splat(new_scale);
+    for (ent, mut sad, mut xfrm) in shrink_q.iter_mut() {
+        if sad.orig_scale.is_none() {
+            sad.orig_scale = Some(xfrm.scale);
+        }
+
+        let orig_scale = sad.orig_scale.as_ref().unwrap().clone();
+
+        // Note, it's backwards, as we count down.
+        let curve = EasingCurve::new(0.0, orig_scale.max_element(), sad.func);
+        sad.time = (sad.time - time.delta_secs()).max(0.0);
+
+        let new_scale_mag = curve.sample_clamped(sad.time);
+        if new_scale_mag >= 0.01 {
+            xfrm.scale = orig_scale * new_scale_mag;
         } else {
             commands.entity(ent).try_despawn();
         }
