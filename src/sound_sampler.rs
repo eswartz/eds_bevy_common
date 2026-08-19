@@ -22,7 +22,7 @@ impl Plugin for CommonSoundSamplerPlugin {
         app
             .insert_resource(RetimedSamples::new(256).with_save_files(false))
             .add_systems(OnEnter(ProgramState::LaunchMenu), init_samples)
-            .add_systems(Update,
+            .add_systems(FixedPreUpdate,
                 (
                     spawn_noise_on_collision,
                 )
@@ -300,7 +300,7 @@ impl SampleSelector {
     }
 }
 
-type SurfaceSampleMap = FxHashMap<SurfaceMaterial, Vec<Handle<AudioSample>>>;
+pub type SurfaceSampleMap = FxHashMap<SurfaceMaterial, Vec<Handle<AudioSample>>>;
 
 #[derive(Resource)]
 pub struct CommonSampleSelector {
@@ -461,7 +461,7 @@ fn spawn_noise_on_collision(
             let rel_ang_abs = src_ang_vel.abs() - ang_vel.0.abs();
             let ang_length = rel_ang_abs.length() /* rad */ * std::f32::consts::PI * 0.125 /* m */;
             if vel_length + ang_length < 1.0 {
-                // They're moving slowly  other, ignore
+                // They're moving slowly, ignore
                 continue
             }
 
@@ -482,10 +482,12 @@ fn spawn_noise_on_collision(
                 let vel_rel_t = rel_vel - norm_rel_vel.dot(normal) * normal;
                 let sliding_speed = vel_rel_t.length();
                 let max_slide_speed = if one_is_player { 4.0 } else { 2.0 };
-                let sliding = vel_rel_n.abs() < 0.25 && sliding_speed > max_slide_speed;
+                let sliding = (vel_rel_n.abs() - ang_length.abs()) < 0.25 && sliding_speed > max_slide_speed;
 
                 sliding
             };
+
+            // dbg!((sliding, vel_length, ang_length));
 
             let target_entity: Entity;
             let vol_range: core::ops::Range<f32>;
@@ -506,10 +508,11 @@ fn spawn_noise_on_collision(
                 *footstep_dist -= FOOTFALL_TIMES_SAMPLE_DIST;
 
                 // Footsteps follow the player.
-                (target_entity, phys_mat) = if player_a {
-                    (event.collider1, phys_mat_b)
+                target_entity = event.collider1;
+                phys_mat = if player_a {
+                    phys_mat_b
                 } else {
-                    (event.collider1, phys_mat_a)
+                    phys_mat_a
                 };
 
                 if !sliding {
@@ -541,7 +544,7 @@ fn spawn_noise_on_collision(
                 let speed_mid = ang_length / mass.0 * 200.0 / 3.0;
                 speed_range = (speed_mid * 0.75).max(0.5) .. (speed_mid * 2.0).min(2.0);
 
-                if !sliding && ang_length < vel_length /*m */ {
+                if !sliding {
                     sample_ty = SampleSelectorType::SurfaceImpact;
                 } else if vel_length > 0.1 {
                     sample_ty = SampleSelectorType::SurfaceSlide;
