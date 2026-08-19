@@ -580,9 +580,9 @@ fn handle_spawn_shape(
                             {
                                 match vid_settings.mesh_quality {
                                     MeshQuality::Low => (12, 6),
-                                    MeshQuality::Medium => (16, 10),
-                                    MeshQuality::High => (20, 14),
-                                    MeshQuality::Ultra => (24, 18),
+                                    MeshQuality::Medium => (24, 12),
+                                    MeshQuality::High => (32, 18),
+                                    MeshQuality::Ultra => (48, 24),
                                 }
                             }
                         };
