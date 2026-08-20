@@ -10,10 +10,12 @@ use bevy::math::FloatOrd;
 use bevy::mesh::PlaneMeshBuilder;
 use bevy::platform::collections::HashMap;
 use bevy::prelude::*;
+use bevy::world_serialization::WorldInstance;
 use rustc_hash::FxHashMap;
 use wgpu::Face;
 use wgpu::TextureFormat;
 
+use crate::markers::GlassTweak;
 use crate::prelude::LevelState;
 use crate::prelude::MeshQuality;
 use crate::prelude::VideoSettings;
@@ -798,10 +800,13 @@ fn handle_spawn_material(
     mut commands: Commands,
     mut mats: If<ResMut<Assets<StandardMaterial>>>,
     mat_q: Query<(Entity, &SpawnMaterial), (Without<TextureSources>, Without<SpawnShape>)>,
+    mesh_q: Query<&Mesh3d>,
+    child_q: Query<&Children>,
+    glass_q: Query<&GlassTweak>,
+    scene_q: Query<&WorldInstance>,
     mut mat_cache: If<ResMut<SpawnMaterialHandles>>,
 ) {
     for (ent, mat) in mat_q.iter() {
-        let mut ent_commands = commands.entity(ent);
         match mat {
             SpawnMaterial::StdMat(mat, cull) => {
                 let mat = StandardMaterial {
@@ -815,11 +820,28 @@ fn handle_spawn_material(
                 let mat_hash = StandardMaterialHash(hash_stdmat(&mat));
                 let std_mat = (**mat_cache).0.entry(mat_hash)
                     .or_insert_with(|| mats.add(mat));
-                ent_commands.try_insert(MeshMaterial3d(std_mat.clone()));
+
+                // Simple mesh?
+                if mesh_q.contains(ent) && !scene_q.contains(ent) {
+                    commands.entity(ent).try_insert(MeshMaterial3d(std_mat.clone()));
+                } else {
+                    // Else, assume it's a complex model and all the mesh children need to be affected.
+                    for kid in child_q.iter_descendants(ent) {
+                        if scene_q.contains(kid) {
+                            break;
+                        }
+                        if mesh_q.contains(kid) {
+                            commands.entity(kid).try_insert(MeshMaterial3d(std_mat.clone()));
+                            if glass_q.contains(ent) {
+                                commands.entity(kid).try_insert(GlassTweak);
+                            }
+                        }
+                    }
+                }
             }
             SpawnMaterial::None => (),
         }
-        ent_commands.try_remove::<SpawnMaterial>();
+        commands.entity(ent).try_remove::<SpawnMaterial>();
     }
 }
 
