@@ -390,7 +390,6 @@ fn apply_effect_settings(
 }
 
 fn apply_glass_tweak(
-    mut commands: Commands,
     mut mats: ResMut<Assets<StandardMaterial>>,
     video_settings: Res<VideoSettings>,
     mut glass_mat_q: Query<(&mut MeshMaterial3d<StandardMaterial>, &GlassTweak)>,
