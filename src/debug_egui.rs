@@ -2,6 +2,7 @@ use std::{collections::BTreeMap, io::Write, sync::LazyLock};
 
 use bevy::{ecs::{query::QueryFilter, system::SystemParam}, prelude::*};
 use bevy_egui::{EguiContext, EguiContexts, EguiGlobalSettings, EguiPlugin, EguiPrimaryContextPass, PrimaryEguiContext, helpers::*, input::{EguiWantsInput, egui_wants_any_keyboard_input, egui_wants_any_pointer_input}};
+use bevy_egui::egui;
 use bevy_inspector_egui::{DefaultInspectorConfigPlugin};
 use fuzzy_matcher::skim::SkimMatcherV2;
 
