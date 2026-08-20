@@ -15,6 +15,7 @@ use bevy::pbr::ScreenSpaceAmbientOcclusion;
 use bevy::pbr::ScreenSpaceAmbientOcclusionQualityLevel;
 use bevy::pbr::ScreenSpaceTransmissionQuality;
 
+use crate::markers::GlassTweak;
 use crate::prelude::GameplayState;
 use crate::prelude::LevelState;
 use crate::prelude::WorldCamera;
@@ -28,18 +29,21 @@ impl Plugin for VideoPlugin {
                 (
                     apply_effect_settings,
                     apply_camera_settings,
+                    apply_glass_tweak,
                 )
             )
             .add_systems(OnEnter(LevelState::Configuring),
                 (
                     apply_effect_settings,
                     apply_camera_settings,
+                    apply_glass_tweak,
                 )
             )
             .add_systems(PreUpdate,
                 (
                     apply_effect_settings.run_if(resource_changed::<VideoSettings>),
                     apply_camera_settings.run_if(resource_changed::<VideoSettings>.or_else(resource_changed::<FovDelta>)),
+                    apply_glass_tweak,
                 )
             )
         ;
@@ -383,4 +387,33 @@ fn apply_effect_settings(
     }
 
     // Lights and shadows handled in [lights::apply_light_effect_settings].
+}
+
+fn apply_glass_tweak(
+    mut commands: Commands,
+    mut mats: ResMut<Assets<StandardMaterial>>,
+    video_settings: Res<VideoSettings>,
+    mut glass_mat_q: Query<(&mut MeshMaterial3d<StandardMaterial>, &GlassTweak)>,
+) {
+    for (mut mat_h, _) in glass_mat_q.iter_mut() {
+        if video_settings.is_changed() || mat_h.is_changed() {
+            if let Some(mat) = mats.get(mat_h.id())
+            && mat.specular_transmission != 0.0 {
+                let new_mat = if video_settings.glass_quality == GlassQuality::Off {
+                    StandardMaterial {
+                        alpha_mode: AlphaMode::Add,
+                        .. mat.clone()
+                    }
+                } else {
+                    StandardMaterial {
+                        alpha_mode: AlphaMode::Opaque,
+                        .. mat.clone()
+                    }
+                };
+                if new_mat.alpha_mode != mat.alpha_mode {
+                    mat_h.0 = mats.add(new_mat);
+                }
+            }
+        }
+    }
 }

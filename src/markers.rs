@@ -103,7 +103,6 @@ pub struct ConfigureBeforePlaying;
 
 /////
 
-
 /// Mark the world camera (for 3D).
 #[derive(Component, Reflect, Debug)]
 #[reflect(Component)]
@@ -115,3 +114,11 @@ pub struct WorldCamera;
 #[reflect(Component)]
 #[type_path = "game"]
 pub struct ViewerCamera;
+
+/////
+
+/// Mark a glass item, to tweak materials.
+#[derive(Component, Reflect, Debug)]
+#[reflect(Component)]
+#[type_path = "game"]
+pub struct GlassTweak;
