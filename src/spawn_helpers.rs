@@ -431,7 +431,7 @@ fn handle_spawn_material(
     mesh_q: Query<&Mesh3d>,
     child_q: Query<&Children>,
     glass_q: Query<&GlassTweak>,
-    scene_q: Query<&WorldInstance, Without<WorldAssetRoot>>,
+    scene_q: Query<&WorldInstance>,
     mut mat_cache: If<ResMut<SpawnMaterialHandles>>,
 ) {
     for (ent, mat) in mat_q.iter() {
