@@ -24,11 +24,9 @@ fn main() -> AppExit {
     let mut app = App::new();
     app
         .insert_resource(WinitSettings {
-            focused_mode: bevy::winit::UpdateMode::reactive_low_power(Duration::from_secs_f32(
-                1.0 / 120.0,
-            )),
+            focused_mode: bevy::winit::UpdateMode::Continuous,
             unfocused_mode: bevy::winit::UpdateMode::reactive_low_power(Duration::from_secs_f32(
-                1.0 / 24.0,
+                1.0 / 15.0,
             )),
         })
 
@@ -51,7 +49,7 @@ fn main() -> AppExit {
         .add_plugins(AppPlugin)
 
         .add_plugins(ActionPlugin)
-
+        .add_plugins(CommonSoundSamplerPlugin)
         .add_plugins(LifecyclePlugin)
         .add_plugins(GuiPlugin)
         .add_plugins(VideoPlugin)
@@ -61,11 +59,11 @@ fn main() -> AppExit {
         .add_plugins(DeathboxPlugin::default())
         .add_plugins(CollidersPlugin)
 
-        .add_plugins(CrosshairPlugin)
-        .insert_resource(CrosshairMode::AimFromCenter)
-        .add_plugins(HighlightingPlugin)
-        .add_plugins(GrabbingPlugin)
-        .insert_resource(HighlightingMode::Disabled)
+        // .add_plugins(CrosshairPlugin)
+        // .insert_resource(CrosshairMode::AimFromCenter)
+        // .add_plugins(HighlightingPlugin)
+        // .add_plugins(GrabbingPlugin)
+        // .insert_resource(HighlightingMode::Disabled)
 
         .add_plugins(EffectsPlugin)
 
