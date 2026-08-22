@@ -7,7 +7,7 @@ use crate::prelude::*;
 use crate::physics::*;
 
 use bevy_seedling::{firewheel::Volume, prelude::*, sample::{AudioSample, SamplePlayer}};
-use bevy::{math::FloatOrd, prelude::*};
+use bevy::prelude::*;
 use rustc_hash::FxHashMap;
 
 use lru::LruCache;
@@ -35,7 +35,7 @@ impl Plugin for CommonSoundSamplerPlugin {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-struct QuantizedFloat(FloatOrd);
+struct QuantizedFloat(Float32);
 
 impl From<QuantizedFloat> for f32 {
     fn from(value: QuantizedFloat) -> Self {
@@ -49,14 +49,14 @@ impl QuantizedFloat {
         if v <= 0.0 { return None };
         let v_l2 = v.log2();
         let res = v_l2.round().exp2();
-        Some(Self(FloatOrd(res)))
+        Some(Self(Float32(res)))
     }
 
     #[allow(unused)]
     pub(crate) fn rounded_to_multiple(v: f32, mult: f32) -> Option<Self> {
         if v <= 0.0 { return None };
         let ret = (v / mult).ceil() * mult;
-        Some(Self(FloatOrd(ret)))
+        Some(Self(Float32(ret)))
     }
 
     pub(crate) fn as_f32(&self) -> f32 {
@@ -66,11 +66,11 @@ impl QuantizedFloat {
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct RetimedSampleKey {
-    pub scale_factor: FloatOrd,
+    pub scale_factor: Float32,
     pub orig: Handle<AudioSample>,
 }
 impl RetimedSampleKey {
-    fn new(source: Handle<AudioSample>, scale_factor: FloatOrd) -> Self {
+    fn new(source: Handle<AudioSample>, scale_factor: Float32) -> Self {
         Self { scale_factor, orig: source }
     }
 }
@@ -116,7 +116,7 @@ impl RetimedSamples {
     /// Return a version of the [AudioSample] scaled in length (but not pitch)
     /// by [`scale_factor`].
     pub fn fetch_retimed(&mut self, mut assets: Mut<Assets<AudioSample>>, source: Handle<AudioSample>, scale_factor: f32) -> Result<Handle<AudioSample>, String> {
-        let key = RetimedSampleKey::new(source, FloatOrd(scale_factor));
+        let key = RetimedSampleKey::new(source, Float32(scale_factor));
         let ret: Handle<AudioSample>;
         if let Some(target) = self.cache.get(&key) {
             ret = (*target).clone();
@@ -517,11 +517,12 @@ fn spawn_noise_on_collision(
 
                 if !sliding {
                     sample_ty = SampleSelectorType::FootstepImpact;
-                    vol_range = (dist / 1.0).clamp(0.25, 1.5) .. 1.51;
-                    speed_range = 0.75 .. 1.25;
+                    vol_range = (dist / 1.0).clamp(0.5, 1.5) .. 1.51;
+                    // speed_range = 0.75 .. 1.25;
+                    speed_range = 1.0 .. 1.0001;
                 } else if vel_length + ang_length > 0.1 {
                     sample_ty = SampleSelectorType::FootstepSlide;
-                    vol_range = (dist / 1.0).clamp(0.25, 1.25) .. 1.26;
+                    vol_range = (dist / 1.0).clamp(0.5, 1.25) .. 1.26;
                     speed_range = 0.75 .. 1.25;
                 } else {
                     continue
