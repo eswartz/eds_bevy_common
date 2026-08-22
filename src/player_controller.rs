@@ -35,7 +35,9 @@ impl Plugin for PlayerControllerPlugin {
                 .run_if(is_context_active::<PlayerContext>)
                 .run_if(not(is_paused))
                 .run_if(not(debug_gui_wants_direct_input))
-            );
+            )
+            .add_observer(on_toggle_crouch)
+            ;
         }
 
         app.add_systems(
@@ -111,11 +113,11 @@ fn collect_player_movement(
     ctrl_settings: Res<PlayerControllerSettings>,
     input_settings: Res<PlayerInputSettings>,
     cam_settings: Res<PlayerCameraSettings>,
-    mut writer: MessageWriter<PlayerInput>,
     player_vel_q: Single<(Entity, &LinearVelocity), With<OurPlayer>>,
     mut cam_q: Single<&mut OurCamera, With<WorldCamera>>,
     time: Res<Time>,
     mode: Res<PlayerMode>,
+    mut writer: MessageWriter<PlayerInput>,
 ) {
     let mut instant_thrust = Vec3::ZERO;
 
@@ -149,13 +151,22 @@ fn collect_player_movement(
         actual_speed as _,
     );
 
-    if **crouch_events == ActionEvents::START | ActionEvents::FIRE {
-        writer.write(PlayerInput::ToggleCrouch(player));
-    }
     writer.write(PlayerInput::Move(
         player,
         PlayerMove::new(instant_thrust, speed),
     ));
+}
+
+#[cfg(feature = "input_bei")]
+fn on_toggle_crouch(
+    event: On<Start<Crouch>>,
+    context_q: Query<&ActionOf<PlayerContext>>,
+    player_q: Single<Entity, With<OurPlayer>>,
+    mut writer: MessageWriter<PlayerInput>,
+) {
+    if context_q.contains(event.action) {
+        writer.write(PlayerInput::ToggleCrouch(*player_q));
+    }
 }
 
 /// Keep the mouse centered, so users won't accidentally
