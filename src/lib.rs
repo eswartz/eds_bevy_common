@@ -3,6 +3,8 @@
 pub mod prelude;
 
 pub mod physics;
+pub mod math;
+pub mod standard_material_model;
 pub mod app;
 pub mod states_sets;
 pub mod conditions;

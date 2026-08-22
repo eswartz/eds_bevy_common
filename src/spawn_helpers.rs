@@ -2,24 +2,16 @@
 //! by [SpawnShape] and [SpawnMaterial].
 use std::hash::Hash;
 
-use bevy::image::ImageAddressMode;
 use bevy::image::ImageLoaderSettings;
 use bevy::image::ImageSampler;
 use bevy::image::ImageSamplerDescriptor;
-use bevy::math::FloatOrd;
 use bevy::mesh::PlaneMeshBuilder;
 use bevy::platform::collections::HashMap;
 use bevy::prelude::*;
 use bevy::world_serialization::WorldInstance;
 use rustc_hash::FxHashMap;
-use wgpu::Face;
-use wgpu::TextureFormat;
 
-use crate::markers::GlassTweak;
-use crate::prelude::LevelState;
-use crate::prelude::MeshQuality;
-use crate::prelude::VideoSettings;
-use crate::prelude::create_uvmapped_mesh_scaled;
+use crate::prelude::*;
 
 pub struct SpawnHelpersPlugin;
 
@@ -32,10 +24,9 @@ impl Plugin for SpawnHelpersPlugin {
             .add_systems(
                 PreUpdate,
                 (
-                    handle_spawn_shape,
-                    handle_spawn_texture,
                     handle_spawn_material,
-                )
+                    handle_spawn_shape,
+                ).chain()
             )
             .add_systems(
                 PostUpdate,
@@ -53,137 +44,6 @@ impl Plugin for SpawnHelpersPlugin {
                 )
             )
         ;
-    }
-}
-
-/// Reflectable version of Face.
-#[derive(Debug, Default, Clone, Reflect)]
-#[reflect(Default, Clone)]
-#[type_path = "game"]
-pub enum MaterialCullFace {
-    None,
-    Front,
-    #[default]
-    Back,
-}
-
-
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Reflect)]
-#[reflect(Default, Clone)]
-#[type_path = "game"]
-pub struct TextureParams {
-    /// Tell if the image content should be interpreted as sRGB.
-    pub is_srgb: Option<bool>,
-    /// Tell how the image should be filtered for rendering.
-    pub filter: TextureFilter,
-    /// Tell how out-of-bounds UVs are handled.
-    pub address_mode: TextureAddressMode,
-}
-
-impl Default for TextureParams {
-    fn default() -> Self {
-        Self {
-            is_srgb: None,
-            filter: TextureFilter::Linear,
-            address_mode: TextureAddressMode::Repeat,
-        }
-    }
-}
-
-#[derive(Debug, Default, Clone, PartialEq, Eq, Hash, Reflect)]
-#[reflect(Default, Clone)]
-#[type_path = "game"]
-pub enum TextureImageFormat {
-    #[default]
-    Rgba8Unorm,
-    Rgba8Snorm,
-    Rgba16Float,
-    Rgba32Float,
-}
-
-impl From<TextureImageFormat> for TextureFormat {
-    fn from(value: TextureImageFormat) -> Self {
-        match value {
-            TextureImageFormat::Rgba8Unorm => TextureFormat::Rgba8Unorm,
-            TextureImageFormat::Rgba8Snorm => TextureFormat::Rgba8Snorm,
-            TextureImageFormat::Rgba16Float => TextureFormat::Rgba16Float,
-            TextureImageFormat::Rgba32Float => TextureFormat::Rgba32Float,
-        }
-    }
-}
-
-
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash, Reflect)]
-#[reflect(Default, Clone)]
-#[type_path = "game"]
-pub enum TextureFilter {
-    #[default]
-    Linear,
-    Nearest,
-}
-
-/// Our default is `Repeat` unlike Bevy.
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash, Reflect)]
-#[reflect(Default, Clone)]
-#[type_path = "game"]
-pub enum TextureAddressMode {
-    /// Clamp the value to the edge of the texture.
-    ///
-    /// -0.25 -> 0.0
-    /// 1.25  -> 1.0
-    //#[default]
-    ClampToEdge,
-    /// Repeat the texture in a tiling fashion.
-    ///
-    /// -0.25 -> 0.75
-    /// 1.25 -> 0.25
-    #[default]      // different for script!
-    Repeat,
-    /// Repeat the texture, mirroring it every repeat.
-    ///
-    /// -0.25 -> 0.25
-    /// 1.25 -> 0.75
-    MirrorRepeat,
-    /// Clamp the value to the border of the texture
-    /// Requires the wgpu feature [`Features::ADDRESS_MODE_CLAMP_TO_BORDER`].
-    ///
-    /// -0.25 -> border
-    /// 1.25 -> border
-    ClampToBorder,
-}
-
-impl From<TextureAddressMode> for ImageAddressMode {
-    fn from(value: TextureAddressMode) -> Self {
-        match value {
-            TextureAddressMode::ClampToEdge => ImageAddressMode::ClampToEdge,
-            TextureAddressMode::Repeat => ImageAddressMode::Repeat,
-            TextureAddressMode::MirrorRepeat => ImageAddressMode::MirrorRepeat,
-            TextureAddressMode::ClampToBorder => ImageAddressMode::ClampToBorder,
-        }
-    }
-}
-
-/// The way a texture can be loaded.
-#[derive(Debug, Clone, Reflect)]
-#[reflect(Clone)]
-#[type_path = "game"]
-pub enum TextureSource {
-    Load{
-        path: String,
-        params: TextureParams,
-    },
-    Handle(Handle<Image>),
-}
-
-impl Default for TextureSource {
-    fn default() -> Self {
-        TextureSource::Handle(default())
-    }
-}
-
-impl TextureSource {
-    pub fn is_handle(&self) -> bool {
-        matches!(self, TextureSource::Handle(_))
     }
 }
 
@@ -228,124 +88,7 @@ pub fn make_image_settings_applier(
     }
 }
 
-impl TextureSource {
-    /// For `Load` variants, load the image from the AssetServer if needed.
-    /// Otherwise return the handle as-is.
-    pub fn get_handle(&self, assets: &AssetServer, assume_is_srgb: bool) -> Handle<Image> {
-        match self {
-            TextureSource::Load{ path, params } => assets
-                .load_builder()
-                .with_settings(
-                    make_image_loader_settings_applier(
-                        params.clone(), assume_is_srgb,
-                    ),
-                )
-                .load(path),
-            TextureSource::Handle(handle) => handle.clone(),
-        }
-    }
-}
-
-/// A component that prompts loading images and populating
-/// them in a corresponding [SpawnMaterial].
-#[derive(Component, Default, Clone, Reflect)]
-#[component(storage = "SparseSet")]
-#[reflect(Component, Default, Clone)]
-#[type_path = "game"]
-pub struct TextureSources {
-    /// Asset path to color texture.
-    pub base_color: Option<TextureSource>,
-    pub normal_map: Option<TextureSource>,
-    pub emissive_color: Option<TextureSource>,
-    pub metallic_roughness: Option<TextureSource>,
-    pub diffuse_transmission: Option<TextureSource>,
-    pub specular_transmission: Option<TextureSource>,
-    pub thickness: Option<TextureSource>,
-    pub occlusion: Option<TextureSource>,
-    pub specular: Option<TextureSource>,
-    pub specular_tint: Option<TextureSource>,
-    pub clearcoat: Option<TextureSource>,
-    pub clearcoat_roughness: Option<TextureSource>,
-    pub clearcoat_normal: Option<TextureSource>,
-    pub anisotropy: Option<TextureSource>,
-    pub depth_map: Option<TextureSource>,
-}
-
-impl TextureSources {
-    pub fn is_empty(&self) -> bool {
-        self.base_color.is_none() &&
-        self.normal_map.is_none() &&
-        self.emissive_color.is_none() &&
-        self.metallic_roughness.is_none() &&
-        self.diffuse_transmission.is_none() &&
-        self.specular_transmission.is_none() &&
-        self.thickness.is_none() &&
-        self.occlusion.is_none() &&
-        self.specular.is_none() &&
-        self.specular_tint.is_none() &&
-        self.clearcoat.is_none() &&
-        self.clearcoat_roughness.is_none() &&
-        self.clearcoat_normal.is_none() &&
-        self.anisotropy.is_none() &&
-        self.depth_map.is_none() &&
-        true
-    }
-}
-
-pub fn handle_spawn_texture(
-    mut commands: Commands,
-    assets: If<ResMut<AssetServer>>,
-    mut tex_q: Query<(Entity, &TextureSources, &mut SpawnMaterial), Without<SpawnShape>>,
-) {
-    for (ent, tex, mut mat) in tex_q.iter_mut() {
-        let mut ent_commands = commands.entity(ent);
-        match &mut *mat {
-            SpawnMaterial::StdMat(mat, _cull) => {
-                macro_rules! handle {
-                    ($source:ident, $tex:ident, $is_srgb:expr) => {
-                        if let Some(source) = &tex.$source {
-                            mat.$tex = Some(source.get_handle(&assets, $is_srgb));
-                        }
-                    }
-                }
-
-                handle!(base_color, base_color_texture, true);
-                handle!(normal_map, normal_map_texture, false);
-                handle!(emissive_color, emissive_texture, true);
-                handle!(metallic_roughness, metallic_roughness_texture, false);
-                handle!(depth_map, depth_map, false);
-
-                #[cfg(feature = "pbr_transmission_textures")]
-                {
-                    handle!(diffuse_transmission, diffuse_transmission_texture, false);
-                    handle!(specular_transmission, specular_transmission_texture, false);
-                    handle!(thickness, thickness_texture, false);
-                }
-                handle!(occlusion, occlusion_texture, false);
-                #[cfg(feature = "pbr_specular_textures")]
-                {
-                    handle!(specular, specular_texture, false);
-                    handle!(specular_tint, specular_tint_texture, false);
-                }
-                #[cfg(feature = "pbr_multi_layer_material_textures")]
-                {
-                    handle!(clearcoat, clearcoat_texture, false);
-                    handle!(clearcoat_roughness, clearcoat_roughness_texture, false);
-                    handle!(clearcoat_normal, clearcoat_normal_texture, false);
-                }
-                #[cfg(feature = "pbr_anisotropy_texture")]
-                {
-                    handle!(anisotropy, anisotropy_texture, false);
-                }
-            }
-            SpawnMaterial::None => (),
-        }
-
-        ent_commands.try_remove::<TextureSources>();
-    }
-}
-
-/// When added or modified on an entity with a `MeshMaterial3d<StandardMaterial>`,
+/// When added or modified on an entity with a [MeshMaterial3d<StandardMaterial>],
 /// ensures [StandardMaterial::depth_map] references a loaded handle for `source`
 /// along with the other related fields.
 #[derive(Component, Debug, Clone, Reflect)]
@@ -516,16 +259,16 @@ impl std::hash::Hash for SpawnShapeKind {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         match self {
             SpawnShapeKind::Cube(vec3) => {
-                FloatOrd(vec3.x).hash(state);
-                FloatOrd(vec3.y).hash(state);
-                FloatOrd(vec3.z).hash(state);
+                Float32(vec3.x).hash(state);
+                Float32(vec3.y).hash(state);
+                Float32(vec3.z).hash(state);
             }
             SpawnShapeKind::Sphere(rad) => {
-                FloatOrd(*rad).hash(state);
+                Float32(*rad).hash(state);
             }
             SpawnShapeKind::Plane(vec2) => {
-                FloatOrd(vec2.x).hash(state);
-                FloatOrd(vec2.y).hash(state);
+                Float32(vec2.x).hash(state);
+                Float32(vec2.y).hash(state);
             }
             SpawnShapeKind::Model(path) => {
                 path.hash(state);
@@ -641,206 +384,77 @@ fn handle_spawn_shape(
     }
 }
 
-/// A component that applies a material.
+/// A component that applies a material to the [Mesh3d] directly on it
+/// or in the child hierarchy if placed on [WorldInstance].
 #[derive(Component, Debug, Default, Clone, Reflect)]
 #[component(storage = "SparseSet")]
 #[reflect(Component, Default, Clone)]
 #[type_path = "game"]
 pub enum SpawnMaterial {
-    StdMat(StandardMaterial, MaterialCullFace),
+    StdMat(StandardMaterialModel),
     #[default]
     None,
 }
 
 /// Record which materials we generated.
 #[derive(Resource, Default)]
-struct SpawnMaterialHandles (
-    HashMap<StandardMaterialHash, Handle<StandardMaterial>>,
+pub struct SpawnMaterialHandles (
+    HashMap<StandardMaterialModel, Handle<StandardMaterial>>,
 );
 
-#[derive(Debug, Clone, PartialEq, Eq,Hash)]
-pub struct StandardMaterialHash(String);
+impl SpawnMaterialHandles {
+    pub fn allocate(&mut self,
+        mat: &SpawnMaterial,
+        assets: &AssetServer,
+        mut mats: Mut<Assets<StandardMaterial>>,
+    ) -> Handle<StandardMaterial> {
+        match mat {
+            SpawnMaterial::StdMat(mat_model) => {
+                let std_mat = self.0.entry(mat_model.clone())
+                    .or_insert_with(|| {
+                        let mat: StandardMaterial = mat_model.into_standard_material(assets);
+                        mats.add(mat)
+                    });
 
-impl StandardMaterialHash {
-    pub fn new(mat: String) -> Self {
-        Self(mat)
+                std_mat.clone()
+            }
+            SpawnMaterial::None => default(),
+        }
     }
-}
-
-pub fn hash_color(color: Color) -> String {
-    format!("{}", color.to_linear().as_u32())
-}
-pub fn hash_image(image: &Option<Handle<Image>>) -> String {
-    if let Some(image) = image {
-        format!("{}", image.id())
-    } else {
-        default()
-    }
-}
-
-pub fn hash_stdmat(m: &StandardMaterial) -> String {
-    let basic = format!(
-        "bc={}
-        bcc={:?}
-        bct={}
-        e={}
-        eew={:.2}
-        ec={:?}
-        et={}
-        pr={:.2}
-        m={:.2}
-        mrgc={:?}
-        mrt={}
-        r={:.2}
-        st={}
-        dt={:.3}
-        st={:.3}
-        //
-        t={}
-        ior={}
-        ad={}
-        ac={}
-        nmc={:?}
-        nmt={}
-        fn={}
-        oc={:?}
-        ot={}
-        cc={:.2}
-        as={:.3}
-        ar={:.3}
-        ds={}
-        cm={:?}
-        un={}
-        fe={}
-        am={:?}
-        db={:.4}
-        dm={:?}
-        pds={:.3}
-    ",
-        hash_color(m.base_color),
-        m.base_color_channel,
-        hash_image(&m.base_color_texture),
-        hash_color(m.emissive.into()),
-        m.emissive_exposure_weight,
-        m.emissive_channel,
-        hash_image(&m.emissive_texture),
-        m.perceptual_roughness,
-        m.metallic,
-        m.metallic_roughness_channel,
-        hash_image(&m.metallic_roughness_texture),
-        m.reflectance,
-        hash_color(m.specular_tint),
-        m.diffuse_transmission,
-        m.specular_transmission,
-        //
-        m.thickness,
-        m.ior,
-        m.attenuation_distance,
-        hash_color(m.attenuation_color),
-        m.normal_map_channel,
-        hash_image(&m.normal_map_texture),
-        m.flip_normal_map_y,
-        m.occlusion_channel,
-        hash_image(&m.occlusion_texture),
-        //
-        m.clearcoat,
-        //
-        m.anisotropy_strength,
-        m.anisotropy_rotation,
-        m.double_sided,
-        m.cull_mode,
-        m.unlit,
-        m.fog_enabled,
-        m.alpha_mode,
-        m.depth_bias,
-        m.depth_map,
-        m.parallax_depth_scale,
-        //
-    );
-
-    #[cfg(not(feature = "pbr_transmission_textures"))]
-    let ptt = "".to_string();
-
-    #[cfg(feature = "pbr_transmission_textures")]
-    let ptt = format!("dtc={:?} dtt={} stc={:?} tc={:?} tt={} ",
-        m.diffuse_transmission_channel,
-        hash_image(&m.diffuse_transmission_texture),
-        m.specular_transmission_channel,
-        hash_image(&m.specular_transmission_texture),
-        m.thickness_channel,
-        hash_image(&m.thickness_texture),
-    );
-
-    #[cfg(not(feature = "pbr_specular_textures"))]
-    let pst = "".to_string();
-
-    #[cfg(feature = "pbr_specular_textures")]
-    let pst = format!("sc={:?} st={} stc={:?} stt={}",
-        m.specular_channel,
-        hash_image(&m.specular_texture),
-        m.specular_tint_channel,
-        hash_image(&m.specular_tint_texture),
-    );
-
-    #[cfg(not(feature = "pbr_multi_layer_material_textures"))]
-    let pmlmt = "".to_string();
-
-    #[cfg(feature = "pbr_multi_layer_material_textures")]
-    let pmlmt = format!("",
-        m.specular_channel,
-        hash_image(&m.specular_texture),
-        m.specular_tint_channel,
-        hash_image(&m.specular_tint_texture),
-    );
-
-    format!("b={basic} ptt={ptt} pst={pst} pmlmt={pmlmt}")
 }
 
 fn handle_spawn_material(
     mut commands: Commands,
     mut mats: If<ResMut<Assets<StandardMaterial>>>,
-    mat_q: Query<(Entity, &SpawnMaterial), (Without<TextureSources>, Without<SpawnShape>)>,
+    assets: Res<AssetServer>,
+    mat_q: Query<(Entity, &SpawnMaterial), Without<SpawnShape>>,
     mesh_q: Query<&Mesh3d>,
     child_q: Query<&Children>,
     glass_q: Query<&GlassTweak>,
-    scene_q: Query<&WorldInstance>,
+    scene_q: Query<&WorldInstance, Without<WorldAssetRoot>>,
     mut mat_cache: If<ResMut<SpawnMaterialHandles>>,
 ) {
     for (ent, mat) in mat_q.iter() {
-        match mat {
-            SpawnMaterial::StdMat(mat, cull) => {
-                let mat = StandardMaterial {
-                    cull_mode: match cull {
-                        MaterialCullFace::None => None,
-                        MaterialCullFace::Front => Some(Face::Front),
-                        MaterialCullFace::Back => Some(Face::Back),
-                    },
-                    ..mat.clone()
-                };
-                let mat_hash = StandardMaterialHash(hash_stdmat(&mat));
-                let std_mat = (**mat_cache).0.entry(mat_hash)
-                    .or_insert_with(|| mats.add(mat));
+        let std_mat = mat_cache.allocate(mat, &assets, mats.reborrow());
 
-                // Simple mesh?
-                if mesh_q.contains(ent) && !scene_q.contains(ent) {
-                    commands.entity(ent).try_insert(MeshMaterial3d(std_mat.clone()));
-                } else {
-                    // Else, assume it's a complex model and all the mesh children need to be affected.
-                    for kid in child_q.iter_descendants(ent) {
-                        if scene_q.contains(kid) {
-                            break;
-                        }
-                        if mesh_q.contains(kid) {
-                            commands.entity(kid).try_insert(MeshMaterial3d(std_mat.clone()));
-                            if glass_q.contains(ent) {
-                                commands.entity(kid).try_insert(GlassTweak);
-                            }
-                        }
+        // Simple mesh?
+        if mesh_q.contains(ent) && !scene_q.contains(ent) {
+            commands.entity(ent).try_insert(MeshMaterial3d(std_mat.clone()));
+        } else {
+            // Else, assume it's a complex model and all the mesh children need to be affected.
+            for kid in child_q.iter_descendants(ent) {
+                if scene_q.contains(kid) {
+                    break;
+                }
+                if mesh_q.contains(kid) {
+                    commands.entity(kid).try_insert(MeshMaterial3d(std_mat.clone()));
+                    if glass_q.contains(ent) {
+                        commands.entity(kid).try_insert(GlassTweak);
                     }
                 }
             }
-            SpawnMaterial::None => (),
-        }
+        };
+
         commands.entity(ent).try_remove::<SpawnMaterial>();
     }
 }

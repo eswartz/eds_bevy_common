@@ -36,6 +36,7 @@ impl Plugin for GuiPlugin {
         app
         .insert_resource(GuiState::default())
         .insert_resource(UiFont(default()))
+        .insert_resource(InstructionsTimeout(Duration::from_secs(3)))
 
         .init_resource::<GrabState>()
         .add_message::<GrabCursor>()
@@ -78,25 +79,11 @@ impl Plugin for GuiPlugin {
         .add_systems(OnExit(OverlayState::Loading),
             on_loading_finished)
 
-        // .add_systems(
-        //     OnTransition{ exited: GameplayState::Playing, entered: GameplayState::Setup },
-        //     (
-        //         hide_instructions,
-        //         reset_instructions,
-        //     )
-        // )
-        // .add_systems(OnTransition{ exited: ProgramState::InGame, entered: ProgramState::LaunchMenu },
-        //     (
-        //         reset_instructions,
-        //     )
-        //     .
-        //     chain()
-        // )
         .add_systems(OnExit(OverlayState::Hidden),
             hide_instructions,
         )
         .add_systems(OnEnter(LevelState::Playing),
-            show_instructions,
+            show_instructions_from_resource,
         )
         .add_systems(OnExit(LevelState::Playing),
             (
@@ -664,6 +651,7 @@ fn setup_gui_nodes(
     // Info
     commands.spawn((
         despawn.clone(),
+        Name::new("INFO"),
         GuiAreaMarker::InfoArea,
         Text::new(""),
         TextFont {
@@ -671,6 +659,7 @@ fn setup_gui_nodes(
             font_size: FontSize::Px(10.0),
             ..default()
         },
+        TextLayout::no_wrap().with_justify(Justify::Left),
         Node {
             position_type: PositionType::Absolute,
             top: Val::Px(160.0),
@@ -682,6 +671,7 @@ fn setup_gui_nodes(
     // Instructions
     commands.spawn((
         despawn.clone(),
+        Name::new("INSTRUCTIONS"),
         GuiAreaMarker::InstructionsArea,
         Visibility::Hidden,
         Text::new(
@@ -692,6 +682,7 @@ fn setup_gui_nodes(
             font_size: FontSize::Px(16.0),
             .. default()
         },
+        TextLayout::no_wrap().with_justify(Justify::Center),
         Node {
             width: Val::Percent(100.),
             height: Val::Percent(100.),
@@ -705,6 +696,7 @@ fn setup_gui_nodes(
     // Score
     commands.spawn((
         despawn.clone(),
+        Name::new("SCORE"),
         GuiAreaMarker::ScoreArea,
         Text::default(),
         TextFont {
@@ -974,33 +966,36 @@ fn update_physics_pause_ui(
     });
 }
 
-/// Set the instruction text for level.
+/// Set the default delay for instructions.
 /// It is consumed and displayed in [LevelState::LevelLoaded].
+#[derive(Resource, Reflect, Deref)]
+#[reflect(Resource)]
+#[type_path = "game"]
+pub struct InstructionsTimeout(pub Duration);
+
+/// Set the instruction text for level.
+/// It is consumed and displayed in [LevelState::Playing].
 #[derive(Resource, Reflect, Deref)]
 #[reflect(Resource)]
 #[type_path = "game"]
 pub struct InstructionText(pub String);
 
 /// Set when we showed the instruction text for what level.
+/// It is set in [LevelState::Playing].
 #[derive(Resource, Reflect)]
 #[reflect(Resource)]
 #[type_path = "game"]
 pub struct ShowedInstructions{ level_id: String }
 
-fn show_instructions(
+/// Show the instructions in `InstructionText`, if it exists,
+/// unless `ShowedInstructions` exists and references the same level.
+fn show_instructions_from_resource(
     mut commands: Commands,
     text: If<Res<InstructionText>>,
+    timeout: If<Res<InstructionsTimeout>>,
     level: Option<Res<CurrentLevel>>,
     showed: Option<Res<ShowedInstructions>>,
-    fonts: Res<CommonGuiAssets>,
-    gui_area: GuiAreaMarkerLocator,
 ) {
-    use bevy_tweening::AnimTarget;
-    use bevy_tweening::EaseMethod;
-    use bevy_tweening::Tween;
-    use bevy_tweening::TweenAnim;
-    use bevy_tweening::lens::TextColorLens;
-
     // Ignore blank instructions.
     if text.0.is_empty() {
         return
@@ -1021,6 +1016,28 @@ fn show_instructions(
         level_id,
     });
 
+    commands.run_system_cached_with(show_instructions,
+        (
+            text.0.to_string(),
+            ***timeout,
+        )
+    );
+}
+
+/// Call with run_system_cached_with to set the instruction text.
+/// This text will fade out over time.
+pub fn show_instructions(
+    In((text, tween_time)): In<(String, Duration)>,
+    mut commands: Commands,
+    fonts: Res<CommonGuiAssets>,
+    gui_area: GuiAreaMarkerLocator,
+) {
+    use bevy_tweening::AnimTarget;
+    use bevy_tweening::EaseMethod;
+    use bevy_tweening::Tween;
+    use bevy_tweening::TweenAnim;
+    use bevy_tweening::lens::TextColorLens;
+
     let mut text_ent = Entity::PLACEHOLDER;
 
     gui_area.with_first(GuiAreaMarker::InstructionsArea, |ent| {
@@ -1029,7 +1046,7 @@ fn show_instructions(
         .with_children(|builder| {
             text_ent = builder.spawn((
                 DespawnOnReset(LevelState::Playing),
-                Text::new(text.0.clone()),
+                Text::new(text),
                 TextLayout::new(Justify::Center, LineBreak::WordBoundary),
                 TextFont {
                     font: fonts.std_ui.clone().into(),
@@ -1046,12 +1063,9 @@ fn show_instructions(
     });
 
     // Fade in and out.
-
-    const TIME_SECS: f32 = 2.0;
-
     let color_tween = Tween::new(
         EaseMethod::EaseFunction(EaseFunction::CubicOut),
-        Duration::from_secs_f32(TIME_SECS),
+        tween_time,
         TextColorLens {
             start: Color::WHITE.with_alpha(0.0),
             end: Color::WHITE.with_alpha(1.0),
@@ -1061,7 +1075,7 @@ fn show_instructions(
 
     let shadow_tween = Tween::new(
         EaseMethod::EaseFunction(EaseFunction::CubicOut),
-        Duration::from_secs_f32(TIME_SECS),
+        tween_time,
         TextShadowColorLens {
             start: Color::linear_rgba(0., 0., 0., 0.0),
             end: Color::linear_rgba(0., 0., 0., 1.0),
