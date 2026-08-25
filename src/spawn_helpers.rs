@@ -9,6 +9,7 @@ use bevy::mesh::PlaneMeshBuilder;
 use bevy::platform::collections::HashMap;
 use bevy::prelude::*;
 use bevy::world_serialization::WorldInstance;
+use bevy::world_serialization::WorldInstanceReady;
 use rustc_hash::FxHashMap;
 
 use crate::prelude::*;
@@ -43,6 +44,7 @@ impl Plugin for SpawnHelpersPlugin {
                     cleanup_meshes,
                 )
             )
+            .add_observer(twiddle_spawn_materials)
         ;
     }
 }
@@ -423,19 +425,36 @@ impl SpawnMaterialHandles {
     }
 }
 
+/// When we detect a world instance was loaded, make sure we (re)check the
+/// SpawnMaterial component and apply it to the (new) children.
+fn twiddle_spawn_materials(
+    event: On<WorldInstanceReady>,
+    mut spawn_mat_q: Query<&mut SpawnMaterial>,
+    child_q: Query<&Children>,
+) {
+    if let Ok(mut spawn_mat) = spawn_mat_q.get_mut(event.event_target()) {
+        spawn_mat.set_changed();
+    }
+    for kid in child_q.iter_descendants(event.event_target()) {
+        if let Ok(mut spawn_mat) = spawn_mat_q.get_mut(kid) {
+            spawn_mat.set_changed();
+        }
+    }
+}
+
 fn handle_spawn_material(
     mut commands: Commands,
     mut mats: If<ResMut<Assets<StandardMaterial>>>,
     assets: Res<AssetServer>,
-    mat_q: Query<(Entity, &SpawnMaterial), Without<SpawnShape>>,
+    spawn_mat_q: Query<(Entity, &SpawnMaterial), Or<(Added<Mesh3d>, Changed<SpawnMaterial>)>>,
     mesh_q: Query<&Mesh3d>,
     child_q: Query<&Children>,
     glass_q: Query<&GlassTweak>,
     scene_q: Query<&WorldInstance>,
     mut mat_cache: If<ResMut<SpawnMaterialHandles>>,
 ) {
-    for (ent, mat) in mat_q.iter() {
-        let std_mat = mat_cache.allocate(mat, &assets, mats.reborrow());
+    for (ent, spawn_mat) in spawn_mat_q.iter() {
+        let std_mat = mat_cache.allocate(spawn_mat, &assets, mats.reborrow());
 
         // Simple mesh?
         if mesh_q.contains(ent) && !scene_q.contains(ent) {
@@ -454,8 +473,6 @@ fn handle_spawn_material(
                 }
             }
         };
-
-        commands.entity(ent).try_remove::<SpawnMaterial>();
     }
 }
 

@@ -1,3 +1,11 @@
+/// This defines a model for Bevy [StandardMaterial] but has these advantages:
+///
+/// * Reflectable
+/// * Defaultable
+/// * PartialEq-able
+///
+/// To do this, several types are mirrored and all [Handle<Image>] are
+/// converted to [TextureSource].
 use std::hash::Hash;
 
 use bevy::image::ImageAddressMode;
