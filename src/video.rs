@@ -255,6 +255,7 @@ pub enum GlassQuality {
     Ultra,
 }
 
+/// Soft shadow configuration.
 #[derive(
     Component,
     Reflect,
@@ -278,10 +279,9 @@ pub enum GlassQuality {
 #[reflect(Default, Clone, Component)]
 #[type_path = "game"]
 pub enum ShadowQuality {
-    #[cfg_attr(feature = "solari", default)]
     Off,
     Low,
-    #[cfg_attr(not(feature = "solari"), default)]
+    #[default]
     Medium,
     High,
     Ultra,
