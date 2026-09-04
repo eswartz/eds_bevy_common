@@ -1,10 +1,15 @@
-
-use bevy::platform::sync::{Arc, atomic::{AtomicBool, Ordering},};
-use bevy_seedling::{firewheel::node::NodeError, prelude::ChannelCount};
-use bevy_seedling::firewheel::{
-    atomic_float::AtomicF32, channel_config::ChannelConfig, diff::{Diff, Patch}, node::{AudioNode, AudioNodeInfo, AudioNodeProcessor, ConstructProcessorContext, ProcBuffers}
+use bevy::platform::sync::{
+    Arc,
+    atomic::{AtomicBool, Ordering},
 };
 use bevy_seedling::firewheel;
+use bevy_seedling::firewheel::{
+    atomic_float::AtomicF32,
+    channel_config::ChannelConfig,
+    diff::{Diff, Patch},
+    node::{AudioNode, AudioNodeInfo, AudioNodeProcessor, ConstructProcessorContext, ProcBuffers},
+};
+use bevy_seedling::{firewheel::node::NodeError, prelude::ChannelCount};
 
 use std::collections::VecDeque;
 
@@ -30,11 +35,10 @@ pub(crate) struct SynthDecoder {
 impl PartialEq for SynthDecoder {
     fn eq(&self, other: &Self) -> bool {
         self.handle == other.handle
-        && self.sample_rate == other.sample_rate
-        && self.stereo == other.stereo
+            && self.sample_rate == other.sample_rate
+            && self.stereo == other.stereo
     }
 }
-
 
 impl SynthDecoder {
     pub(crate) fn new(
@@ -113,7 +117,7 @@ impl SynthDecoderNodeProcessor {
 impl SynthDecoderNodeProcessor {
     fn fetch_data(&mut self) -> usize {
         if self.quit.load(Ordering::Relaxed) {
-            return self.head.len()
+            return self.head.len();
         }
 
         // Drain incoming data.
@@ -134,7 +138,6 @@ impl SynthDecoderNodeProcessor {
         self.head.len()
     }
 
-
     /// Channel-interleaved (but channel-count-independent) fetcher
     /// of data passed to us through the synth callback.
     fn next_sample(&mut self) -> Option<f32> {
@@ -144,7 +147,7 @@ impl SynthDecoderNodeProcessor {
         }
 
         let Some(frame) = self.head.pop_front() else {
-            return None
+            return None;
         };
 
         // If muted, fine, just return nothing
@@ -166,8 +169,7 @@ impl Default for MidiSynthPlayerNodePatch {
     }
 }
 
-#[derive(Component, PartialEq)]
-#[derive(Clone)]
+#[derive(Component, PartialEq, Clone)]
 pub struct MidiSynthPlayerNodeConfig(pub Arc<SynthDecoder>);
 
 // This is required for AudioNode but we don't want defaults.
@@ -186,7 +188,11 @@ impl AudioNode for MidiSynthPlayerNode {
             .debug_name("midi synth")
             .channel_config(ChannelConfig {
                 num_inputs: ChannelCount::ZERO,
-                num_outputs: if decoder.stereo { ChannelCount::STEREO } else { ChannelCount::MONO },
+                num_outputs: if decoder.stereo {
+                    ChannelCount::STEREO
+                } else {
+                    ChannelCount::MONO
+                },
             }))
     }
 
@@ -195,9 +201,9 @@ impl AudioNode for MidiSynthPlayerNode {
         configuration: &Self::Configuration,
         cx: ConstructProcessorContext,
     ) -> Result<impl AudioNodeProcessor, NodeError> {
-
         let decoder = &configuration.0;
-        Ok(SynthDecoderNodeProcessor::new(decoder.stereo,
+        Ok(SynthDecoderNodeProcessor::new(
+            decoder.stereo,
             cx.stream_info.sample_rate.get(),
             decoder.sender.clone().unwrap(),
             decoder.receiver.clone(),
@@ -211,13 +217,17 @@ impl AudioNode for MidiSynthPlayerNode {
 }
 
 impl AudioNodeProcessor for SynthDecoderNodeProcessor {
-    fn new_stream(&mut self, stream_info: &firewheel::StreamInfo, context: &mut firewheel::node::ProcStreamCtx) {
+    fn new_stream(
+        &mut self,
+        stream_info: &firewheel::StreamInfo,
+        context: &mut firewheel::node::ProcStreamCtx,
+    ) {
         let _ = stream_info;
         let _ = context;
     }
     fn stream_stopped(&mut self, context: &mut firewheel::node::ProcStreamCtx) {
         let _ = context;
-        self.quit.store(true, Ordering::SeqCst)
+        self.quit.store(true, Ordering::Relaxed)
     }
 
     fn process(
@@ -227,7 +237,6 @@ impl AudioNodeProcessor for SynthDecoderNodeProcessor {
         // events: &mut firewheel::event::ProcEvents,
         _extra: &mut firewheel::node::ProcExtra,
     ) -> firewheel::node::ProcessStatus {
-
         // for _patch in events.drain_patches::<MidiSynthPlayerNode>() {
         //     unreachable!("we have no config state, right?")
         //     // self.params.apply(patch);
@@ -238,7 +247,7 @@ impl AudioNodeProcessor for SynthDecoderNodeProcessor {
 
         let volume_phys = self.volume_linear.load(Ordering::Relaxed);
         if volume_phys < 0.001 {
-            return firewheel::node::ProcessStatus::ClearAllOutputs
+            return firewheel::node::ProcessStatus::ClearAllOutputs;
         }
 
         let panning_l = self.panning_l.load(Ordering::Relaxed);
@@ -286,6 +295,4 @@ impl AudioNodeProcessor for SynthDecoderNodeProcessor {
             firewheel::node::ProcessStatus::OutputsModified
         }
     }
-
-
 }

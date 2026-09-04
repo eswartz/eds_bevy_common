@@ -1,9 +1,15 @@
-///! Wrap rustysynth
-use std::{sync::{Arc, Mutex, atomic::{AtomicBool, Ordering}}, time::Duration};
+use bevy_seedling::firewheel::atomic_float::AtomicF32;
+use bevy_seedling::{context::StreamRestartEvent, spatial::SpatialListener3D};
 #[cfg(not(target_arch = "wasm32"))]
 use std::thread;
-use bevy_seedling::{context::StreamRestartEvent, spatial::SpatialListener3D};
-use bevy_seedling::firewheel::atomic_float::AtomicF32;
+///! Wrap rustysynth
+use std::{
+    sync::{
+        Arc, Mutex,
+        atomic::{AtomicBool, Ordering},
+    },
+    time::Duration,
+};
 #[cfg(target_arch = "wasm32")]
 use wasm_thread as thread;
 
@@ -16,9 +22,15 @@ use serde::{Deserialize, Serialize};
 
 use crate::prelude::PauseState;
 
-use crate::midi_synth::{asset::{SoundFont, SoundFontLoader}, synth::{MidiMessage, MidiRenderMessage, firewheel_nodes::{MidiSynthPlayerNode, SynthDecoder}}};
-use crate::prelude::SfxNode;
+use crate::midi_synth::{
+    asset::{SoundFont, SoundFontLoader},
+    synth::{
+        MidiMessage, MidiRenderMessage,
+        firewheel_nodes::{MidiSynthPlayerNode, SynthDecoder},
+    },
+};
 use crate::prelude::MusicNode;
+use crate::prelude::SfxNode;
 
 /// The plugin.
 #[derive(Default, Clone, Copy)]
@@ -40,10 +52,9 @@ impl Plugin for MidiSynthPlugin {
                     update_synth_distances,
                     cleanup_synths,
                     check_pause_request_for_synths,
-                )
+                ),
             )
-            .add_observer(restart_synths)
-        ;
+            .add_observer(restart_synths);
     }
 }
 
@@ -72,7 +83,7 @@ impl MidiSynthParams {
     pub fn is_world_positioned(self, is_world_positioned: bool) -> Self {
         Self {
             is_world_positioned,
-            .. self
+            ..self
         }
     }
 }
@@ -122,9 +133,7 @@ pub struct MidiSynth {
 }
 
 #[derive(Component, Default)]
-pub struct MidiSynthListener {
-
-}
+pub struct MidiSynthListener {}
 
 impl MidiSynth {
     /// Create with the given configuration.
@@ -133,8 +142,7 @@ impl MidiSynth {
         // cx: &mut AudioContext,
         // stream_writer_id: firewheel::node::NodeID,
         params: MidiSynthParams,
-        sound_font:
-        Handle<SoundFont>,
+        sound_font: Handle<SoundFont>,
         muted: Arc<AtomicBool>,
         entity: Entity,
         sample_sender: Sender<Vec<f32>>,
@@ -145,7 +153,10 @@ impl MidiSynth {
         Ok(Self {
             params,
             entity,
-            synth_state: SynthState::LoadHandle { sound_font, pending: vec![] },
+            synth_state: SynthState::LoadHandle {
+                sound_font,
+                pending: vec![],
+            },
             volume_linear: Arc::new(AtomicF32::new(1.0)),
             panning_l: Arc::new(AtomicF32::new(0.0)),
             panning_r: Arc::new(AtomicF32::new(0.0)),
@@ -171,7 +182,10 @@ impl MidiSynth {
                 let data2 = message.data_2_byte() as i32;
                 let channel = message.channel() as i32;
                 let command = message.command() as i32;
-                synthesizer.lock().unwrap().process_midi_message(channel, command, data1, data2);
+                synthesizer
+                    .lock()
+                    .unwrap()
+                    .process_midi_message(channel, command, data1, data2);
             }
         }
     }
@@ -227,7 +241,9 @@ impl MidiSynth {
         let midi_synth_params = self.params;
 
         let decoder = SynthDecoder::new(
-            &midi_synth_params, self.entity, self.render_sender.clone(),
+            &midi_synth_params,
+            self.entity,
+            self.render_sender.clone(),
             self.sample_receiver.clone(),
             thread_quit.clone(),
             muted.clone(),
@@ -268,13 +284,15 @@ impl MidiSynth {
             }
         }
 
-        Ok(SynthThread{ thread_quit: self.thread_quit.clone() })
+        Ok(SynthThread {
+            thread_quit: self.thread_quit.clone(),
+        })
     }
 
     fn stop(&mut self) {
         if let Some(thread_handle) = self.thread_handle.take() {
             // i.e. still alive or configured
-            self.thread_quit.store(true, Ordering::SeqCst);
+            self.thread_quit.store(true, Ordering::Relaxed);
             let _ = self.render_sender.send(MidiRenderMessage::Idle(0));
 
             #[cfg(not(target_arch = "wasm32"))]
@@ -321,8 +339,8 @@ fn synth_thread(
 
     let mut was_idle = false;
     loop {
-        if thread_quit.load(Ordering::SeqCst) {
-            break
+        if thread_quit.load(Ordering::Acquire) {
+            break;
         }
 
         let message = if cfg!(target_arch = "wasm32") {
@@ -354,7 +372,10 @@ fn synth_thread(
                         left.fill(0.);
                         right.fill(0.);
                     } else {
-                        synthesizer.lock().unwrap().render(&mut left[0..chunk_size], &mut right[0..chunk_size]);
+                        synthesizer
+                            .lock()
+                            .unwrap()
+                            .render(&mut left[0..chunk_size], &mut right[0..chunk_size]);
                     }
 
                     let data = if stereo {
@@ -385,7 +406,6 @@ fn synth_thread(
             }
         }
     }
-
 }
 
 struct SynthThread {
@@ -409,7 +429,6 @@ fn restart_synths(
     }
 }
 
-
 fn ensure_synths(
     mut commands: Commands,
     sf_assets: Res<Assets<SoundFont>>,
@@ -417,7 +436,11 @@ fn ensure_synths(
     mut synth_q: Query<(Entity, &mut MidiSynth)>,
 ) {
     for (ent, mut synth) in synth_q.iter_mut() {
-        let SynthState::LoadHandle { sound_font, pending } = &synth.synth_state else {
+        let SynthState::LoadHandle {
+            sound_font,
+            pending,
+        } = &synth.synth_state
+        else {
             // Already initialized.
             continue;
         };
@@ -430,14 +453,21 @@ fn ensure_synths(
 
         let synth_settings = SynthesizerSettings::new(synth.params.sample_rate as i32);
 
-        let synthesizer = Arc::new(Mutex::new(Synthesizer::new(&sound_font.content, &synth_settings).unwrap()));
+        let synthesizer = Arc::new(Mutex::new(
+            Synthesizer::new(&sound_font.content, &synth_settings).unwrap(),
+        ));
 
         let is_world_positioned = synth.params.is_world_positioned;
-        match synth.start(synthesizer.clone(), commands.reborrow(), ent, is_world_positioned) {
+        match synth.start(
+            synthesizer.clone(),
+            commands.reborrow(),
+            ent,
+            is_world_positioned,
+        ) {
             Ok(thread) => {
                 let exist = synths.0.insert(ent, thread);
                 if let Some(exist) = exist {
-                    exist.thread_quit.store(true, Ordering::SeqCst);
+                    exist.thread_quit.store(true, Ordering::Relaxed);
                 }
 
                 // Pass any pending events.
@@ -449,7 +479,6 @@ fn ensure_synths(
                 }
 
                 synth.synth_state = SynthState::Loaded { synthesizer };
-
             }
             Err(e) => {
                 error!("failed to start synth: {e:?}");
@@ -507,17 +536,16 @@ fn compute_distance_panning_values(
         .sample_unchecked(xyz_distance.min(damping_distance) / damping_distance)
         .clamp(0., 1.);
 
-    (
-        distance_gain * damp_normal,
-        (pan_gain_l, pan_gain_r),
-    )
+    (distance_gain * damp_normal, (pan_gain_l, pan_gain_r))
 }
 
 fn update_synth_distances(
     synth_q: Query<(&MidiSynth, &GlobalTransform)>,
     listener_q: Query<&GlobalTransform, With<SpatialListener3D>>,
 ) {
-    let Ok(listener_xfrm) = listener_q.single() else { return };
+    let Ok(listener_xfrm) = listener_q.single() else {
+        return;
+    };
     let listener_pos = listener_xfrm.translation();
 
     let rot_inv = listener_xfrm.rotation().inverse();
@@ -529,8 +557,7 @@ fn update_synth_distances(
         // Attenuation and panning from distance and position.
         let sound_offs: Vec3 = rot_inv * listener_emitter_offs;
 
-        let (volume_scale, panning) =
-            compute_distance_panning_values(sound_offs, 25.0);
+        let (volume_scale, panning) = compute_distance_panning_values(sound_offs, 25.0);
 
         synth.volume_linear.store(volume_scale, Ordering::Release);
         synth.panning_l.store(panning.0, Ordering::Release);
@@ -539,13 +566,10 @@ fn update_synth_distances(
 }
 
 /// Stop any threads when MidiSynth is removed.
-fn cleanup_synths(
-    mut removed: RemovedComponents<MidiSynth>,
-    mut synths: ResMut<MidiSynths>,
-) {
+fn cleanup_synths(mut removed: RemovedComponents<MidiSynth>, mut synths: ResMut<MidiSynths>) {
     for ent in removed.read() {
         if let Some(synth) = synths.0.remove(&ent) {
-            synth.thread_quit.store(true, Ordering::SeqCst);
+            synth.thread_quit.store(true, Ordering::Relaxed);
         }
     }
 }
@@ -555,8 +579,8 @@ fn check_pause_request_for_synths(
     synths_paused: Res<MidiSynthsPaused>,
 ) {
     if !paused.is_changed() {
-        return
+        return;
     }
     let pause = paused.is_paused();
-    synths_paused.0.store(pause, Ordering::SeqCst);
+    synths_paused.0.store(pause, Ordering::Relaxed);
 }
