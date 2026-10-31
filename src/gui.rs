@@ -178,8 +178,9 @@ fn update_ui_alpha(
         // Be sure we have UiNodeAlpha on child nodes.
         child_q.iter_descendants(ent).for_each(|kid| {
             if !alpha_q.contains(kid)
-            && let Ok((a, b, c, d)) = color_q.get(kid)
-            && (a.is_some() || b.is_some() || c.is_some() || d.is_some()) {
+                && let Ok((a, b, c, d)) = color_q.get(kid)
+                && (a.is_some() || b.is_some() || c.is_some() || d.is_some())
+            {
                 commands.entity(kid).try_insert(UiNodeAlpha(1.0));
             }
         });
@@ -190,13 +191,11 @@ fn update_ui_alpha(
             if comp.alpha != full_alpha {
                 comp.alpha = full_alpha;
 
-                commands.entity(ent).try_insert((
-                    if full_alpha <= 0.0 {
-                        Visibility::Hidden
-                    } else {
-                        Visibility::Inherited
-                    },
-                ));
+                commands.entity(ent).try_insert((if full_alpha <= 0.0 {
+                    Visibility::Hidden
+                } else {
+                    Visibility::Inherited
+                },));
             }
         } else {
             // Remember the baseline values for alphas.
@@ -231,32 +230,44 @@ fn update_ui_alpha(
 }
 
 fn apply_ui_alpha(
-    mut comp_alpha_q: Query<(
-        &UiNodeComputedAlpha,
-        Option<&mut ImageNode>,
-        Option<&mut TextColor>,
-        Option<&mut TextShadow>,
-        Option<&mut Sprite>,
-    ), Or<(
-        Changed<UiNodeComputedAlpha>,
-        Changed<UiNodeAlpha>,
-    )>>
+    mut comp_alpha_q: Query<
+        (
+            &UiNodeComputedAlpha,
+            Option<&mut ImageNode>,
+            Option<&mut TextColor>,
+            Option<&mut TextShadow>,
+            Option<&mut Sprite>,
+        ),
+        Or<(Changed<UiNodeComputedAlpha>, Changed<UiNodeAlpha>)>,
+    >,
 ) {
     for (alpha, im, text, shadow, sprite) in comp_alpha_q.iter_mut() {
         if let Some(mut im) = im {
-            let orig_alpha = alpha.orig_values.get(&ImageNode::type_info().type_id()).unwrap_or(&1.0);
+            let orig_alpha = alpha
+                .orig_values
+                .get(&ImageNode::type_info().type_id())
+                .unwrap_or(&1.0);
             im.color.set_alpha(alpha.alpha * orig_alpha);
         }
         if let Some(mut text) = text {
-            let orig_alpha = alpha.orig_values.get(&TextColor::type_info().type_id()).unwrap_or(&1.0);
+            let orig_alpha = alpha
+                .orig_values
+                .get(&TextColor::type_info().type_id())
+                .unwrap_or(&1.0);
             text.set_alpha(alpha.alpha * orig_alpha);
         }
         if let Some(mut shadow) = shadow {
-            let orig_alpha = alpha.orig_values.get(&TextShadow::type_info().type_id()).unwrap_or(&1.0);
+            let orig_alpha = alpha
+                .orig_values
+                .get(&TextShadow::type_info().type_id())
+                .unwrap_or(&1.0);
             shadow.color.set_alpha(alpha.alpha * orig_alpha);
         }
         if let Some(mut sprite) = sprite {
-            let orig_alpha = alpha.orig_values.get(&Sprite::type_info().type_id()).unwrap_or(&1.0);
+            let orig_alpha = alpha
+                .orig_values
+                .get(&Sprite::type_info().type_id())
+                .unwrap_or(&1.0);
             sprite.color.set_alpha(alpha.alpha * orig_alpha);
         }
     }
@@ -287,9 +298,7 @@ fn ensure_ui_font(
     }
 }
 
-fn ensure_font_assets(
-    world: &mut World,
-) {
+fn ensure_font_assets(world: &mut World) {
     world.init_collection::<CommonGuiAssets>();
 
     // Force font data to load, since it seems to take an indeterminate amount of time (0.18.1)
@@ -298,7 +307,7 @@ fn ensure_font_assets(
         DespawnOnEnter(GameplayState::Playing),
         TextFont {
             font: assets.emoji_icon_font.clone().into(),
-            .. default()
+            ..default()
         },
         Text::new("🚀\u{1F508}\u{1F6AB}\u{23f1}\u{fe0f}"), // various emoji used below
         Visibility::Hidden,
@@ -308,58 +317,45 @@ fn ensure_font_assets(
 #[derive(Component)]
 pub struct LoadingScreen;
 
-pub fn on_loading(
-    mut commands: Commands,
-    ui_font: Res<UiFont>,
-) {
-    let ent_commands = commands.spawn((
-        Name::new("Loading..."),
-        LoadingScreen,
-    ));
+pub fn on_loading(mut commands: Commands, ui_font: Res<UiFont>) {
+    let ent_commands = commands.spawn((Name::new("Loading..."), LoadingScreen));
     setup_loading_screen(ent_commands, ui_font);
 }
 
-pub fn on_loading_finished(
-    mut commands: Commands,
-    loading_q: Query<Entity, With<LoadingScreen>>,
-) {
+pub fn on_loading_finished(mut commands: Commands, loading_q: Query<Entity, With<LoadingScreen>>) {
     for ent in loading_q.iter() {
         commands.entity(ent).try_despawn();
     }
 }
 
-pub fn setup_loading_screen(
-    mut ent_commands: EntityCommands,
-    ui_font: Res<UiFont>,
-) -> Entity {
+pub fn setup_loading_screen(mut ent_commands: EntityCommands, ui_font: Res<UiFont>) -> Entity {
     let icon_size = 32.0f32;
 
-    ent_commands.try_insert((
-        Node {
-            width: Val::Percent(100.),
-            height: Val::Percent(100.),
-            flex_direction: FlexDirection::Column,
-            align_items: AlignItems::Center,
-            justify_content: JustifyContent::Center,
-            .. default()
-        },
-        BackgroundColor(tailwind::BLUE_950.with_alpha(0.75).into()),
-        RenderLayers::from_layers(&[RENDER_LAYER_UI]),
-    ))
-    .with_children(|builder| {
-        builder.spawn((
-            Text::new(
-                "Loading...",
-            ),
-            TextFont {
-                font: ui_font.0.clone().into(),
-                font_size: FontSize::Px(icon_size),
-                .. default()
+    ent_commands
+        .try_insert((
+            Node {
+                width: Val::Percent(100.),
+                height: Val::Percent(100.),
+                flex_direction: FlexDirection::Column,
+                align_items: AlignItems::Center,
+                justify_content: JustifyContent::Center,
+                ..default()
             },
-            TextColor(Color::WHITE.with_alpha(0.5)),
-        ));
-    })
-    .id()
+            BackgroundColor(tailwind::BLUE_950.with_alpha(0.75).into()),
+            RenderLayers::from_layers(&[RENDER_LAYER_UI]),
+        ))
+        .with_children(|builder| {
+            builder.spawn((
+                Text::new("Loading..."),
+                TextFont {
+                    font: ui_font.0.clone().into(),
+                    font_size: FontSize::Px(icon_size),
+                    ..default()
+                },
+                TextColor(Color::WHITE.with_alpha(0.5)),
+            ));
+        })
+        .id()
 }
 
 /// Indicate the desire to change the cursor grab state
@@ -376,11 +372,11 @@ impl Default for GrabState {
     fn default() -> Self {
         Self {
             grabbed: false,
-            options: CursorOptions{
+            options: CursorOptions {
                 visible: false,
                 grab_mode: GRABBED_MODE,
-                .. default()
-            }
+                ..default()
+            },
         }
     }
 }
@@ -414,8 +410,7 @@ impl Default for GuiState {
 
 impl GuiState {
     pub fn is_debug_ui_inspector_visible(&self) -> bool {
-        self.show_inspector_always ||
-        (self.enabled && self.show_inspector)
+        self.show_inspector_always || (self.enabled && self.show_inspector)
     }
     pub fn show_cursor(&self) -> bool {
         self.enabled || self.show_inspector_always
@@ -439,7 +434,10 @@ pub(crate) struct StatusVisible(pub bool);
 
 /// State held while a grab operation is occurring.
 #[derive(Resource)]
-pub(crate) struct GrabState{ grabbed: bool, options: CursorOptions }
+pub(crate) struct GrabState {
+    grabbed: bool,
+    options: CursorOptions,
+}
 
 fn update_gui_state(
     state: Res<GuiState>,
@@ -465,16 +463,11 @@ fn update_gui_state(
     }
 }
 
-fn grab_cursor_for_game(
-    mut commands: Commands,
-    gui_state: Res<GuiState>,
-) {
+fn grab_cursor_for_game(mut commands: Commands, gui_state: Res<GuiState>) {
     commands.write_message(GrabCursor(!gui_state.show_cursor()));
 }
 
-fn ungrab_cursor_for_overlay(
-    mut commands: Commands,
-) {
+fn ungrab_cursor_for_overlay(mut commands: Commands) {
     commands.write_message(GrabCursor(false));
 }
 
@@ -524,7 +517,8 @@ fn check_grab_focus_state(
     // are we coming back to await a previous grab event completion?
     // (If so, re-request until it takes.)
     if desired_grab.is_none()
-    && let Some(awaited_grabbed) = awaiting.take() {
+        && let Some(awaited_grabbed) = awaiting.take()
+    {
         let current_grabbed = cursor_options.grab_mode != CursorGrabMode::None;
         if awaited_grabbed != current_grabbed {
             // Double-check that we're allowed to before trying again.
@@ -601,7 +595,6 @@ pub enum GuiAreaMarker {
     PhysicsRunningArea,
     /// Mark the crossed-out icon (on top of [PhysicsRunningArea] and visible only when physics paused).
     PhysicsRunningCrossArea,
-
 }
 
 #[derive(SystemParam)]
@@ -613,7 +606,7 @@ impl<'w, 's> GuiAreaMarkerLocator<'w, 's> {
     pub fn find_first_marker(&self, marker: GuiAreaMarker) -> Option<Entity> {
         for (entity, &a_marker) in self.marker_q.iter() {
             if a_marker == marker {
-                return Some(entity)
+                return Some(entity);
             }
         }
         None
@@ -626,7 +619,11 @@ impl<'w, 's> GuiAreaMarkerLocator<'w, 's> {
         }
         None
     }
-    pub fn with_marker<R>(&self, marker: GuiAreaMarker, mut cb: impl FnMut(Entity) -> R) -> Option<R> {
+    pub fn with_marker<R>(
+        &self,
+        marker: GuiAreaMarker,
+        mut cb: impl FnMut(Entity) -> R,
+    ) -> Option<R> {
         let mut ret = None::<R>;
         for (entity, &a_marker) in self.marker_q.iter() {
             if a_marker == marker {
@@ -637,11 +634,7 @@ impl<'w, 's> GuiAreaMarkerLocator<'w, 's> {
     }
 }
 
-fn setup_gui_nodes(
-    mut commands: Commands,
-    assets: Res<CommonGuiAssets>,
-    ui_font: Res<UiFont>,
-) {
+fn setup_gui_nodes(mut commands: Commands, assets: Res<CommonGuiAssets>, ui_font: Res<UiFont>) {
     // let font = ui_font.map_or(default(), |f| f.0.clone());
     let font: FontSource = ui_font.0.clone().into();
     let icon_size = 32.0;
@@ -674,13 +667,11 @@ fn setup_gui_nodes(
         Name::new("INSTRUCTIONS"),
         GuiAreaMarker::InstructionsArea,
         Visibility::Hidden,
-        Text::new(
-            "",
-        ),
+        Text::new(""),
         TextFont {
             font: font.clone(),
             font_size: FontSize::Px(16.0),
-            .. default()
+            ..default()
         },
         TextLayout::no_wrap().with_justify(Justify::Center),
         Node {
@@ -689,7 +680,7 @@ fn setup_gui_nodes(
             flex_direction: FlexDirection::Column,
             align_items: AlignItems::Center,
             justify_content: JustifyContent::Center,
-            .. default()
+            ..default()
         },
     ));
 
@@ -728,20 +719,19 @@ fn setup_gui_nodes(
             flex_direction: FlexDirection::Column,
             align_items: AlignItems::Center,
             justify_content: JustifyContent::Center,
-            .. default()
+            ..default()
         },
         BackgroundColor(Color::NONE),
         RenderLayers::from_layers(&[RENDER_LAYER_UI]),
-
         Text::new(
             "", // e.g. "You win!"
         ),
         TextFont {
             font: font.clone(),
             font_size: FontSize::Px(64.0),
-            .. default()
+            ..default()
         },
-        TextColor( Color::linear_rgba(0., 0., 0., 1.0)),
+        TextColor(Color::linear_rgba(0., 0., 0., 1.0)),
         TextShadow {
             offset: Vec2::splat(4.),
             color: Color::linear_rgba(0., 0., 0., 0.5),
@@ -765,14 +755,13 @@ fn setup_gui_nodes(
             ..default()
         },
         Visibility::Hidden,
-    ))
-    ;
+    ));
 
     // We place these in from right to left,
     // but in some cases stack them.
 
     let pos_y = Val::Px(4.0);
-    let mut right_x = 4.0 - icon_size;    // can't do add/sub on Val, keep  as f32
+    let mut right_x = 4.0 - icon_size; // can't do add/sub on Val, keep  as f32
 
     // Mute icon
     right_x += icon_size;
@@ -783,14 +772,14 @@ fn setup_gui_nodes(
         TextFont {
             font: assets.emoji_icon_font.clone().into(),
             font_size: FontSize::Px(icon_size),
-            .. default()
+            ..default()
         },
         TextColor(Color::Srgba(tailwind::YELLOW_300)),
         Node {
             position_type: PositionType::Absolute,
             top: Val::Px(4.0),
             right: Val::Px(right_x),
-            .. default()
+            ..default()
         },
         Text::new("\u{1F508}"), // speaker
         Visibility::Hidden,
@@ -804,16 +793,16 @@ fn setup_gui_nodes(
         TextFont {
             font: assets.emoji_icon_font.clone().into(),
             font_size: FontSize::Px(icon_size),
-            .. default()
+            ..default()
         },
         TextColor(Color::Srgba(tailwind::YELLOW_300)),
         Node {
             position_type: PositionType::Absolute,
             top: pos_y,
             right: Val::Px(right_x),
-            .. default()
+            ..default()
         },
-        Text::new("\u{1F6AB}"),  // circle with slash
+        Text::new("\u{1F6AB}"), // circle with slash
         Visibility::Inherited,
     ));
 
@@ -827,21 +816,21 @@ fn setup_gui_nodes(
             font: assets.emoji_icon_font.clone().into(),
             // font: assets.hack_font.clone().into(),
             font_size: FontSize::Px(icon_size),
-            .. default()
+            ..default()
         },
         TextColor(Color::Srgba(tailwind::GRAY_100)),
         Node {
             position_type: PositionType::Absolute,
             top: pos_y,
             right: Val::Px(right_x),
-            .. default()
+            ..default()
         },
         // Text::new("\u{23f1}\u{fe0f}"), // stopwatch
         // ⚡⚠⚒⛭
         // missing ⛯⚗⛕⛈⏻⛹
         Text::new("⛭"),
         Visibility::Hidden, // by default
-        ZIndex(-1), // under
+        ZIndex(-1),         // under
     ));
     commands.spawn((
         Name::new("RunningCrossArea"),
@@ -850,17 +839,17 @@ fn setup_gui_nodes(
         TextFont {
             font: assets.emoji_icon_font.clone().into(),
             font_size: FontSize::Px(icon_size),
-            .. default()
+            ..default()
         },
         TextColor(Color::Srgba(tailwind::RED_700)),
         Node {
             position_type: PositionType::Absolute,
             top: pos_y,
             right: Val::Px(right_x), // on top
-            .. default()
+            ..default()
         },
         Text::new("\u{1F5D9}"), // cross X
-        Visibility::Hidden, // by default
+        Visibility::Hidden,     // by default
         ZIndex(1),
     ));
 
@@ -872,14 +861,14 @@ fn setup_gui_nodes(
         TextFont {
             font: assets.emoji_icon_font.clone().into(),
             font_size: FontSize::Px(icon_size),
-            .. default()
+            ..default()
         },
         TextColor(Color::Srgba(tailwind::GRAY_300)),
         Node {
             position_type: PositionType::Absolute,
             top: pos_y,
             right: Val::Px(right_x),
-            .. default()
+            ..default()
         },
         Text::new("\u{1f680}"), // rocket 🚀
         Visibility::Inherited,
@@ -891,20 +880,19 @@ fn setup_gui_nodes(
         TextFont {
             font: assets.emoji_icon_font.clone().into(),
             font_size: FontSize::Px(icon_size),
-            .. default()
+            ..default()
         },
         TextColor(Color::Srgba(tailwind::RED_700)),
         Node {
             position_type: PositionType::Absolute,
             top: pos_y,
             right: Val::Px(right_x),
-            .. default()
+            ..default()
         },
         Text::new("\u{1F5D9}"), // cross X
         Visibility::Hidden,
         ZIndex(0),
     ));
-
 }
 
 fn update_pause_ui(
@@ -914,7 +902,11 @@ fn update_pause_ui(
 ) {
     gui_area.with_marker(GuiAreaMarker::UserPausedArea, |ent| {
         if let Ok(mut vis) = vis_q.get_mut(ent) {
-            *vis = if paused.is_paused() { Visibility::Inherited } else { Visibility::Hidden };
+            *vis = if paused.is_paused() {
+                Visibility::Inherited
+            } else {
+                Visibility::Hidden
+            };
         }
     });
 }
@@ -926,7 +918,11 @@ fn update_mute_ui(
 ) {
     gui_area.with_marker(GuiAreaMarker::MuteArea, |ent| {
         if let Ok(mut vis) = vis_q.get_mut(ent) {
-            *vis = if vol_q.muted { Visibility::Inherited } else { Visibility::Hidden };
+            *vis = if vol_q.muted {
+                Visibility::Inherited
+            } else {
+                Visibility::Hidden
+            };
         }
     });
 }
@@ -951,7 +947,7 @@ fn update_physics_pause_ui(
         }
     });
     if !paused.is_changed() {
-        return
+        return;
     }
     if **paused {
         time.pause();
@@ -961,7 +957,11 @@ fn update_physics_pause_ui(
     gui_area.with_marker(GuiAreaMarker::PhysicsRunningCrossArea, |ent| {
         if let Ok(mut vis) = vis_q.get_mut(ent) {
             // If we're here, it's paused.
-            vis.set_if_neq(if **paused { Visibility::Inherited } else { Visibility::Hidden });
+            vis.set_if_neq(if **paused {
+                Visibility::Inherited
+            } else {
+                Visibility::Hidden
+            });
         }
     });
 }
@@ -980,12 +980,20 @@ pub struct InstructionsTimeout(pub Duration);
 #[type_path = "game"]
 pub struct InstructionText(pub String);
 
+/// Set the instruction font for [InstructionText].
+#[derive(Resource, Reflect, Deref)]
+#[reflect(Resource)]
+#[type_path = "game"]
+pub struct InstructionFont(pub Handle<Font>);
+
 /// Set when we showed the instruction text for what level.
 /// It is set in [LevelState::Playing].
 #[derive(Resource, Reflect)]
 #[reflect(Resource)]
 #[type_path = "game"]
-pub struct ShowedInstructions{ level_id: String }
+pub struct ShowedInstructions {
+    level_id: String,
+}
 
 /// Show the instructions in `InstructionText`, if it exists,
 /// unless `ShowedInstructions` exists and references the same level.
@@ -998,7 +1006,7 @@ fn show_instructions_from_resource(
 ) {
     // Ignore blank instructions.
     if text.0.is_empty() {
-        return
+        return;
     }
 
     // Show only if we don't remember showing the instructions for this level.
@@ -1012,16 +1020,9 @@ fn show_instructions_from_resource(
         return;
     }
 
-    commands.insert_resource(ShowedInstructions{
-        level_id,
-    });
+    commands.insert_resource(ShowedInstructions { level_id });
 
-    commands.run_system_cached_with(show_instructions,
-        (
-            text.0.to_string(),
-            ***timeout,
-        )
-    );
+    commands.run_system_cached_with(show_instructions, (text.0.to_string(), ***timeout));
 }
 
 /// Call with run_system_cached_with to set the instruction text.
@@ -1030,6 +1031,7 @@ pub fn show_instructions(
     In((text, tween_time)): In<(String, Duration)>,
     mut commands: Commands,
     fonts: Res<CommonGuiAssets>,
+    font: Option<Res<InstructionFont>>,
     gui_area: GuiAreaMarkerLocator,
 ) {
     use bevy_tweening::AnimTarget;
@@ -1041,25 +1043,31 @@ pub fn show_instructions(
     let mut text_ent = Entity::PLACEHOLDER;
 
     gui_area.with_first(GuiAreaMarker::InstructionsArea, |ent| {
-        commands.entity(ent)
-        .try_insert(Visibility::Inherited)  // show
-        .with_children(|builder| {
-            text_ent = builder.spawn((
-                DespawnOnReset(LevelState::Playing),
-                Text::new(text),
-                TextLayout::new(Justify::Center, LineBreak::WordBoundary),
-                TextFont {
-                    font: fonts.std_ui.clone().into(),
-                    font_size: FontSize::Px(32.0),
-                    .. default()
-                },
-                TextColor(Color::WHITE.with_alpha(0.5)),
-                TextShadow {
-                    offset: Vec2::splat(2.),
-                    color: Color::linear_rgba(0., 0., 0., 0.0),
-                },
-            )).id();
-        });
+        commands
+            .entity(ent)
+            .try_insert(Visibility::Inherited) // show
+            .with_children(|builder| {
+                text_ent = builder
+                    .spawn((
+                        DespawnOnReset(LevelState::Playing),
+                        Text::new(text),
+                        TextLayout::new(Justify::Center, LineBreak::WordBoundary),
+                        TextFont {
+                            font: font
+                                .map(|fr| fr.clone())
+                                .unwrap_or_else(|| fonts.std_ui.clone())
+                                .into(),
+                            font_size: FontSize::Px(32.0),
+                            ..default()
+                        },
+                        TextColor(Color::WHITE.with_alpha(0.5)),
+                        TextShadow {
+                            offset: Vec2::splat(2.),
+                            color: Color::linear_rgba(0., 0., 0., 0.0),
+                        },
+                    ))
+                    .id();
+            });
     });
 
     // Fade in and out.
@@ -1069,7 +1077,7 @@ pub fn show_instructions(
         TextColorLens {
             start: Color::WHITE.with_alpha(0.0),
             end: Color::WHITE.with_alpha(1.0),
-        }
+        },
     )
     .with_repeat(2, bevy_tweening::RepeatStrategy::MirroredRepeat);
 
@@ -1079,26 +1087,22 @@ pub fn show_instructions(
         TextShadowColorLens {
             start: Color::linear_rgba(0., 0., 0., 0.0),
             end: Color::linear_rgba(0., 0., 0., 1.0),
-        }
+        },
     )
     .with_repeat(2, bevy_tweening::RepeatStrategy::MirroredRepeat);
 
     commands.entity(text_ent).try_insert((
         DespawnOnReset(GameplayState::Playing),
         TweenAnim::new(color_tween).with_destroy_on_completed(true),
-
         // Add another TweenAnim.
         children![(
             TweenAnim::new(shadow_tween).with_destroy_on_completed(true),
             AnimTarget::component::<TextShadow>(text_ent),
-        )]
+        )],
     ));
 }
 
-pub fn hide_instructions(
-    gui_area: GuiAreaMarkerLocator,
-    mut vis_q: Query<&mut Visibility>,
-) {
+pub fn hide_instructions(gui_area: GuiAreaMarkerLocator, mut vis_q: Query<&mut Visibility>) {
     gui_area.with_marker(GuiAreaMarker::InstructionsArea, |ent| {
         if let Ok(mut vis) = vis_q.get_mut(ent) {
             *vis = Visibility::Hidden;
@@ -1106,8 +1110,6 @@ pub fn hide_instructions(
     });
 }
 
-pub fn reset_instructions(
-    mut commands: Commands,
-) {
+pub fn reset_instructions(mut commands: Commands) {
     commands.remove_resource::<InstructionText>();
 }
