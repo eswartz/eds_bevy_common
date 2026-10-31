@@ -2,7 +2,10 @@
 //!
 use bevy::input_focus::AutoFocus;
 use bevy::input_focus::FocusCause;
+use bevy::picking::hover::Hovered;
 use bevy::platform::collections::HashMap;
+use bevy::ui::Pressed;
+use bevy::ui_widgets::Button;
 use std::hash::BuildHasher as _;
 use std::marker::PhantomData;
 use std::ops::RangeInclusive;
@@ -10,20 +13,19 @@ use std::sync::Arc;
 use std::sync::Mutex;
 use std::time::Duration;
 
+use bevy::camera::visibility::RenderLayers;
 use bevy::color::palettes::tailwind;
 use bevy::ecs::system::SystemId;
 use bevy::input_focus::InputFocus;
 use bevy::input_focus::InputFocusVisible;
 use bevy::input_focus::tab_navigation::*;
 use bevy::prelude::*;
-use bevy::camera::visibility::RenderLayers;
 use bevy::text::LineHeight;
 use bevy::ui::RelativeCursorPosition;
 use bevy::window::PrimaryWindow;
-use rustc_hash::FxBuildHasher;
 #[cfg(feature = "input_bei")]
 use bevy_enhanced_input::prelude::*;
-use bevy::picking::events::Press;
+use rustc_hash::FxBuildHasher;
 
 use crate::prelude::RENDER_LAYER_UI;
 #[cfg(feature = "input_bei")]
@@ -71,30 +73,19 @@ impl Plugin for MenuCommonPlugin {
                     handle_menu_slider_actions,
                     handle_menu_slider_refresh,
                 )
-                .chain()
-                .run_if(is_in_menu)
+                    .chain()
+                    .run_if(is_in_menu),
             )
-            .add_systems(
-                Update,
-                (
-                    handle_menu_back,
-                    handle_menu_into,
-                )
-                .chain()
-            )
-        ;
+            .add_systems(Update, (handle_menu_back, handle_menu_into).chain());
 
         #[cfg(feature = "input_bei")]
         {
-            app
-                .add_observer(on_menu_back)
+            app.add_observer(on_menu_back)
                 .add_observer(on_menu_down_up)
                 .add_observer(on_focused_reset)
                 .add_observer(on_focused_interact_fire)
-                .add_observer(on_focused_left_right)
-            ;
+                .add_observer(on_focused_left_right);
         }
-
     }
 }
 
@@ -107,7 +98,11 @@ pub struct CountAccumulator<T> {
 
 impl<T> Default for CountAccumulator<T> {
     fn default() -> Self {
-        Self { dir: 0., count: 0., _marker: default() }
+        Self {
+            dir: 0.,
+            count: 0.,
+            _marker: default(),
+        }
     }
 }
 
@@ -141,7 +136,8 @@ impl<T> CountAccumulator<T> {
     }
 }
 
-fn handle_menu_back(mut commands: Commands,
+fn handle_menu_back(
+    mut commands: Commands,
     _go_back_in_menu_request: If<Res<GoBackInMenuRequest>>,
     overlay_state: Res<State<OverlayState>>,
     mut prev_menu: ResMut<PreviousMenuStack>,
@@ -158,7 +154,8 @@ fn handle_menu_back(mut commands: Commands,
     commands.remove_resource::<GoBackInMenuRequest>();
 }
 
-fn handle_menu_into(mut commands: Commands,
+fn handle_menu_into(
+    mut commands: Commands,
     go_into_in_menu_request: If<Res<GoIntoMenuRequest>>,
     overlay_state: Res<State<OverlayState>>,
     mut prev_menu: ResMut<PreviousMenuStack>,
@@ -208,22 +205,24 @@ impl<'w, 's> MenuItemBuilder<'w, 's> {
         font_scale: f32,
         history: &MenuItemSelectionHistory,
     ) -> Self {
-       commands.remove_resource::<LastMenuFocus>();
+        commands.remove_resource::<LastMenuFocus>();
         let page = commands
             .spawn((
                 DespawnOnExit(overlay),
                 create_menu_page_node(),
                 TabGroup::new(FxBuildHasher.hash_one(overlay) as _),
             ))
-            .with_child(
-                Node {
-                    margin: UiRect {
-                        top: Val::Px(if program == ProgramState::LaunchMenu { 128.0 } else { 0.0 }),
-                        ..default()
-                    },
+            .with_child(Node {
+                margin: UiRect {
+                    top: Val::Px(if program == ProgramState::LaunchMenu {
+                        128.0
+                    } else {
+                        0.0
+                    }),
                     ..default()
-                }
-            )
+                },
+                ..default()
+            })
             .id();
 
         Self {
@@ -266,8 +265,7 @@ impl<'w, 's> MenuItemBuilder<'w, 's> {
                 .entity(ent_id)
                 .try_insert(Name::new(text.clone()))
                 .try_insert(other_menu_items)
-                .try_insert_if(AutoFocus, || self.item_index == 0)
-            ;
+                .try_insert_if(AutoFocus, || self.item_index == 0);
         });
 
         self.item_index += 1;
@@ -325,17 +323,13 @@ impl<'w, 's> MenuItemBuilder<'w, 's> {
     /// reentering the menu structure.
     pub fn finish(&mut self, history: &mut MenuItemSelectionHistory) {
         if let Some((first_ent, label)) = self.first_ent_label.take() {
-            history
-                .0
-                .insert(self.overlay, (first_ent, label).clone());
-            self.commands.insert_resource(InputFocus::from_entity(first_ent));
+            history.0.insert(self.overlay, (first_ent, label).clone());
+            self.commands
+                .insert_resource(InputFocus::from_entity(first_ent));
             self.commands.insert_resource(RefreshMenu);
-            self.commands.entity(first_ent).try_insert(Interaction::Hovered);
-            self.commands.write_message(MenuActionMessage::Navigate(first_ent));
-
-            // self.prev.0.push(self.overlay);
-            // dbg!(&self.prev.0);
-            // self.commands.insert_resource(self.prev.clone());
+            self.commands.entity(first_ent).try_insert(Hovered(true));
+            self.commands
+                .write_message(MenuActionMessage::Navigate(first_ent));
         }
     }
 }
@@ -492,7 +486,6 @@ pub struct MenuSlider {
     pub ui_step_base: f32,
 }
 
-
 /// When this resource is Some, we're dragging this.
 #[derive(Resource, Debug)]
 pub struct DraggingMenuItem(pub Option<Entity>);
@@ -531,7 +524,11 @@ impl MenuSlider {
     }
 
     pub fn add_and_clamp(&self, delta: f32, ui_orig: f32) -> f32 {
-        let delta = if delta.abs() < self.ui_step_base { self.ui_step_base.copysign(delta) } else { (delta / self.ui_step_base).round() * self.ui_step_base };
+        let delta = if delta.abs() < self.ui_step_base {
+            self.ui_step_base.copysign(delta)
+        } else {
+            (delta / self.ui_step_base).round() * self.ui_step_base
+        };
         (ui_orig + delta).clamp(*self.ui_range.start(), *self.ui_range.end())
     }
 }
@@ -572,6 +569,7 @@ fn spawn_menu_button_bundle(
     let ent_id = spawn_menu_row_bundle(builder, font, font_size_scale);
     builder.commands().entity(ent_id).try_insert((
         Button,
+        Hovered::default(),
         Text::new(text.clone()),
         MenuBaseText(text, font_size_scale),
         tab_index,
@@ -588,10 +586,10 @@ fn spawn_menu_label_bundle(
     font_size_scale: f32,
 ) -> Entity {
     let ent_id = spawn_menu_row_bundle(builder, font, font_size_scale);
-    builder.commands().entity(ent_id).try_insert((
-        Text::new(text.clone()),
-        MenuBaseText(text, font_size_scale),
-    ));
+    builder
+        .commands()
+        .entity(ent_id)
+        .try_insert((Text::new(text.clone()), MenuBaseText(text, font_size_scale)));
     ent_id
 }
 
@@ -632,12 +630,14 @@ fn on_added_menu_item(
         let mut ent_commands = commands.entity(ent);
         ent_commands
             .observe(
-                move |mut trigger: On<Pointer<Press>>,
+                move |mut trigger: On<PointerPress>,
                       mut focus: ResMut<InputFocus>,
                       mut visible: ResMut<InputFocusVisible>,
                       slider_q: Query<&MenuSlider>,
                       mut dragging: ResMut<DraggingMenuItem>| {
-                    if focus.get().is_none() || slider_q.get(trigger.event().entity).iter().next().is_none() {
+                    if focus.get().is_none()
+                        || slider_q.get(trigger.event().entity).iter().next().is_none()
+                    {
                         focus.set(trigger.event().entity, FocusCause::Navigated);
                         visible.0 = true;
                         dragging.0 = None;
@@ -646,7 +646,7 @@ fn on_added_menu_item(
                 },
             )
             .observe(
-                move |mut trigger: On<Pointer<Click>>,
+                move |mut trigger: On<PointerClick>,
                       mut commands: Commands,
                       mut focus: ResMut<InputFocus>,
                       mut visible: ResMut<InputFocusVisible>,
@@ -658,8 +658,7 @@ fn on_added_menu_item(
                     if was_focused
                         && (dragging.0.is_none()
                             && (slider_q.get(trigger.event().entity).iter().next().is_none()
-                                || trigger.event().duration < Duration::from_millis(100)
-                            ))
+                                || trigger.event().duration < Duration::from_millis(100)))
                     {
                         commands.write_message(MenuActionMessage::Activate(trigger.event().entity));
                         trigger.propagate(false);
@@ -669,7 +668,7 @@ fn on_added_menu_item(
 
         if toggle {
             ent_commands.observe(
-                move |mut trigger: On<Pointer<Click>>,
+                move |mut trigger: On<PointerClick>,
                       mut focus: ResMut<InputFocus>,
                       mut visible: ResMut<InputFocusVisible>,
                       dragging: Option<Res<DraggingMenuItem>>,
@@ -686,7 +685,7 @@ fn on_added_menu_item(
 
         if enm {
             ent_commands.observe(
-                move |mut trigger: On<Pointer<Click>>,
+                move |mut trigger: On<PointerClick>,
                       mut focus: ResMut<InputFocus>,
                       mut visible: ResMut<InputFocusVisible>,
                       dragging: Option<Res<DraggingMenuItem>>,
@@ -704,7 +703,7 @@ fn on_added_menu_item(
         if slider || enm {
             ent_commands
                 .observe(
-                    move |trigger: On<Pointer<DragStart>>,
+                    move |trigger: On<PointerDragStart>,
                           mut focus: ResMut<InputFocus>,
                           mut visible: ResMut<InputFocusVisible>,
                           mut dragging: ResMut<DraggingMenuItem>| {
@@ -714,7 +713,7 @@ fn on_added_menu_item(
                     },
                 )
                 .observe(
-                    move |trigger: On<Pointer<Drag>>,
+                    move |trigger: On<PointerDrag>,
                           mut dragging: ResMut<DraggingMenuItem>,
                           window: Single<&Window, With<PrimaryWindow>>,
                           mut writer: MessageWriter<MenuActionMessage>| {
@@ -726,7 +725,7 @@ fn on_added_menu_item(
                     },
                 )
                 .observe(
-                    move |mut trigger: On<Pointer<DragEnd>>,
+                    move |mut trigger: On<PointerDragEnd>,
                           mut dragging: ResMut<DraggingMenuItem>| {
                         dragging.0 = None;
                         trigger.propagate(false);
@@ -751,7 +750,7 @@ fn on_focus_change(
     auto_focus_q: Query<&AutoFocus, With<MenuItem>>,
 ) {
     if !focus.is_changed() {
-        return
+        return;
     }
 
     if focus.get().is_none() {
@@ -763,7 +762,7 @@ fn on_focus_change(
             if prev_focus.as_ref().is_some_and(|prev| ***prev == ent) {
                 debug!("switch to previous {ent}");
                 focus.set(ent, FocusCause::Navigated);
-                return
+                return;
             }
             if auto.is_none() && auto_focus_q.contains(ent) {
                 auto = Some(ent);
@@ -828,15 +827,14 @@ fn on_focused_left_right(
     enum_q: Query<&MenuEnum>,
     mut writer: MessageWriter<MenuActionMessage>,
 ) {
-    if !overlay.is_menu() { return };
+    if !overlay.is_menu() {
+        return;
+    };
     let Some(entity) = focus.get() else { return };
 
     let dir = event.value.signum() as i32;
     if slider_q.contains(entity) {
-        writer.write(MenuActionMessage::Slide(
-            entity,
-            dir as f32,
-        ));
+        writer.write(MenuActionMessage::Slide(entity, dir as f32));
     } else if toggle_q.contains(entity) || enum_q.contains(entity) {
         if dir < 0 {
             writer.write(MenuActionMessage::Previous(entity));
@@ -846,11 +844,14 @@ fn on_focused_left_right(
     }
 }
 
-
 fn signum_or_zero(f: f32) -> i32 {
-    if f < 0. { -1 }
-    else if f > 0. { 1 }
-    else { 0 }
+    if f < 0. {
+        -1
+    } else if f > 0. {
+        1
+    } else {
+        0
+    }
 }
 
 #[cfg(feature = "input_bei")]
@@ -859,7 +860,9 @@ fn on_menu_back(
     overlay: Res<State<OverlayState>>,
     mut commands: Commands,
 ) {
-    if !overlay.is_menu() { return };
+    if !overlay.is_menu() {
+        return;
+    };
     commands.insert_resource(GoBackInMenuRequest);
 }
 
@@ -873,8 +876,12 @@ fn on_menu_down_up(
     mut focus: ResMut<InputFocus>,
     mut visible: ResMut<InputFocusVisible>,
 ) {
-    if !overlay.is_menu() { return };
-    if focus.get().is_none() { return };
+    if !overlay.is_menu() {
+        return;
+    };
+    if focus.get().is_none() {
+        return;
+    };
 
     let dir = event.value.signum() as i32;
     // Move in menu?
@@ -913,7 +920,7 @@ struct MouseSliderReleaseTime {
 
 fn handle_menu_mouse_drag(
     mut commands: Commands,
-    mut reader: MessageReader<Pointer<Drag>>,
+    mut reader: MessageReader<PointerDrag>,
     mut dragging: ResMut<DraggingMenuItem>,
     window: Single<&Window, With<PrimaryWindow>>,
     mut writer: MessageWriter<MenuActionMessage>,
@@ -933,7 +940,10 @@ fn handle_menu_mouse_drag(
 
 fn handle_menu_mouse_click(
     mut commands: Commands,
-    int_q: Query<(Entity, &Interaction), (Changed<Interaction>, With<MenuItem>)>,
+    int_q: Query<
+        (Entity, Has<Pressed>, &Hovered),
+        (Or<(Changed<Pressed>, Changed<Hovered>)>, With<MenuItem>),
+    >,
     slider_q: Query<&MenuSlider>,
     time: Res<Time>,
     pressed: Option<Res<MouseSliderReleaseTime>>,
@@ -941,20 +951,20 @@ fn handle_menu_mouse_click(
 ) {
     // Delay before
     const DELAY: Duration = Duration::from_millis(250);
-    for (ent, int) in int_q.iter() {
-        if *int == Interaction::Pressed {
+    for (ent, pressedf, hovered) in int_q.iter() {
+        if pressedf {
             // Queue to activate menu item on release later if it's a slider.
-            commands.insert_resource(MouseSliderReleaseTime{
+            commands.insert_resource(MouseSliderReleaseTime {
                 ent,
-                slider_release_time: time.elapsed().saturating_add(DELAY)
+                slider_release_time: time.elapsed().saturating_add(DELAY),
             });
             focus.set(ent, FocusCause::Pressed);
-        }
-        else if *int == Interaction::Hovered
-        && let Some(pressed) = &pressed
-        && pressed.ent == ent {
-            let should_fire = !slider_q.contains(ent)
-                || time.elapsed() >= pressed.slider_release_time;
+        } else if hovered.get()
+            && let Some(pressed) = &pressed
+            && pressed.ent == ent
+        {
+            let should_fire =
+                !slider_q.contains(ent) || time.elapsed() >= pressed.slider_release_time;
             if should_fire {
                 commands.write_message(MenuActionMessage::Activate(ent));
                 commands.remove_resource::<MouseSliderReleaseTime>();
@@ -967,7 +977,8 @@ fn handle_menu_item_decoration(
     mut interaction_query: Query<
         (
             Entity,
-            &Interaction,
+            &Hovered,
+            Has<Pressed>,
             &MenuBaseText,
             &mut TextFont,
             &mut TextColor,
@@ -976,12 +987,14 @@ fn handle_menu_item_decoration(
     >,
     focus: Res<InputFocus>,
 ) {
-    for (ent, interaction, MenuBaseText(_, scale), mut text, mut color) in &mut interaction_query {
-        let (font_size, item_color) = match (*interaction, focus.get() == Some(ent)) {
-            (_, true) => (MENU_ITEM_FONT_SIZE * scale * 1.1, PRESSED_BUTTON.into()),
-            (Interaction::Pressed, _) => (MENU_ITEM_FONT_SIZE * scale * 1.1, PRESSED_BUTTON.into()),
-            (Interaction::Hovered, _) => (MENU_ITEM_FONT_SIZE * scale * 1.1, HOVERED_BUTTON.into()),
-            (Interaction::None, _) => (MENU_ITEM_FONT_SIZE * scale, NORMAL_BUTTON.into()),
+    for (ent, hovered, pressed, MenuBaseText(_, scale), mut text, mut color) in
+        &mut interaction_query
+    {
+        let (font_size, item_color) = match (hovered.get(), pressed, focus.get() == Some(ent)) {
+            (_, _, true) => (MENU_ITEM_FONT_SIZE * scale * 1.1, PRESSED_BUTTON.into()),
+            (_, true, _) => (MENU_ITEM_FONT_SIZE * scale * 1.1, PRESSED_BUTTON.into()),
+            (true, false, _) => (MENU_ITEM_FONT_SIZE * scale * 1.1, HOVERED_BUTTON.into()),
+            (false, _, _) => (MENU_ITEM_FONT_SIZE * scale, NORMAL_BUTTON.into()),
         };
         #[expect(clippy::float_cmp, reason = "binary diff checking")]
         if text.font_size != FontSize::Px(font_size) || *color != item_color {
@@ -1000,7 +1013,7 @@ fn handle_menu_action(world: &mut World) {
     reader.initialize(world);
     let Ok(events) = reader.run((), world) else {
         error!("failed to fetch menu action events");
-        return
+        return;
     };
 
     let overlay_state = *world
@@ -1057,7 +1070,7 @@ fn check(b: bool) -> &'static str {
 fn handle_menu_slider_refresh(
     mut slider_q: Query<
         (&mut Text, &MenuBaseText, &MenuSlider, Option<&MenuToggle>),
-        Or<(Changed<MenuSlider>, Changed<MenuToggle>)>
+        Or<(Changed<MenuSlider>, Changed<MenuToggle>)>,
     >,
 ) {
     for (mut text, base_text, slider, toggle) in slider_q.iter_mut() {
@@ -1089,8 +1102,7 @@ fn handle_menu_slider_actions(
         };
 
         match event {
-            MenuActionMessage::Navigate(_) |
-            MenuActionMessage::Activate(_) => (),
+            MenuActionMessage::Navigate(_) | MenuActionMessage::Activate(_) => (),
             MenuActionMessage::Reset(_) => {
                 if let Some(default) = (slider.default_fn)() {
                     // Reset.
@@ -1154,9 +1166,8 @@ fn handle_menu_toggle_actions(
             continue;
         };
 
-        if !matches!(event, MenuActionMessage::Activate(_))
-        {
-            continue
+        if !matches!(event, MenuActionMessage::Activate(_)) {
+            continue;
         }
         let Some(current) = toggle.current.as_mut() else {
             error!("toggle {entity} not initialized yet");
@@ -1180,10 +1191,7 @@ fn handle_menu_enums_init(
 }
 
 fn handle_menu_enums_refresh(
-    mut enums_q: Query<
-        (&mut Text, &MenuBaseText, &MenuEnum),
-        Changed<MenuEnum>
-    >,
+    mut enums_q: Query<(&mut Text, &MenuBaseText, &MenuEnum), Changed<MenuEnum>>,
 ) {
     for (mut text, base_text, enums) in enums_q.iter_mut() {
         let Some(value) = enums.current.as_ref() else {
@@ -1223,7 +1231,7 @@ fn handle_menu_enums_actions(
             _ => 0,
         };
         if dir == 0 {
-            continue
+            continue;
         }
 
         // Adjust value in UI space.

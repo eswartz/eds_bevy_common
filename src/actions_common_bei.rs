@@ -1,4 +1,3 @@
-use bevy::input::mouse::MouseScrollUnit;
 use bevy::prelude::*;
 use bevy::window::CursorOptions;
 use bevy::window::PrimaryWindow;
@@ -20,23 +19,20 @@ impl Plugin for ActionPlugin {
         app.add_plugins(EnhancedInputPlugin)
             .add_input_context::<PlayerContext>()
             .add_input_context::<MenuContext>()
-
             .add_input_condition::<BetterPulse>()
-
             // All the time!
             .add_systems(FixedUpdate, handle_escape)
-
             .add_systems(Last, mask_and_unmask_inputs)
-            .add_systems(Last, toggle_context.run_if(resource_changed::<State<OverlayState>>))
-
+            .add_systems(
+                Last,
+                toggle_context.run_if(resource_changed::<State<OverlayState>>),
+            )
             .add_observer(handle_pause_gameplay)
             .add_observer(handle_toggle_physics)
             .add_observer(handle_toggle_physics_gizmos)
             .add_observer(handle_debug_ui)
             .add_observer(handle_full_screen)
-            .add_observer(handle_mute)
-
-            ;
+            .add_observer(handle_mute);
     }
 }
 
@@ -57,7 +53,7 @@ pub fn is_context_active<Context: Component>(
     activities: Query<&ContextActivity<Context>>,
 ) -> bool {
     let Some(context) = context_opt else {
-        return false
+        return false;
     };
     let Ok(activity) = activities.get(*context) else {
         warn!("no ActivityContext?");
@@ -225,26 +221,38 @@ pub mod actions {
 
 fn toggle_context(
     mut commands: Commands,
-    player_active: Single<Entity, With<ContextActivity::<PlayerContext>>>,
-    menu_active: Single<Entity, With<ContextActivity::<MenuContext>>>,
+    player_active: Single<Entity, With<ContextActivity<PlayerContext>>>,
+    menu_active: Single<Entity, With<ContextActivity<MenuContext>>>,
     overlay: Res<State<OverlayState>>,
 ) {
     if overlay.is_menu() {
-        commands.entity(*player_active).insert(ContextActivity::<PlayerContext>::INACTIVE);
-        commands.entity(*menu_active).insert(ContextActivity::<MenuContext>::ACTIVE);
+        commands
+            .entity(*player_active)
+            .insert(ContextActivity::<PlayerContext>::INACTIVE);
+        commands
+            .entity(*menu_active)
+            .insert(ContextActivity::<MenuContext>::ACTIVE);
     } else {
-        commands.entity(*player_active).insert(ContextActivity::<PlayerContext>::ACTIVE);
-        commands.entity(*menu_active).insert(ContextActivity::<MenuContext>::INACTIVE);
+        commands
+            .entity(*player_active)
+            .insert(ContextActivity::<PlayerContext>::ACTIVE);
+        commands
+            .entity(*menu_active)
+            .insert(ContextActivity::<MenuContext>::INACTIVE);
     }
 }
 
 /// Handle the primary pause action.
 ///
 /// (note, scripting plugin needs to handle [actions::PauseScripting] instead.)
-pub(crate) fn handle_pause_gameplay(_event: On<Start<actions::PauseGameplay>>, keys: Res<ButtonInput<KeyCode>>, mut pause_state: ResMut<PauseState>) {
+pub(crate) fn handle_pause_gameplay(
+    _event: On<Start<actions::PauseGameplay>>,
+    keys: Res<ButtonInput<KeyCode>>,
+    mut pause_state: ResMut<PauseState>,
+) {
     // Ignore overlap with PauseScripting
     if keys.any_pressed([KeyCode::ShiftLeft, KeyCode::ShiftRight]) {
-        return
+        return;
     }
     // Toggle from whatever means we are paused, as an
     // escape hatch.
@@ -252,12 +260,20 @@ pub(crate) fn handle_pause_gameplay(_event: On<Start<actions::PauseGameplay>>, k
     pause_state.set_user_paused(paused);
 }
 
-
-pub(crate) fn handle_toggle_physics(_event: On<Start<actions::TogglePhysics>>, mut pause_state: ResMut<PhysicsPaused>) {
+pub(crate) fn handle_toggle_physics(
+    _event: On<Start<actions::TogglePhysics>>,
+    mut pause_state: ResMut<PhysicsPaused>,
+) {
     **pause_state ^= true;
-    log::info!("Physics {}", if !**pause_state { "RUNNING" } else { "PAUSED" });
+    log::info!(
+        "Physics {}",
+        if !**pause_state { "RUNNING" } else { "PAUSED" }
+    );
 }
-pub(crate) fn handle_toggle_physics_gizmos(_event: On<Start<actions::TogglePhysicsGizmos>>, mut gui_state: ResMut<GuiState>) {
+pub(crate) fn handle_toggle_physics_gizmos(
+    _event: On<Start<actions::TogglePhysicsGizmos>>,
+    mut gui_state: ResMut<GuiState>,
+) {
     gui_state.show_physics_gizmos ^= true;
 }
 
@@ -306,10 +322,7 @@ macro_rules! add_actions {
 
 /// Assign actions to your own context/etc.
 /// include: should be at least e.g. `ActionOf::<YourContext>::new(context_entity)`
-pub fn assign_stock_common_actions(
-    mut commands: Commands,
-    include: impl Bundle + Clone,
-) {
+pub fn assign_stock_common_actions(mut commands: Commands, include: impl Bundle + Clone) {
     commands.spawn((
         include.clone(),
         Action::<actions::PauseGameplay>::new(),
@@ -330,10 +343,7 @@ pub fn assign_stock_common_actions(
     commands.spawn((
         include.clone(),
         Action::<actions::Mute>::new(),
-        bindings![
-            KeyCode::F12,
-            KeyCode::KeyM.with_mod_keys(MOD_CTRL_COMMAND),
-        ],
+        bindings![KeyCode::F12, KeyCode::KeyM.with_mod_keys(MOD_CTRL_COMMAND),],
     ));
     commands.spawn((
         include.clone(),
@@ -353,9 +363,7 @@ pub fn assign_stock_common_actions(
     commands.spawn((
         include.clone(),
         Action::<actions::DebugUi>::new(),
-        bindings![
-            KeyCode::Backquote,
-        ],
+        bindings![KeyCode::Backquote,],
     ));
 
     commands.spawn((
@@ -375,10 +383,7 @@ pub fn assign_stock_common_actions(
 }
 
 /// include: should be at least e.g. `(ActionOf::<YourContext>::new(context_entity), {Menu,Player}Action)`
-pub fn assign_stock_menu_actions(
-    mut commands: Commands,
-    include: impl Bundle + Clone,
-) {
+pub fn assign_stock_menu_actions(mut commands: Commands, include: impl Bundle + Clone) {
     commands.spawn((
         include.clone(),
         Action::<actions::Back>::new(),
@@ -390,13 +395,12 @@ pub fn assign_stock_menu_actions(
         Cooldown::new(0.125),
         bindings![
             KeyCode::Escape,
-            GamepadButton::East,    // not GAMEPAD_BUTTON_MENU here
+            GamepadButton::East, // not GAMEPAD_BUTTON_MENU here
         ],
     ));
 
     commands.spawn((
         include.clone(),
-
         Action::<actions::MoveUpDown>::new(),
         BetterPulse::new(0.125),
         DeadZone::default(),
@@ -411,7 +415,6 @@ pub fn assign_stock_menu_actions(
     ));
     commands.spawn((
         include.clone(),
-
         Action::<actions::MoveRightLeft>::new(),
         BetterPulse::new(0.125),
         DeadZone::default(),
@@ -428,20 +431,14 @@ pub fn assign_stock_menu_actions(
     commands.spawn((
         include.clone(),
         Action::<actions::Reset>::new(),
-        bindings![
-            KeyCode::Backspace,
-            GamepadButton::LeftTrigger,
-        ],
+        bindings![KeyCode::Backspace, GamepadButton::LeftTrigger,],
     ));
 }
 
 /// Add Action entities for the common player actions.
 ///
 /// include: should be at least e.g. `(ActionOf::<YourContext>::new(context_entity)`
-pub fn assign_stock_player_actions(
-    mut commands: Commands,
-    include: impl Bundle + Clone,
-) {
+pub fn assign_stock_player_actions(mut commands: Commands, include: impl Bundle + Clone) {
     commands.spawn((
         // Note: this usage as an action is only processed in gameplay
         // (which, being pauseable, means there'd be no way to escape),
@@ -452,20 +449,14 @@ pub fn assign_stock_player_actions(
             require_reset: true,
             ..default()
         },
-        bindings![
-            KeyCode::Escape,
-            GAMEPAD_BUTTON_MENU,
-            ],
-        ));
+        bindings![KeyCode::Escape, GAMEPAD_BUTTON_MENU,],
+    ));
 
     commands.spawn((
         include.clone(),
         Action::<actions::MoveFlycam>::new(),
         Negate::y(),
-        Bindings::spawn((
-            Cardinal::wasd_keys(),
-            Axial::left_stick(),
-        )),
+        Bindings::spawn((Cardinal::wasd_keys(), Axial::left_stick())),
     ));
     commands.spawn((
         include.clone(),
@@ -488,13 +479,12 @@ pub fn assign_stock_player_actions(
         Action::<actions::Look>::new(),
         Bindings::spawn((
             Spawn((Binding::mouse_motion(), Scale::new(Vec3::splat(1.0)))),
-            Axial::right_stick()
-                .with((
-                    DeadZone::default(),
-                    Scale::new(Vec3::splat(100.0)),
-                    Negate::y(),
-                    SmoothNudge::default(),
-                )),
+            Axial::right_stick().with((
+                DeadZone::default(),
+                Scale::new(Vec3::splat(100.0)),
+                Negate::y(),
+                SmoothNudge::default(),
+            )),
         )),
     ));
     commands.spawn((
@@ -515,18 +505,12 @@ pub fn assign_stock_player_actions(
     commands.spawn((
         include.clone(),
         Action::<actions::Jump>::new(),
-        bindings![
-            KeyCode::Space,
-            GamepadButton::East,
-        ],
+        bindings![KeyCode::Space, GamepadButton::East,],
     ));
     commands.spawn((
         include.clone(),
         Action::<actions::TurnAround>::new(),
-        bindings![
-            KeyCode::Backspace,
-            GamepadButton::RightThumb,
-        ],
+        bindings![KeyCode::Backspace, GamepadButton::RightThumb,],
     ));
     commands.spawn((
         include.clone(),
@@ -553,7 +537,6 @@ pub fn assign_stock_player_actions(
         bindings![
             MouseButton::Right,
             GamepadButton::LeftTrigger2,
-
             // "g"rab, "g"un, and not "f", which could be hit
             // accidentally when failing to hit "d/r/c"
             KeyCode::KeyG,
@@ -563,9 +546,7 @@ pub fn assign_stock_player_actions(
     commands.spawn((
         include.clone(),
         Action::<actions::Reset>::new(),
-        bindings![
-            KeyCode::Backslash,
-        ],
+        bindings![KeyCode::Backslash,],
     ));
 
     commands.spawn((
@@ -574,9 +555,7 @@ pub fn assign_stock_player_actions(
         bindings![
             // MouseButton::Right,
             // GamepadButton::LeftTrigger2,
-
             KeyCode::KeyE,
-
             // These are dangerous since they must be used in isolation
             // and not with keyboard combinations.
             // See code in [actions_common::handle_escape].
@@ -590,10 +569,7 @@ pub fn assign_stock_player_actions(
         Action::<actions::ReleaseGrab>::new(),
         // Hold::new(0.125),
         // Cooldown::new(0.125),
-        bindings![
-            MouseButton::Left,
-            GamepadButton::RightTrigger2,
-        ],
+        bindings![MouseButton::Left, GamepadButton::RightTrigger2,],
     ));
     commands.spawn((
         include.clone(),
@@ -613,29 +589,21 @@ pub fn assign_stock_player_actions(
     commands.spawn((
         include.clone(),
         Action::<actions::ToggleFlashlight>::new(),
-        bindings![
-            KeyCode::KeyL,
-            GamepadButton::North,
-        ],
+        bindings![KeyCode::KeyL, GamepadButton::North,],
     ));
 }
 
 /// Add Action entities for InputActions related to editing.
 ///
 /// include: should be at least e.g. `ActionOf::<YourContext>::new(context_entity)`
-pub fn assign_stock_editing_actions(
-    mut commands: Commands,
-    include: impl Bundle + Clone,
-) {
+pub fn assign_stock_editing_actions(mut commands: Commands, include: impl Bundle + Clone) {
     commands.spawn((
         include.clone(),
         Action::<actions::ToggleSelect>::new(),
         bindings![
             // MouseButton::Right,
             // GamepadButton::LeftTrigger2,
-
             KeyCode::KeyE,
-
             // These are dangerous since they must be used in isolation
             // and not with keyboard combinations.
             // See code in [actions_common::handle_escape].
@@ -649,10 +617,7 @@ pub fn assign_stock_editing_actions(
         Action::<actions::ReleaseGrab>::new(),
         // Hold::new(0.125),
         // Cooldown::new(0.125),
-        bindings![
-            MouseButton::Left,
-            GamepadButton::RightTrigger2,
-        ],
+        bindings![MouseButton::Left, GamepadButton::RightTrigger2,],
     ));
     commands.spawn((
         include.clone(),
@@ -670,14 +635,13 @@ pub fn assign_stock_editing_actions(
     ));
 }
 
-
 /// Workaround for different use of [MouseScrollUnit] on different OSes.
 pub fn default_mouse_wheel_scale(factor: f32) -> Scale {
-    if cfg!(target_os = "macos") {
-        Scale::splat(factor / MouseScrollUnit::SCROLL_UNIT_CONVERSION_FACTOR as f32)
-    } else {
-        Scale::splat(factor)
-    }
+    // if cfg!(target_os = "macos") {
+    //     Scale::splat(factor / MouseScrollUnit::SCROLL_UNIT_CONVERSION_FACTOR as f32)
+    // } else {
+    Scale::splat(factor)
+    // }
 }
 
 /// Hide inputs from BEI when, e.g., a window is not focused or egui input is active.
@@ -691,8 +655,14 @@ fn mask_and_unmask_inputs(
     mut count: Local<i32>,
 ) {
     let (window, _cursor) = window_cursor_options.into_inner();
-    let mouse_busy = !window.focused || wants_input_opt.as_ref().is_some_and(|inp| inp.wants_any_pointer_input());
-    let kbd_busy = !window.focused || wants_input_opt.as_ref().is_some_and(|inp| inp.wants_any_keyboard_input());
+    let mouse_busy = !window.focused
+        || wants_input_opt
+            .as_ref()
+            .is_some_and(|inp| inp.wants_any_pointer_input());
+    let kbd_busy = !window.focused
+        || wants_input_opt
+            .as_ref()
+            .is_some_and(|inp| inp.wants_any_keyboard_input());
     if mouse_busy {
         // Use this flag to detect the previous state.
         if sources.mouse_buttons {

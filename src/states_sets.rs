@@ -2,7 +2,6 @@ use bevy::prelude::*;
 
 /// This reflects the 2D overlay state.
 #[derive(States, Default, Reflect, Debug, Clone, Copy, PartialEq, Eq, Hash)]
-#[states(scoped_entities)]
 #[reflect(State, Default)]
 #[type_path = "game"]
 pub enum OverlayState {
@@ -54,7 +53,6 @@ impl OverlayState {
 
 /// State machine for overall program behavior.
 #[derive(States, Reflect, Default, Debug, Clone, Copy, PartialEq, Eq, Hash)]
-#[states(scoped_entities)]
 #[reflect(State, Default)]
 #[type_path = "game"]
 pub enum ProgramState {
@@ -83,7 +81,6 @@ pub enum ProgramState {
 /// These are very loose to avoid constraining game design
 /// but define well-known sequence points in the user interface.
 #[derive(SubStates, Reflect, Default, Debug, Clone, Copy, PartialEq, Eq, Hash)]
-#[states(scoped_entities)]
 #[reflect(State, Default)]
 #[source(ProgramState = ProgramState::InGame)]
 #[type_path = "game"]
@@ -106,7 +103,6 @@ pub enum GameplayState {
 
 /// State of a level (there is only one level in play at a time).
 #[derive(SubStates, Debug, Default, Clone, Copy, PartialEq, Eq, Hash, Reflect)]
-#[states(scoped_entities)]
 #[source(ProgramState = ProgramState::InGame)]
 #[reflect(Default)]
 #[type_path = "game"]

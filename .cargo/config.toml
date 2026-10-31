@@ -1,7 +1,9 @@
 [build]
-rustflags = ["-Z", "threads=4",
- # (Nightly) Make the current crate share its generic instantiations
-  "-Zshare-generics=y",
+rustflags = [
+    "-Z",
+    "threads=4",
+    # (Nightly) Make the current crate share its generic instantiations
+    "-Zshare-generics=y",
 ]
 
 # [target.wasm32-unknown-unknown]
@@ -32,5 +34,5 @@ codegen-backend = "cranelift"
 codegen-backend = "llvm"
 
 [patch.crates-io]
-avian3d = { git = "https://github.com/Jondolf/avian.git", rev = "a3d9d06c4939f251f58583cd970177ec30385361" }
-
+## avian3d = { git = "https://github.com/Jondolf/avian.git", rev = "a3d9d06c4939f251f58583cd970177ec30385361" }
+# bevy_seedling = { git = "https://github.com/eswartz/bevy_seedling-fork.git", branch = "a3d9d06c4939f251f58583cd970177ec30385361" }

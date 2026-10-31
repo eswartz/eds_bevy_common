@@ -1,6 +1,6 @@
 [package]
 name = "eds_bevy_common"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 authors = ["Ed Swartz (github.com/eswartz)"]
 license = "MIT OR Apache 2"
@@ -25,7 +25,13 @@ gltf = { git = "https://github.com/gltf-rs/gltf.git", branch = "main" }
 #########
 
 [features]
-default = ["input_bei", "highlighting", "grabbing", "firewheel", "experimental_pbr_pcss"]
+default = [
+    "input_bei",
+    "highlighting",
+    "grabbing",
+    "firewheel",
+    "experimental_pbr_pcss",
+]
 
 trenchbroom = ["bevy_trenchbroom"]
 input_bei = ["dep:bevy_enhanced_input"]
@@ -58,14 +64,12 @@ dev_native = [
     "bevy/embedded_watcher",
     "bevy/webgpu",
 ]
-web = [
-    "bevy/webgpu",
-    "bevy_seedling/web_audio",
-]
+web = ["bevy/webgpu", "bevy_seedling/web_audio"]
 
 [dependencies]
-bevy = { version = "0.19.0", default-features = false, features = [
-    "3d", "ui",
+bevy = { version = "0.20.0", default-features = false, features = [
+    "3d",
+    "ui",
 
     # And these optional:
     # "dev",
@@ -88,7 +92,7 @@ bevy = { version = "0.19.0", default-features = false, features = [
 ] }
 
 # Common deps with bevy usage.
-wgpu = "29"
+wgpu = "30"
 rand = { version = "0.10.0" }
 
 ###
@@ -97,9 +101,9 @@ gltf = { version = "*" }
 
 # avian3d = { git = "https://github.com/Jondolf/avian.git", branch = "main", default-features = false, features = [
 # avian3d = { git = "https://github.com/Jondolf/avian.git", rev = "442af791512dfc369b41bd8718878df7e0ab26dd", default-features = false, features = [
-avian3d = { version = "0.8.0-dev", default-features = false, features = [
-	"3d",
-	"collider-from-mesh",
+avian3d = { version = "0.8.0", default-features = false, features = [
+    "3d",
+    "collider-from-mesh",
     # "f32",
     "parry-f32",
     #  "f64", "parry-f64",
@@ -113,16 +117,25 @@ avian3d = { version = "0.8.0-dev", default-features = false, features = [
 ] }
 #bevy-inspector-egui = { git = "ssh://git@github.com/eswartz/bevy-inspector-egui-fork.git", branch = "main", default-features = false, features = ["bevy", "bevy_gizmos", "egui_clipboard" ] } #, "documentation"] } #"highlight_changes"] }
 #bevy_egui = { version = "0.41", features = ["render", "serde"] }
-bevy-inspector-egui = { version = "0.37", default-features = false, features = ["bevy", "bevy_gizmos", "egui_clipboard" ] } #, "documentation"] } #"highlight_changes"] }
-bevy_egui = { version = "0.40", features = ["render", "serde"] }
+bevy-inspector-egui = { version = "0.38", default-features = false, features = [
+    "bevy",
+    "bevy_gizmos",
+    "egui_clipboard",
+] } #, "documentation"] } #"highlight_changes"] }
+bevy_egui = { version = "0.43", features = ["render", "serde"] }
 # egui = { version = "0.35", features = ["bytemuck"] }
 
 # # We must mention it and maintain the version because of the override below for wasm.
-firewheel = { version = "0.12", optional = true }
+firewheel = { version = "0.14", optional = true }
 # firewheel = { git = "https://github.com/BillyDM/Firewheel", rev = "fdf9fbb" }
 
-bevy_seedling = { version = "0.8.0", optional = true, default-features = false, features = [
-    "wav", "ogg", "rand", "reflect", "diagnostics",
+# bevy_seedling = { version = "0.8.0", optional = true, default-features = false, features = [
+bevy_seedling = { git = "https://github.com/eswartz/bevy_seedling-fork.git", optional = true, default-features = false, features = [
+    "wav",
+    "ogg",
+    "rand",
+    "reflect",
+    "diagnostics",
     "hrtf",
     "cpal",
     "web_audio",
@@ -133,35 +146,41 @@ bevy_seedling = { version = "0.8.0", optional = true, default-features = false, 
     # "stream",
     # "scheduled_events",
 
-    # 0.11
     "effects",
 ] }
 
-bevy_skein = { version = "0.6.0", optional = true }
+# 0.11
+bevy_skein = { version = "0.7.0", optional = true }
 
-bevy_enhanced_input = { version = "0.26", features = ["reflect", "state", "serialize"], optional = true }
+bevy_enhanced_input = { version = "0.27", features = [
+    "reflect",
+    "state",
+    "serialize",
+], optional = true }
 
-bevy_common_assets = { version = "0.17.0", features = ["ron"] }
-bevy_asset_loader = { version = "0.27.0", features = [
+bevy_common_assets = { version = "0.18.0", features = ["ron"] }
+bevy_asset_loader = { version = "0.28", features = [
     "2d",
     "3d",
     "standard_dynamic_assets",
     # "progress_tracking",
 ] }
 
-bevy_trenchbroom = { version = "0.14.0-rc.2", optional = true, default-features = false, features = [ "bsp", "client", "physics-integration" ] }
-
-bevy_mod_outline = { version = "0.13", optional = true }
-
-bevy_tweening = "0.16.0"
-
-log = { version = "0.4", features = [
-    "max_level_debug",
+bevy_trenchbroom = { version = "0.15", optional = true, default-features = false, features = [
+    "bsp",
+    "client",
+    "physics-integration",
 ] }
-tracing = { version = "0.1", features = [
-    "max_level_debug",
-] }
-rustc-hash = "2.1.1"
+
+# bevy_mod_outline = { version = "0.13", optional = true }
+bevy_mod_outline = { git = "https://github.com/Eventhra-Studio/bevy_mod_outline.git", branch = "master", optional = true }
+
+# bevy_tweening = "0.16.0"
+bevy_tweening = { git = "https://github.com/djeedai/bevy_tweening.git", branch = "main" }
+
+log = { version = "0.4", features = ["max_level_debug"] }
+tracing = { version = "0.1", features = ["max_level_debug"] }
+rustc-hash = "2.1"
 regex = "1.12"
 
 strum = { version = "0.27.2", features = ["derive", "strum_macros"] }
@@ -175,7 +194,7 @@ derive-debug = "0.1.2"
 obj = "0.10"
 serde = { version = "1.0", features = ["alloc", "derive", "serde_derive"] }
 
-getrandom = { version = "0.4.1", features = ["wasm_js"]}
+getrandom = { version = "0.4", features = ["wasm_js"] }
 image = { version = "0.25", default-features = false }
 
 sysinfo = { version = "0.37" }
@@ -196,8 +215,8 @@ dasp-rs = "0.5.1"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 # firewheel = {  git = "https://github.com/BillyDM/Firewheel", rev = "fdf9fbb", optional = true, default-features = false, features = [
-firewheel = { version = "0.12", optional = true, default-features = false, features = [
-  "wasm-bindgen",
+firewheel = { version = "0.14", optional = true, default-features = false, features = [
+    "wasm-bindgen",
 ] }
 
 [profile.dev]
@@ -217,8 +236,9 @@ debug-assertions = false
 # opt-level = 1
 
 [dev.dependencies]
-bevy = { version = "0.19.0", default-features = false, features = [
-    "3d", "ui",
+bevy = { version = "0.20.0", default-features = false, features = [
+    "3d",
+    "ui",
 
     # And these optional:
     # "dev",
@@ -299,7 +319,7 @@ assertions_on_result_states = "warn"
 # Don't Do Bad Async Stuff - prevent deadlocks and concurrency bugs
 await_holding_lock = "warn"
 await_holding_refcell_ref = "warn"
-if_let_mutex = "warn"  # only relevant on editions before 2024
+if_let_mutex = "warn"              # only relevant on editions before 2024
 large_futures = "warn"
 
 # Don't Do Unsafe Things with Memory
@@ -337,7 +357,9 @@ allow_attributes_without_reason = "warn"
 type_complexity = "allow"
 too_many_arguments = "allow"
 
-# [patch-crates.io]
-# bevy_seedling = { git = "https://github.com/CorvusPrudens/bevy_seedling.git", branch = "master" }
+[patch-crates.io]
+bevy_seedling = { git = "https://github.com/eswartz/bevy_seedling-fork.git", branch = "bevy-0.20" }
+firewheel = { git = "https://github.com/eswartz/Firewheel-fork.git", branch = "bevy-0.20" }
+#
 # firewheel = { git = "https://github.com/BillyDM/Firewheel", rev = "fdf9fbb", optional = true }
 # firewheel-core = { git = "https://github.com/BillyDM/Firewheel", rev = "fdf9fbb", optional = true }
