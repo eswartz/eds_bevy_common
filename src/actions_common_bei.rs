@@ -1,3 +1,4 @@
+#![allow(deprecated, reason = "BEI changes")]
 use bevy::prelude::*;
 use bevy::window::CursorOptions;
 use bevy::window::PrimaryWindow;
