@@ -1,4 +1,5 @@
 #![feature(iter_array_chunks)]
+#![recursion_limit = "256"]
 
 pub mod prelude;
 
