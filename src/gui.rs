@@ -41,10 +41,15 @@ impl Plugin for GuiPlugin {
         .init_resource::<GrabState>()
         .add_message::<GrabCursor>()
         .init_resource::<PhysicsPaused>()
+        .add_systems(OnEnter(ProgramState::New),
+            ensure_ui_font
+        )
         .add_systems(
             Update,
             (
-                ensure_ui_font.run_if(resource_exists_and_changed::<UiFontPath>),
+                ensure_ui_font
+                    .run_if(resource_exists_and_changed::<UiFontPath>)
+                    .run_if(resource_exists::<CommonGuiAssets>),
                 update_ui_alpha,
                 apply_ui_alpha,
             )
@@ -273,28 +278,29 @@ fn apply_ui_alpha(
     }
 }
 
-/// Define to define the asset path to the UI font, to be loaded in Startup.
+/// Define to define the asset path to the UI font, to be loaded in [ProgramState::New].
 /// Use this OR UiFont.
 #[derive(Resource, Reflect)]
 #[reflect(Resource)]
 #[type_path = "game"]
 pub struct UiFontPath(pub PathBuf);
 
-/// Define to define the font for UI. Overrides [UiFontPath]. Defined after Startup.
+/// Define to define the font for UI. Overrides [UiFontPath]. Defined after [ProgramState::New].
 #[derive(Resource, Reflect)]
 #[reflect(Resource)]
 #[type_path = "game"]
 pub struct UiFont(pub Handle<Font>);
 
-fn ensure_ui_font(
+pub(crate) fn ensure_ui_font(
     mut commands: Commands,
     assets: Res<AssetServer>,
     ui_font_path: Option<Res<UiFontPath>>,
+    gui_assets: Res<CommonGuiAssets>,
 ) {
     if let Some(path) = ui_font_path {
         commands.insert_resource(UiFont(assets.load(AssetPath::from_path(&path.0))));
     } else {
-        commands.insert_resource(UiFont(default()));
+        commands.insert_resource(UiFont(gui_assets.std_ui.clone()));
     }
 }
 

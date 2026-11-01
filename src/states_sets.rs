@@ -26,30 +26,37 @@ pub enum OverlayState {
     ControlsMenu,
     /// Game Over is up.
     GameOverScreen,
-    /// Error is up.
+    /// Error screen is up (e.g. missing assets).
     ErrorScreen,
-    // /// egui controls are up
-    // DebugGuiVisible,
+    /// Catch-all for some game UI that is none of the above.
+    ModalDialog,
 }
 
 impl OverlayState {
+    /// Tell if the state is a menu specifically.
     pub fn is_menu(&self) -> bool {
-        matches!(self,
+        matches!(
+            self,
             Self::MainMenu
-            | Self::GameMenu
-            | Self::OptionsMenu
-            | Self::AudioMenu
-            | Self::VideoMenu
-            | Self::ControlsMenu
-            | Self::EscapeMenu
+                | Self::GameMenu
+                | Self::OptionsMenu
+                | Self::AudioMenu
+                | Self::VideoMenu
+                | Self::ControlsMenu
+                | Self::EscapeMenu
         )
     }
 
+    /// Tell if there is a modal dialog active.
+    pub fn is_modal_dialog(&self) -> bool {
+        *self == OverlayState::ModalDialog
+    }
+
+    /// Tell if the 2D overlay is hidden.
     pub fn is_hidden(&self) -> bool {
         *self == OverlayState::Hidden
     }
 }
-
 
 /// State machine for overall program behavior.
 #[derive(States, Reflect, Default, Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -99,7 +106,6 @@ pub enum GameplayState {
     /// Game completed.
     Done,
 }
-
 
 /// State of a level (there is only one level in play at a time).
 #[derive(SubStates, Debug, Default, Clone, Copy, PartialEq, Eq, Hash, Reflect)]

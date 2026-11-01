@@ -1,5 +1,37 @@
 //! Stock widgetry for handling menus.
 //!
+//! Client code typically sets up like this:
+//!
+//! ```
+//! pub struct MyMenuPlugin;
+//! impl Plugin for MyMenuPlugin {
+//!     fn build(&self, app: &mut App) {
+//!         app
+//!             .add_plugins(MenuCommonPlugin)
+//!             .add_systems(OnEnter(OverlayState::MainMenu), on_enter_main_menu)
+//!             .add_systems(OnEnter(OverlayState::EscapeMenu), on_enter_escape_menu)
+//!             .add_systems(OnExit(OverlayState::EscapeMenu), on_exit_escape_menu)
+//!             .add_systems(OnEnter(OverlayState::GameMenu), on_enter_game_menu)
+//!             .add_systems(OnEnter(OverlayState::OptionsMenu), on_enter_options_menu)
+//!             .add_systems(OnEnter(OverlayState::AudioMenu), on_enter_audio_menu)
+//!             .add_systems(OnEnter(OverlayState::VideoMenu), on_enter_video_menu)
+//!             .add_systems(OnEnter(OverlayState::ControlsMenu), on_enter_controls_menu);
+//!     }
+//! }
+//! ```
+//! where the `on_enter...` functions create menus using [MenuItemBuilder] with
+//! appropriate items, then activates a menu by setting the [OverlayState] appropriately.
+//!
+//! [`ProgramState::LaunchMenu`] will trigger [OverlayState::MainMenu] via handlers in
+//! [crate::app::AppPlugin].
+//!
+//! While a menu is up [OverlayState::is_menu], user keyboard/mouse/controller
+//! actions will be interpreted. Client code can insert [GoIntoMenuRequest]
+//! to stack a submenu and [GoBackInMenuRequest] to pop an entry.
+//!
+//! [crate::actions_common::handle_escape] handles entering [OverlayState::EscapeMenu]
+//! during gameplay and also unstacking menus, but never goes past [OverlayState::MainMenu].
+//!
 use bevy::input_focus::AutoFocus;
 use bevy::input_focus::FocusCause;
 use bevy::picking::hover::Hovered;
@@ -27,6 +59,8 @@ use bevy::window::PrimaryWindow;
 use bevy_enhanced_input::prelude::*;
 use rustc_hash::FxBuildHasher;
 
+use crate::gui::UiFont;
+use crate::gui::ensure_ui_font;
 use crate::prelude::RENDER_LAYER_UI;
 #[cfg(feature = "input_bei")]
 use crate::prelude::actions;
@@ -45,6 +79,26 @@ const NORMAL_BUTTON: Color = Color::hsva(0.0, 0.0, 0.75, 1.0);
 const HOVERED_BUTTON: Color = Color::hsva(0.0, 0.0, 1.0, 1.0);
 const PRESSED_BUTTON: Color = Color::srgb(0.35, 0.75, 0.35);
 
+/// Style settings for the menu.
+#[derive(Debug, Resource, Reflect)]
+#[type_path = "game"]
+pub struct MenuStyle {
+    /// Color for the background in menus.
+    pub page_color: Color,
+    /// Font for menu text.
+    pub font: Handle<Font>,
+}
+
+impl Default for MenuStyle {
+    fn default() -> Self {
+        Self {
+            page_color: tailwind::BLUE_900.with_alpha(0.25).into(),
+            // These are set in [set_default_menu_style]
+            font: default(),
+        }
+    }
+}
+
 pub struct MenuCommonPlugin;
 impl Plugin for MenuCommonPlugin {
     fn build(&self, app: &mut App) {
@@ -53,6 +107,10 @@ impl Plugin for MenuCommonPlugin {
             .insert_resource(MenuItemSelectionHistory::default())
             .insert_resource(PreviousMenuStack::default())
             .add_message::<MenuActionMessage>()
+            .add_systems(
+                OnEnter(ProgramState::New),
+                set_default_menu_style.after(ensure_ui_font),
+            )
             .add_systems(
                 PreUpdate,
                 // Common handling for any menu.
@@ -86,6 +144,19 @@ impl Plugin for MenuCommonPlugin {
                 .add_observer(on_focused_interact_fire)
                 .add_observer(on_focused_left_right);
         }
+    }
+}
+
+fn set_default_menu_style(
+    mut commands: Commands,
+    style: Option<Res<MenuStyle>>,
+    ui_font: Res<UiFont>,
+) {
+    if style.is_none() {
+        commands.insert_resource(MenuStyle {
+            font: ui_font.0.clone(),
+            ..default()
+        });
     }
 }
 
@@ -140,6 +211,7 @@ fn handle_menu_back(
     mut commands: Commands,
     _go_back_in_menu_request: If<Res<GoBackInMenuRequest>>,
     overlay_state: Res<State<OverlayState>>,
+    pre_menu: Option<ResMut<OverlayStateBeforeMenu>>,
     mut prev_menu: ResMut<PreviousMenuStack>,
 ) {
     // Ok, pop something.
@@ -147,7 +219,13 @@ fn handle_menu_back(
         commands.set_state(prev);
     } else if *overlay_state.get() != OverlayState::MainMenu {
         // Done, no more history.
-        commands.set_state(OverlayState::Hidden);
+        let previous = if let Some(pre_menu) = pre_menu {
+            pre_menu.0
+        } else {
+            OverlayState::Hidden
+        };
+        commands.remove_resource::<OverlayStateBeforeMenu>();
+        commands.set_state(previous);
     }
 
     // Handled, whether or not it did anything.
@@ -188,8 +266,10 @@ fn handle_menu_into(
 pub struct MenuItemBuilder<'w, 's> {
     page: Entity,
     overlay: OverlayState,
+    program: ProgramState,
     font: Handle<Font>,
     font_scale: f32,
+    bg_color: Color,
     commands: Commands<'w, 's>,
     item_index: i32,
     previous_first_ent_label: Option<(Entity, String)>,
@@ -198,23 +278,49 @@ pub struct MenuItemBuilder<'w, 's> {
 
 impl<'w, 's> MenuItemBuilder<'w, 's> {
     pub fn new(
-        mut commands: Commands<'w, 's>,
+        commands: Commands<'w, 's>,
         overlay: OverlayState,
         program: ProgramState,
-        font: Handle<Font>,
-        font_scale: f32,
+        style: &MenuStyle,
         history: &MenuItemSelectionHistory,
     ) -> Self {
-        commands.remove_resource::<LastMenuFocus>();
-        let page = commands
+        Self {
+            overlay,
+            program,
+            font: style.font.clone(),
+            font_scale: 1.0,
+            bg_color: style.page_color,
+            page: Entity::PLACEHOLDER,
+            commands,
+            item_index: 0,
+            previous_first_ent_label: history.0.get(&overlay).cloned(),
+            first_ent_label: None,
+        }
+    }
+
+    pub fn with_font(self, font: Handle<Font>) -> Self {
+        Self { font, ..self }
+    }
+    pub fn with_font_scale(self, font_scale: f32) -> Self {
+        Self { font_scale, ..self }
+    }
+    pub fn with_page_color(self, font_scale: f32) -> Self {
+        Self { font_scale, ..self }
+    }
+
+    /// Create the menu page, applying the desired styling.
+    pub fn page(mut self) -> Self {
+        self.commands.remove_resource::<LastMenuFocus>();
+        let page = self
+            .commands
             .spawn((
-                DespawnOnExit(overlay),
-                create_menu_page_node(),
-                TabGroup::new(FxBuildHasher.hash_one(overlay) as _),
+                DespawnOnExit(self.overlay),
+                create_menu_page_node(self.bg_color),
+                TabGroup::new(FxBuildHasher.hash_one(self.overlay) as _),
             ))
             .with_child(Node {
                 margin: UiRect {
-                    top: Val::Px(if program == ProgramState::LaunchMenu {
+                    top: Val::Px(if self.program == ProgramState::LaunchMenu {
                         128.0
                     } else {
                         0.0
@@ -225,16 +331,7 @@ impl<'w, 's> MenuItemBuilder<'w, 's> {
             })
             .id();
 
-        Self {
-            overlay,
-            font,
-            font_scale,
-            page,
-            commands,
-            item_index: 0,
-            previous_first_ent_label: history.0.get(&overlay).cloned(),
-            first_ent_label: None,
-        }
+        Self { page, ..self }
     }
 
     pub fn commands(&mut self) -> Commands<'_, '_> {
@@ -247,6 +344,10 @@ impl<'w, 's> MenuItemBuilder<'w, 's> {
         other_menu_items: impl Bundle,
         handler: impl MenuItemHandler + 'static,
     ) -> &mut Self {
+        if self.page == Entity::PLACEHOLDER {
+            panic!("need to call MenuItemBuilder.page()");
+        }
+
         let text: String = text.into();
         let tab_index = TabIndex(self.item_index);
         let mut ent_commands = self.commands.entity(self.page);
@@ -334,8 +435,9 @@ impl<'w, 's> MenuItemBuilder<'w, 's> {
     }
 }
 
-// #[derive(Resource, Default, Debug)]
-// pub struct PauseStateBeforeMenu(bool);
+/// Overlay state before entering a menu.
+#[derive(Resource, Debug, Default, Clone)]
+pub(crate) struct OverlayStateBeforeMenu(pub(crate) OverlayState);
 
 /// Temporary resource, requests redraw of the current menu.
 #[derive(Resource, Default, Debug, Clone, Copy, PartialEq, Eq)]
@@ -542,7 +644,7 @@ pub trait MenuItemHandler: Send + Sync {
     }
 }
 
-fn create_menu_page_node() -> impl Bundle {
+fn create_menu_page_node(bg_color: Color) -> impl Bundle {
     (
         Node {
             width: Val::Percent(100.),
@@ -553,7 +655,7 @@ fn create_menu_page_node() -> impl Bundle {
             padding: UiRect::all(MARGIN),
             ..default()
         },
-        BackgroundColor(tailwind::BLUE_900.with_alpha(0.25).into()),
+        BackgroundColor(bg_color),
         RenderLayers::from_layers(&[RENDER_LAYER_UI]),
     )
 }

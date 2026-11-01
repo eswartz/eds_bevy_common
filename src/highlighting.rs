@@ -8,8 +8,8 @@
 //! Highlighting is represented with the [Highlighted] component.
 //!
 use bevy_mod_outline::*;
-use bevy_seedling::sample::PlaybackSettings;
 use bevy_seedling::prelude::*;
+use bevy_seedling::sample::PlaybackSettings;
 
 use bevy::prelude::*;
 use rand::RngExt as _;
@@ -27,21 +27,18 @@ impl Plugin for HighlightingPlugin {
         if !app.is_plugin_added::<OutlinesPlugin>() {
             app.add_plugins(OutlinesPlugin);
         }
-        app
-            .add_message::<ChangeHighlightedItem>()
-
+        app.add_message::<ChangeHighlightedItem>()
             .init_resource::<HighlightingMode>()
             .init_resource::<HighlightedItemStyle>()
             .init_resource::<CountAccumulator<HighlightedItemCycle>>()
-
             .add_systems(
                 OnEnter(LevelState::Configuring),
                 clear_highlighted
                     .run_if(not(is_paused))
-                    .run_if(not(is_in_menu))
+                    .run_if(not(is_overlay_active))
                     .run_if(is_level_active)
                     .run_if(not(debug_gui_wants_direct_input))
-                    .run_if(in_state(ProgramState::InGame))
+                    .run_if(in_state(ProgramState::InGame)),
             )
             .add_systems(
                 FixedUpdate,
@@ -50,16 +47,15 @@ impl Plugin for HighlightingPlugin {
                     cycle_targetables,
                     update_highlightable,
                     update_highlighting_mode,
-                ).chain()
+                )
+                    .chain()
                     .run_if(is_highlighting_enabled)
                     .run_if(not(is_paused))
-                    .run_if(not(is_in_menu))
+                    .run_if(not(is_overlay_active))
                     .run_if(is_level_active)
                     .run_if(not(debug_gui_wants_direct_input))
-                    .run_if(in_state(ProgramState::InGame))
-                ,
-            )
-        ;
+                    .run_if(in_state(ProgramState::InGame)),
+            );
     }
 }
 
@@ -147,7 +143,10 @@ fn check_actions(
     mut commands: Commands,
 
     crosshair_targets: Res<CrosshairTargets>,
-    cycle_action_q: Query<(&ActionEvents, &Action<actions::CycleHighlightedItem>), With<ActionOf<PlayerContext>>>,
+    cycle_action_q: Query<
+        (&ActionEvents, &Action<actions::CycleHighlightedItem>),
+        With<ActionOf<PlayerContext>>,
+    >,
     mut cycle_ctr: ResMut<CountAccumulator<HighlightedItemCycle>>,
 ) {
     if let Some((cycle_events, cycle_action)) = cycle_action_q.iter().next() {
@@ -156,7 +155,8 @@ fn check_actions(
         }
 
         if let Some(dir) = cycle_ctr.add_and_test(**cycle_action)
-        && !crosshair_targets.targets.is_empty() {
+            && !crosshair_targets.targets.is_empty()
+        {
             commands.write_message(ChangeHighlightedItem(dir as isize));
         }
 
@@ -200,7 +200,11 @@ fn cycle_targetables(
 
     // See where we index now into the crosshair list.
     let mut new_index = if let Some(first) = &first_exist {
-        crosshair_targets.targets.iter().position(|e| *e == *first).expect("we found it above") as isize
+        crosshair_targets
+            .targets
+            .iter()
+            .position(|e| *e == *first)
+            .expect("we found it above") as isize
     } else {
         0
     };
@@ -226,7 +230,8 @@ fn cycle_targetables(
 
     // Highlight the new item, if new.
     if let Some(new_item) = crosshair_targets.targets.get(new_index)
-    && !hilit_q.contains(*new_item) {
+        && !hilit_q.contains(*new_item)
+    {
         commands.entity(*new_item).try_insert(Highlighted);
     }
 }
@@ -242,7 +247,7 @@ fn update_highlighting_mode(
     mut targets: ResMut<CrosshairTargets>,
 ) {
     if !mode.is_changed() {
-        return
+        return;
     }
 
     if mode.is_enabled() {
@@ -269,12 +274,7 @@ fn update_highlighting_mode(
             let mut rng = rand::rng();
             commands.spawn((
                 UiSfx,
-                SamplePlayer::new(
-                    (*[&fx.deselect]
-                        .choose(&mut rng)
-                        .expect("we have one"))
-                    .clone(),
-                ),
+                SamplePlayer::new((*[&fx.deselect].choose(&mut rng).expect("we have one")).clone()),
                 PlaybackSettings {
                     speed: rng.random_range(0.9..1.1),
                     ..default()
@@ -292,10 +292,17 @@ fn update_highlightable(
     targets: Res<CrosshairTargets>,
     style: Res<HighlightedItemStyle>,
     now_hovered_q: Query<Entity, (With<CrosshairTargetable>, Added<Highlighted>)>,
-    was_hovered_q: Query<Entity, (With<OutlineVolume>, With<CrosshairTargetable>, Without<Highlighted>)>,
+    was_hovered_q: Query<
+        Entity,
+        (
+            With<OutlineVolume>,
+            With<CrosshairTargetable>,
+            Without<Highlighted>,
+        ),
+    >,
 ) {
     if !targets.is_changed() {
-        return
+        return;
     }
 
     for ent in was_hovered_q.iter() {
@@ -312,12 +319,7 @@ fn update_highlightable(
         let mut rng = rand::rng();
         commands.spawn((
             UiSfx,
-            SamplePlayer::new(
-                (*[&fx.select]
-                    .choose(&mut rng)
-                    .expect("we have one"))
-                .clone(),
-            ),
+            SamplePlayer::new((*[&fx.select].choose(&mut rng).expect("we have one")).clone()),
             PlaybackSettings {
                 speed: rng.random_range(0.9..1.1),
                 ..default()

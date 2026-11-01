@@ -15,81 +15,56 @@ pub struct AppPlugin;
 
 impl Plugin for AppPlugin {
     fn build(&self, app: &mut App) {
-        app
-        .insert_state(ProgramState::default())
-        .insert_state(GameplayState::default())
-        .insert_state(LevelState::default())
-        .insert_state(OverlayState::default())
-
-        .add_plugins(DespawnOnResetPlugin::<ProgramState>::default())
-        .add_plugins(DespawnOnResetPlugin::<GameplayState>::default())
-        .add_plugins(DespawnOnResetPlugin::<LevelState>::default())
-        .add_plugins(DespawnOnResetPlugin::<OverlayState>::default())
-
-        // This needs to be added at the app level, though
-        // you can configure it later.
-        .add_loading_state(
-            LoadingState::new(ProgramState::Initializing)
-                .continue_to_state(ProgramState::New)
-                .on_failure_continue_to_state(ProgramState::Error)
-            ,
-        )
-
-        .configure_loading_state(
-            LoadingStateConfig::new(ProgramState::Initializing)
-                .load_collection::<CommonGuiAssets>()
-        )
-
-        // Custom exit handling.
-        .add_systems(
-            First,
-            (
-                check_app_exit.in_set(MessageUpdateSystems),
-                check_windows_closed.in_set(MessageUpdateSystems),
+        app.insert_state(ProgramState::default())
+            .insert_state(GameplayState::default())
+            .insert_state(LevelState::default())
+            .insert_state(OverlayState::default())
+            .add_plugins(DespawnOnResetPlugin::<ProgramState>::default())
+            .add_plugins(DespawnOnResetPlugin::<GameplayState>::default())
+            .add_plugins(DespawnOnResetPlugin::<LevelState>::default())
+            .add_plugins(DespawnOnResetPlugin::<OverlayState>::default())
+            // This needs to be added at the app level, though
+            // you can configure it later.
+            .add_loading_state(
+                LoadingState::new(ProgramState::Initializing)
+                    .continue_to_state(ProgramState::New)
+                    .on_failure_continue_to_state(ProgramState::Error),
             )
-                .chain(),
-        )
-
-        .add_systems(OnEnter(ProgramState::Initializing), on_enter_initializing)
-        .add_systems(
-            OnEnter(ProgramState::New),
-            (on_enter_loading,).chain(),
-        )
-        .add_systems(
-            OnEnter(ProgramState::LaunchMenu),
-            (on_enter_launch_menu,).chain(),
-        )
-        .add_systems(
-            OnEnter(ProgramState::InGame),
-            (
-                on_exit_launch_menu.run_if(is_in_menu),
-                // on_enter_in_game,
-            ).chain(),
-        )
-        .add_systems(
-            OnEnter(GameplayState::Playing),
-            (
-                show_3d_camera,
+            .configure_loading_state(
+                LoadingStateConfig::new(ProgramState::Initializing)
+                    .load_collection::<CommonGuiAssets>(),
             )
-        )
-        .add_systems(
-            OnExit(GameplayState::Playing),
-            hide_3d_camera,
-        )
-
-        .add_systems(OnEnter(ProgramState::Error),
-            on_enter_error)
-        .add_systems(OnEnter(OverlayState::ErrorScreen),
-            on_error_screen)
-        .add_systems(OnExit(OverlayState::ErrorScreen),
-            on_error_screen_finished)
-
-        .insert_resource(VideoSettings::default())
-        .insert_resource(FovDelta::default())
-
-        .insert_resource(PauseState::new(false))
-
-        ;
+            // Custom exit handling.
+            .add_systems(
+                First,
+                (
+                    check_app_exit.in_set(MessageUpdateSystems),
+                    check_windows_closed.in_set(MessageUpdateSystems),
+                )
+                    .chain(),
+            )
+            .add_systems(OnEnter(ProgramState::Initializing), on_enter_initializing)
+            .add_systems(OnEnter(ProgramState::New), (on_enter_loading,).chain())
+            .add_systems(
+                OnEnter(ProgramState::LaunchMenu),
+                (on_enter_launch_menu,).chain(),
+            )
+            .add_systems(
+                OnEnter(ProgramState::InGame),
+                (
+                    on_exit_launch_menu.run_if(is_overlay_active),
+                    // on_enter_in_game,
+                )
+                    .chain(),
+            )
+            .add_systems(OnEnter(GameplayState::Playing), (show_3d_camera,))
+            .add_systems(OnExit(GameplayState::Playing), hide_3d_camera)
+            .add_systems(OnEnter(ProgramState::Error), on_enter_error)
+            .add_systems(OnEnter(OverlayState::ErrorScreen), on_error_screen)
+            .add_systems(OnExit(OverlayState::ErrorScreen), on_error_screen_finished)
+            .insert_resource(VideoSettings::default())
+            .insert_resource(FovDelta::default())
+            .insert_resource(PauseState::new(false));
     }
 }
 
@@ -150,27 +125,16 @@ pub fn on_exit_launch_menu(mut commands: Commands) {
 #[derive(Component)]
 pub struct ErrorScreen;
 
-pub fn on_enter_error(
-    mut commands: Commands,
-) {
+pub fn on_enter_error(mut commands: Commands) {
     commands.set_state(OverlayState::ErrorScreen);
 }
 
-pub fn on_error_screen(
-    mut commands: Commands,
-    ui_font: Option<Res<UiFont>>,
-) {
-    let ent_commands = commands.spawn((
-        Name::new("Loading..."),
-        ErrorScreen,
-    ));
+pub fn on_error_screen(mut commands: Commands, ui_font: Option<Res<UiFont>>) {
+    let ent_commands = commands.spawn((Name::new("Loading..."), ErrorScreen));
     setup_error_screen(ent_commands, ui_font);
 }
 
-pub fn on_error_screen_finished(
-    mut commands: Commands,
-    gui_q: Query<Entity, With<ErrorScreen>>,
-) {
+pub fn on_error_screen_finished(mut commands: Commands, gui_q: Query<Entity, With<ErrorScreen>>) {
     for ent in gui_q.iter() {
         commands.entity(ent).try_despawn();
     }

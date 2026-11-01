@@ -1,5 +1,5 @@
-use bevy::{ecs::world::CommandQueue, prelude::*};
 use crate::prelude::*;
+use bevy::{ecs::world::CommandQueue, prelude::*};
 
 #[derive(Debug)]
 pub enum SimpleMenuActions {
@@ -77,19 +77,19 @@ impl MenuItemHandler for SimpleMenuActions {
 
 /// Common menu for Options, showing for Audio/Video/Controls.
 pub fn on_enter_options_menu(
-    gui_assets: Res<CommonGuiAssets>,
     commands: Commands,
     program_state: Res<State<ProgramState>>,
+    style: Res<MenuStyle>,
     mut history: ResMut<MenuItemSelectionHistory>,
 ) {
     MenuItemBuilder::new(
         commands,
         OverlayState::OptionsMenu,
         *program_state.get(),
-        gui_assets.std_ui.clone(),
-        1.0,
+        &style,
         &history,
     )
+    .page()
     .add_item("Audio", (), SimpleMenuActions::AudioMenu)
     .add_item("Video", (), SimpleMenuActions::VideoMenu)
     .add_item("Controls", (), SimpleMenuActions::ControlsMenu)
@@ -110,9 +110,9 @@ impl MenuItemHandler for VolumeMenuActions {}
 /// Common volume menu creator.
 #[cfg(feature = "firewheel")]
 pub fn on_enter_audio_menu(
-    gui_assets: Res<CommonGuiAssets>,
     mut commands: Commands,
     program_state: Res<State<ProgramState>>,
+    style: Res<MenuStyle>,
     mut history: ResMut<MenuItemSelectionHistory>,
 ) {
     use bevy_seedling::prelude::MainBus;
@@ -168,10 +168,10 @@ pub fn on_enter_audio_menu(
         commands,
         OverlayState::AudioMenu,
         *program_state.get(),
-        gui_assets.std_ui.clone(),
-        1.0,
+        &style,
         &history,
     )
+    .page()
     .add_item(
         "Master Volume",
         (
@@ -216,7 +216,9 @@ pub fn add_level_selector(
     current_level: Option<&CurrentLevel>,
     handler: impl MenuItemHandler + 'static,
 ) {
-    fn get_level(In(entity): In<Entity>, mut enum_q: Query<&mut MenuEnum>,
+    fn get_level(
+        In(entity): In<Entity>,
+        mut enum_q: Query<&mut MenuEnum>,
         level_index: Res<LevelIndex>,
         next_level_index: Option<Res<NextLevelIndex>>,
     ) {
@@ -226,31 +228,39 @@ pub fn add_level_selector(
     fn set_level(In(v): In<usize>, mut commands: Commands) {
         commands.insert_resource(NextLevelIndex(v));
     }
-    let get_level = builder.commands().register_system(IntoSystem::into_system(get_level));
-    let set_level = builder.commands().register_system(IntoSystem::into_system(set_level));
+    let get_level = builder
+        .commands()
+        .register_system(IntoSystem::into_system(get_level));
+    let set_level = builder
+        .commands()
+        .register_system(IntoSystem::into_system(set_level));
 
     let level_infos = level_list.0.clone();
     let current_level = current_level.cloned();
     let level_count = level_infos.len();
-    let level_names = level_infos.iter().map(|info| info.label.clone()).collect::<Vec<_>>();
+    let level_names = level_infos
+        .iter()
+        .map(|info| info.label.clone())
+        .collect::<Vec<_>>();
 
-    builder
-        .add_item(
-            label,
-            MenuEnum::new(
-                get_level,
-                set_level,
-                move || level_count,
-                move |index| {
-                    if let Some(level) = &current_level && level.info.id == level_infos[index].id {
-                        format!("{} (reset)", level_names[index])
-                    } else if !level_names.is_empty() {
-                        level_names[index].clone()
-                    } else {
-                        "???".to_string()
-                    }
+    builder.add_item(
+        label,
+        MenuEnum::new(
+            get_level,
+            set_level,
+            move || level_count,
+            move |index| {
+                if let Some(level) = &current_level
+                    && level.info.id == level_infos[index].id
+                {
+                    format!("{} (reset)", level_names[index])
+                } else if !level_names.is_empty() {
+                    level_names[index].clone()
+                } else {
+                    "???".to_string()
                 }
-            ),
-            handler,
-        );
+            },
+        ),
+        handler,
+    );
 }

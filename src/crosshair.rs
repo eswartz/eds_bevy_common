@@ -12,40 +12,33 @@ use super::states_sets::ProgramState;
 pub struct CrosshairPlugin;
 impl Plugin for CrosshairPlugin {
     fn build(&self, app: &mut App) {
-        app
-        .init_resource::<CrosshairTargets>()
-        .init_resource::<CrosshairMode>()
-        .add_systems(
-            OnEnter(ProgramState::InGame),
-            init_crosshair
-        )
-        .add_systems(
-            OnExit(ProgramState::InGame),
-            term_crosshair
-        )
-        .add_systems(
-            PreUpdate,
-            check_crosshair_visibility
-            .run_if(resource_exists_and_equals(CrosshairMode::AimFromCenter))
-            .run_if(resource_changed::<State<OverlayState>>)
-        )
-        .add_systems(
-            Update,
-            (
-                check_crosshair_activity_mouse,
-                check_crosshair_activity_gamepad,
-                update_crosshair,
-                // This is very CPU-intensive :(
-                update_crosshair_targets.run_if(repeating_with_delay(Duration::from_secs_f32(1.0 / 8.0))),
+        app.init_resource::<CrosshairTargets>()
+            .init_resource::<CrosshairMode>()
+            .add_systems(OnEnter(ProgramState::InGame), init_crosshair)
+            .add_systems(OnExit(ProgramState::InGame), term_crosshair)
+            .add_systems(
+                PreUpdate,
+                check_crosshair_visibility
+                    .run_if(resource_exists_and_equals(CrosshairMode::AimFromCenter))
+                    .run_if(resource_changed::<State<OverlayState>>),
             )
-            .run_if(resource_exists_and_equals(CrosshairMode::AimFromCenter))
-            .run_if(not(is_paused))
-            .run_if(not(is_in_menu))
-            .run_if(is_level_active)
-            .run_if(not(debug_gui_wants_direct_input))
-            .run_if(in_state(ProgramState::InGame))
-        )
-        ;
+            .add_systems(
+                Update,
+                (
+                    check_crosshair_activity_mouse,
+                    check_crosshair_activity_gamepad,
+                    update_crosshair,
+                    // This is very CPU-intensive :(
+                    update_crosshair_targets
+                        .run_if(repeating_with_delay(Duration::from_secs_f32(1.0 / 8.0))),
+                )
+                    .run_if(resource_exists_and_equals(CrosshairMode::AimFromCenter))
+                    .run_if(not(is_paused))
+                    .run_if(not(is_overlay_active))
+                    .run_if(is_level_active)
+                    .run_if(not(debug_gui_wants_direct_input))
+                    .run_if(in_state(ProgramState::InGame)),
+            );
     }
 }
 
@@ -90,39 +83,37 @@ pub enum CrosshairMode {
     AimFromCenter,
 }
 
-fn init_crosshair(
-    mut commands: Commands,
-    gui_assets: Res<CommonGuiAssets>,
-) {
-    commands.spawn((
-        Name::new("Crosshair"),
-        DespawnOnReset(ProgramState::InGame),
-        Crosshair { current_strength: 0. },
-
-        RenderLayers::from_layers(&[RENDER_LAYER_DEFAULT, RENDER_LAYER_VIEW]),
-        Transform::from_xyz(0., 0., -10.),
-
-        // Hidden until CrosshairMode changes.
-        Visibility::Hidden,
-        Node {
-            width: Val::Percent(100.),
-            height: Val::Percent(100.),
-            position_type: PositionType::Absolute,
-            justify_content: JustifyContent::Center,
-            align_items: AlignItems::Center,
-            ..default()
-        }
-    ))
-    .with_children(|builder| {
-        builder.spawn((
-            ImageNode::new(gui_assets.crosshair.clone()),
+fn init_crosshair(mut commands: Commands, gui_assets: Res<CommonGuiAssets>) {
+    commands
+        .spawn((
+            Name::new("Crosshair"),
+            DespawnOnReset(ProgramState::InGame),
+            Crosshair {
+                current_strength: 0.,
+            },
+            RenderLayers::from_layers(&[RENDER_LAYER_DEFAULT, RENDER_LAYER_VIEW]),
+            Transform::from_xyz(0., 0., -10.),
+            // Hidden until CrosshairMode changes.
+            Visibility::Hidden,
             Node {
-                width: Val::Px(16.),
-                height: Val::Px(16.),
+                width: Val::Percent(100.),
+                height: Val::Percent(100.),
+                position_type: PositionType::Absolute,
+                justify_content: JustifyContent::Center,
+                align_items: AlignItems::Center,
                 ..default()
-            }
-        ));
-    });
+            },
+        ))
+        .with_children(|builder| {
+            builder.spawn((
+                ImageNode::new(gui_assets.crosshair.clone()),
+                Node {
+                    width: Val::Px(16.),
+                    height: Val::Px(16.),
+                    ..default()
+                },
+            ));
+        });
 }
 
 fn term_crosshair(mut commands: Commands, crosshair_q: Query<Entity, With<Crosshair>>) {
@@ -137,10 +128,14 @@ fn check_crosshair_visibility(
     mut vis_q: Query<&mut Visibility>,
     overlay: Res<State<OverlayState>>,
 ) {
-    let visible = !is_in_menu(overlay) && *mode == CrosshairMode::AimFromCenter;
+    let visible = !is_overlay_active(overlay) && *mode == CrosshairMode::AimFromCenter;
     for crosshair in crosshair_q.iter() {
         if let Ok(mut vis) = vis_q.get_mut(crosshair) {
-            vis.set_if_neq(if visible { Visibility::Inherited } else { Visibility::Hidden });
+            vis.set_if_neq(if visible {
+                Visibility::Inherited
+            } else {
+                Visibility::Hidden
+            });
         }
     }
 }
@@ -190,7 +185,10 @@ fn update_crosshair(
     child_q: Query<&Children>,
     mut image_q: Query<&mut ImageNode>,
 ) {
-    let Some(image_ent) = child_q.iter_descendants(crosshair_q.0).find(|ent| image_q.contains(*ent)) else {
+    let Some(image_ent) = child_q
+        .iter_descendants(crosshair_q.0)
+        .find(|ent| image_q.contains(*ent))
+    else {
         error!("no crosshair image");
         return;
     };
@@ -234,21 +232,20 @@ pub fn update_crosshair_targets(
         let mut step = ent;
         loop {
             if targetable_q.contains(step) {
-                return Some(step)
+                return Some(step);
             }
             if let Ok(parent) = parent_q.get(step) {
                 step = parent.0
             } else {
-                break
+                break;
             }
         }
         None
     };
 
     let settings = MeshRayCastSettings::default()
-        .with_visibility(RayCastVisibility::Any)    // allow for hidden controller ents
-        .with_early_exit_test(&|_| false)
-        ;
+        .with_visibility(RayCastVisibility::Any) // allow for hidden controller ents
+        .with_early_exit_test(&|_| false);
     let hits = raycast.cast_ray(ray, &settings);
 
     let targets = hits
@@ -263,7 +260,10 @@ pub fn update_crosshair_targets(
         None
     };
 
-    let new_crosshair_targets = CrosshairTargets{ targets, index: index.unwrap_or(0) };
+    let new_crosshair_targets = CrosshairTargets {
+        targets,
+        index: index.unwrap_or(0),
+    };
     crosshair_targets.set_if_neq(new_crosshair_targets);
 }
 
@@ -275,14 +275,19 @@ pub fn report_crosshair_targets(
     targets_q: &Query<Option<&Name>>,
 ) -> Option<String> {
     if crosshair_target.targets.is_empty() {
-        return None
+        return None;
     }
 
     let mut message = "[".to_string();
     let mut started = false;
-    let current = crosshair_target.targets.get(crosshair_target.index).cloned();
+    let current = crosshair_target
+        .targets
+        .get(crosshair_target.index)
+        .cloned();
     for ent in &crosshair_target.targets {
-        let Ok(name_opt) = targets_q.get(*ent) else { continue };
+        let Ok(name_opt) = targets_q.get(*ent) else {
+            continue;
+        };
         if !started {
             started = true
         } else {

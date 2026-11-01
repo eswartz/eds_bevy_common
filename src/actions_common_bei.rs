@@ -20,14 +20,12 @@ impl Plugin for ActionPlugin {
         app.add_plugins(EnhancedInputPlugin)
             .add_input_context::<PlayerContext>()
             .add_input_context::<MenuContext>()
+            .add_input_context::<DialogContext>()
             .add_input_condition::<BetterPulse>()
             // All the time!
             .add_systems(FixedUpdate, handle_escape)
             .add_systems(Last, mask_and_unmask_inputs)
-            .add_systems(
-                Last,
-                toggle_context.run_if(resource_changed::<State<OverlayState>>),
-            )
+            .add_systems(Last, toggle_context.run_if(state_changed::<OverlayState>))
             .add_observer(handle_pause_gameplay)
             .add_observer(handle_toggle_physics)
             .add_observer(handle_toggle_physics_gizmos)
@@ -49,6 +47,12 @@ pub struct PlayerContext;
 #[type_path = "game"]
 pub struct MenuContext;
 
+/// Context for modal dialog.
+#[derive(Component, Reflect)]
+#[reflect(Component)]
+#[type_path = "game"]
+pub struct DialogContext;
+
 pub fn is_context_active<Context: Component>(
     context_opt: Option<Single<Entity, With<Context>>>,
     activities: Query<&ContextActivity<Context>>,
@@ -60,7 +64,6 @@ pub fn is_context_active<Context: Component>(
         warn!("no ActivityContext?");
         return false;
     };
-    // It derefs to its state... can't fetch field, PartialEq, *OR* match on it!
     **activity
 }
 
@@ -112,10 +115,15 @@ pub mod actions {
     #[action_output(bool)]
     pub struct AltFiring;
 
-    /// Basic world object interaction.
+    /// Basic world object or dialog interaction.
     #[derive(InputAction)]
     #[action_output(bool)]
     pub struct Interact;
+
+    /// Hurry through some long-running operation (e.g. text crawl, cutscene).
+    #[derive(InputAction)]
+    #[action_output(bool)]
+    pub struct HurryUp;
 
     /// Reset something (look to identity, menu item to default)
     #[derive(InputAction)]
@@ -222,24 +230,35 @@ pub mod actions {
 
 fn toggle_context(
     mut commands: Commands,
-    player_active: Single<Entity, With<ContextActivity<PlayerContext>>>,
-    menu_active: Single<Entity, With<ContextActivity<MenuContext>>>,
+    player_active: Query<Entity, With<ContextActivity<PlayerContext>>>,
+    menu_active: Query<Entity, With<ContextActivity<MenuContext>>>,
+    dialog_active: Query<Entity, With<ContextActivity<DialogContext>>>,
     overlay: Res<State<OverlayState>>,
 ) {
-    if overlay.is_menu() {
-        commands
-            .entity(*player_active)
-            .insert(ContextActivity::<PlayerContext>::INACTIVE);
-        commands
-            .entity(*menu_active)
-            .insert(ContextActivity::<MenuContext>::ACTIVE);
+    let player_state = if overlay.is_hidden() {
+        ContextActivity::<PlayerContext>::ACTIVE
     } else {
-        commands
-            .entity(*player_active)
-            .insert(ContextActivity::<PlayerContext>::ACTIVE);
-        commands
-            .entity(*menu_active)
-            .insert(ContextActivity::<MenuContext>::INACTIVE);
+        ContextActivity::<PlayerContext>::INACTIVE
+    };
+    let menu_state = if overlay.is_menu() {
+        ContextActivity::<MenuContext>::ACTIVE
+    } else {
+        ContextActivity::<MenuContext>::INACTIVE
+    };
+    let dialog_state = if overlay.is_modal_dialog() {
+        ContextActivity::<DialogContext>::ACTIVE
+    } else {
+        ContextActivity::<DialogContext>::INACTIVE
+    };
+
+    for ent in player_active.iter() {
+        commands.entity(ent).insert(player_state);
+    }
+    for ent in menu_active.iter() {
+        commands.entity(ent).insert(menu_state);
+    }
+    for ent in dialog_active.iter() {
+        commands.entity(ent).insert(dialog_state);
     }
 }
 
@@ -383,7 +402,7 @@ pub fn assign_stock_common_actions(mut commands: Commands, include: impl Bundle 
     ));
 }
 
-/// include: should be at least e.g. `(ActionOf::<YourContext>::new(context_entity), {Menu,Player}Action)`
+/// include: should be at least e.g. `(ActionOf::<MenuContext>::new(context_entity)`
 pub fn assign_stock_menu_actions(mut commands: Commands, include: impl Bundle + Clone) {
     commands.spawn((
         include.clone(),
@@ -436,9 +455,29 @@ pub fn assign_stock_menu_actions(mut commands: Commands, include: impl Bundle + 
     ));
 }
 
+/// Create action entities for modal dialogs.
+/// include: should be at least e.g. `(ActionOf::<DialogContext>::new(context_entity)`
+pub fn assign_stock_dialog_actions(mut commands: Commands, include: impl Bundle + Clone) {
+    assign_stock_menu_actions(commands.reborrow(), include.clone());
+
+    commands.spawn((
+        include.clone(),
+        Action::<actions::HurryUp>::new(),
+        ActionSettings {
+            require_reset: true,
+            ..default()
+        },
+        bindings![
+            MouseButton::Left,
+            KeyCode::Space,
+            GamepadButton::RightTrigger2,
+        ],
+    ));
+}
+
 /// Add Action entities for the common player actions.
 ///
-/// include: should be at least e.g. `(ActionOf::<YourContext>::new(context_entity)`
+/// include: should be at least e.g. `(ActionOf::<PlayerContext>::new(context_entity)`
 pub fn assign_stock_player_actions(mut commands: Commands, include: impl Bundle + Clone) {
     commands.spawn((
         // Note: this usage as an action is only processed in gameplay

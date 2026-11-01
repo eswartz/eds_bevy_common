@@ -32,19 +32,20 @@ impl Plugin for PlayerControllerPlugin {
                     collect_player_look,
                     collect_player_input,
                 )
-                .run_if(is_context_active::<PlayerContext>)
-                .run_if(not(is_paused))
-                .run_if(not(debug_gui_wants_direct_input))
+                    .run_if(is_context_active::<PlayerContext>)
+                    .run_if(not(is_dialog_active))
+                    .run_if(not(is_paused))
+                    .run_if(not(debug_gui_wants_direct_input)),
             )
-            .add_observer(on_toggle_crouch)
-            ;
+            .add_observer(on_toggle_crouch);
         }
 
         app.add_systems(
             FixedPostUpdate,
             center_mouse
-            .run_if(not(is_paused))
-            .run_if(not(debug_gui_wants_direct_input))
+                .run_if(not(is_paused))
+                .run_if(not(is_dialog_active))
+                .run_if(not(debug_gui_wants_direct_input)),
         );
     }
 }
@@ -182,11 +183,11 @@ fn center_mouse(
     };
 
     if settings.center_mouse
-    && window.focused
-    && cursor.grab_mode != GRABBED_MODE
-    && !gui_state.show_cursor()
-    && !overlay_state.is_menu()
-    && window.cursor_position().is_some()
+        && window.focused
+        && cursor.grab_mode != GRABBED_MODE
+        && !gui_state.show_cursor()
+        && !overlay_state.is_menu()
+        && window.cursor_position().is_some()
     {
         // Keep mouse cursor set window center when while invisible,
         // so look movements will not go outside the window.
@@ -203,7 +204,10 @@ fn collect_player_look(
     primary_window: Query<&Window, With<PrimaryWindow>>,
 
     look_axis: Single<&Action<Look>, (With<Action<Look>>, With<ActionOf<PlayerContext>>)>,
-    turn_around_events: Single<&ActionEvents, (With<Action<TurnAround>>, With<ActionOf<PlayerContext>>)>,
+    turn_around_events: Single<
+        &ActionEvents,
+        (With<Action<TurnAround>>, With<ActionOf<PlayerContext>>),
+    >,
     reset_events: Single<&ActionEvents, (With<Action<Reset>>, With<ActionOf<PlayerContext>>)>,
     // alt_fire_events: Single<&ActionEvents, (With<Action<Firing>>, With<ActionOf<PlayerContext>>))>,
     mouse_button_events: Res<ButtonInput<MouseButton>>,

@@ -1,8 +1,8 @@
 use std::time::Duration;
 
+use crate::prelude::*;
 use bevy::prelude::*;
 use bevy::window::WindowFocused;
-use crate::prelude::*;
 
 pub fn dev_tools_enabled() -> bool {
     if let Ok(val) = std::env::var("DEBUG") {
@@ -18,7 +18,6 @@ pub fn dev_tools_enabled() -> bool {
         false
     }
 }
-
 
 /// Use as a condition to test whether any field in PauseState is set.
 pub fn is_paused(paused: Option<Res<PauseState>>) -> bool {
@@ -44,9 +43,20 @@ pub fn is_in_menu(overlay: Res<State<OverlayState>>) -> bool {
     overlay.is_menu()
 }
 
+pub fn is_overlay_active(overlay: Res<State<OverlayState>>) -> bool {
+    !overlay.is_hidden()
+}
+
+pub fn is_dialog_active(overlay: Res<State<OverlayState>>) -> bool {
+    overlay.is_modal_dialog()
+}
+
 /// Set if the level is active (i.e. player can move around).
 pub fn is_level_active(level_state: Res<State<LevelState>>) -> bool {
-    matches!(*level_state.get(), LevelState::Playing | LevelState::Won | LevelState::Lost)
+    matches!(
+        *level_state.get(),
+        LevelState::Playing | LevelState::Won | LevelState::Lost
+    )
 }
 
 /// Tell if the [PlayerStart] component was added.

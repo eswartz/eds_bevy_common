@@ -64,12 +64,18 @@ pub(crate) fn handle_escape(
 
     // When Escape *opens* the menu the first time
     if menu_detected
-        && matches!(**overlay_state,
-            OverlayState::Hidden | OverlayState::GameOverScreen | OverlayState::ErrorScreen)
+        && matches!(
+            **overlay_state,
+            OverlayState::Hidden
+                | OverlayState::ModalDialog
+                | OverlayState::GameOverScreen
+                | OverlayState::ErrorScreen
+        )
         && **program_state == ProgramState::InGame
     {
         debug!("... Escape");
         previous_menu.0.clear();
+        commands.insert_resource(OverlayStateBeforeMenu(**overlay_state));
         commands.set_state(OverlayState::EscapeMenu);
     }
 }

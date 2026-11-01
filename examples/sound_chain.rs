@@ -1,26 +1,26 @@
 //! This is a demo program showing the integration of various "ebc" features,
 //! focusing on spawning a lot of sounds.
-use bevy::asset::AssetMetaCheck;
-use bevy::render::renderer::RenderDevice;
 use avian3d::PhysicsPlugins;
 use avian3d::prelude::Physics;
-use bevy::prelude::*;
+use bevy::asset::AssetMetaCheck;
 use bevy::asset::uuid::Uuid;
-use bevy::color::palettes::tailwind;
 use bevy::camera::visibility::RenderLayers;
+use bevy::color::palettes::tailwind;
 use bevy::ecs::world::CommandQueue;
-use bevy::world_serialization::WorldInstanceReady;
+use bevy::prelude::*;
+use bevy::render::renderer::RenderDevice;
 use bevy::sprite::Text2dShadow;
+use bevy::winit::WinitSettings;
+use bevy::world_serialization::WorldInstanceReady;
 use bevy_seedling::spatial::SpatialListener3D;
 #[cfg(feature = "bevy_skein")]
 use bevy_skein::SkeinPlugin;
-use bevy::winit::WinitSettings;
 
-use rand::RngExt;
 use rand::Rng;
-use strum::VariantArray;
+use rand::RngExt;
 use std::sync::Arc;
 use std::time::Duration;
+use strum::VariantArray;
 
 #[cfg(target_arch = "wasm32")]
 use console_log::log;
@@ -39,132 +39,117 @@ fn main() -> AppExit {
     // }
 
     let mut app = App::new();
-    app
-        .insert_resource(WinitSettings {
-            focused_mode: bevy::winit::UpdateMode::reactive_low_power(Duration::from_secs_f32(
-                1.0 / 120.0,
-            )),
-            unfocused_mode: bevy::winit::UpdateMode::reactive_low_power(Duration::from_secs_f32(
-                1.0 / 24.0,
-            )),
-        })
-
-        // Needs to precede DefaultPlugins.AssetPlugin
-        .add_plugins(CommonAssetsPlugin)
-
-        .add_plugins((
-            DefaultPlugins
-                .set(AssetPlugin {
-                    // Wasm builds will check for meta files (that don't exist) if this isn't set.
-                    // This causes errors and even panics in web builds on itch.
-                    // See https://github.com/bevyengine/bevy_github_ci_template/issues/48.
-                    meta_check: if cfg!(target_arch = "wasm32") { AssetMetaCheck::Never } else { AssetMetaCheck::Always },
-                    // watch_for_changes_override: if cfg!(target_arch = "wasm32") { Some(true) } else { None },
-                    // file_path: if cfg!(target_arch = "wasm32") { "assets".to_string() } else { base_dir.join("assets").display().to_string() },
-                    file_path: "assets".to_string(),
-                    ..default()
-                }),
-            PhysicsPlugins::default(),
-        ))
-        .add_plugins(avian3d::debug_render::PhysicsDebugPlugin)
-        .insert_gizmo_config(
-            avian3d::prelude::PhysicsGizmos::default(),
-            GizmoConfig {
-                enabled: false,
-                ..default()
+    app.insert_resource(WinitSettings {
+        focused_mode: bevy::winit::UpdateMode::reactive_low_power(Duration::from_secs_f32(
+            1.0 / 120.0,
+        )),
+        unfocused_mode: bevy::winit::UpdateMode::reactive_low_power(Duration::from_secs_f32(
+            1.0 / 24.0,
+        )),
+    })
+    // Needs to precede DefaultPlugins.AssetPlugin
+    .add_plugins(CommonAssetsPlugin)
+    .add_plugins((
+        DefaultPlugins.set(AssetPlugin {
+            // Wasm builds will check for meta files (that don't exist) if this isn't set.
+            // This causes errors and even panics in web builds on itch.
+            // See https://github.com/bevyengine/bevy_github_ci_template/issues/48.
+            meta_check: if cfg!(target_arch = "wasm32") {
+                AssetMetaCheck::Never
+            } else {
+                AssetMetaCheck::Always
             },
-        )
-
-        .add_plugins(AppPlugin)
-
-        .add_plugins(ActionPlugin)
-
-        .add_plugins(LifecyclePlugin)
-        .add_plugins(GuiPlugin)
-        .add_plugins(VideoPlugin)
-        .add_plugins(WorldStatePlugin)
-        .add_plugins(LightsPlugin)
-        .add_plugins(LevelsPlugin)
-        .add_plugins(DeathboxPlugin::default())
-
-        .add_plugins(CrosshairPlugin)
-        .insert_resource(CrosshairMode::AimFromCenter)
-        .add_plugins(HighlightingPlugin)
-        .add_plugins(GrabbingPlugin)
-        .insert_resource(HighlightingMode::Disabled)
-
-        .add_plugins(EffectsPlugin)
-        .add_plugins(AudioCommonPlugin)
-        .add_plugins(MidiSynthPlugin)
-        .add_plugins(SynthPlugin)
-        .add_plugins(ClientSynthPlugin)
-        .add_plugins(MenuAudioPlugin)
-
-        .add_plugins(PlayerCameraPlugin)
-        .add_plugins(PlayerInputPlugin)
-        .add_plugins(PlayerClientPlugin)
-        .add_plugins(PlayerMovementPlugin)
-        .add_plugins(PlayerControllerPlugin)
-        .add_plugins(PlayerEnvironmentPlugin)
-
-        // req'd by GuiPlugin
-        .insert_resource(UiFontPath(std::path::Path::new("fonts/Hack-Regular.ttf").to_path_buf()))
-
-        .insert_resource(GuiState {
-            show_stats: true,
+            // watch_for_changes_override: if cfg!(target_arch = "wasm32") { Some(true) } else { None },
+            // file_path: if cfg!(target_arch = "wasm32") { "assets".to_string() } else { base_dir.join("assets").display().to_string() },
+            file_path: "assets".to_string(),
             ..default()
-        })
-        // req'd by player plugins
-        .insert_resource(OurUser(default()))
-        // .insert_resource(PlayerMode::Fps)
-        // .insert_resource(PlayerInputSettings::for_fps())
-        .insert_resource(PlayerMode::Space)
-        .insert_resource(PlayerInputSettings {
-            max_xz_speed: 128.0,
-            accelerate_scale: 2.0,
-            .. PlayerInputSettings::for_space()
-        })
-        .add_plugins(MyMenuPlugin)
-        .init_resource::<LevelDifficulty>()
-
-        .add_plugins(MyGamePlugin)
-
-        .add_systems(Startup, (
-            register_dummy_level,
-            initialize_audio,
-            setup_adapter,
-        ))
-
-        .add_systems(
-            OnEnter(GameplayState::Playing),
-            ensure_3d_camera,
-        )
-
-        .add_systems(Update,
-            ensure_midi_synths.run_if(resource_exists::<CommonSoundFontAssets>)
-                .run_if(not(is_in_menu))
-                .run_if(in_state(ProgramState::InGame)),
-        )
-        .add_systems(Update,
-            spawn_midi_sphere
-                .run_if(not(is_in_menu))
-                .run_if(is_trigger_pressed)
-                .run_if(in_state(ProgramState::InGame)),
-        )
-
-        .add_systems(FixedUpdate,
-            trigger_midi_notes
-                .run_if(not(is_paused))
-                .run_if(not(is_in_menu))
-                .run_if(in_state(ProgramState::InGame)),
-        )
-        .add_systems(Update,
-            move_midi_spheres
-                .run_if(not(is_paused))
-                .run_if(not(is_in_menu))
-                .run_if(in_state(ProgramState::InGame)),
-        )
-    ;
+        }),
+        PhysicsPlugins::default(),
+    ))
+    .add_plugins(avian3d::debug_render::PhysicsDebugPlugin)
+    .insert_gizmo_config(
+        avian3d::prelude::PhysicsGizmos::default(),
+        GizmoConfig {
+            enabled: false,
+            ..default()
+        },
+    )
+    .add_plugins(AppPlugin)
+    .add_plugins(ActionPlugin)
+    .add_plugins(LifecyclePlugin)
+    .add_plugins(GuiPlugin)
+    .add_plugins(VideoPlugin)
+    .add_plugins(WorldStatePlugin)
+    .add_plugins(LightsPlugin)
+    .add_plugins(LevelsPlugin)
+    .add_plugins(DeathboxPlugin::default())
+    .add_plugins(CrosshairPlugin)
+    .insert_resource(CrosshairMode::AimFromCenter)
+    .add_plugins(HighlightingPlugin)
+    .add_plugins(GrabbingPlugin)
+    .insert_resource(HighlightingMode::Disabled)
+    .add_plugins(EffectsPlugin)
+    .add_plugins(AudioCommonPlugin)
+    .add_plugins(MidiSynthPlugin)
+    .add_plugins(SynthPlugin)
+    .add_plugins(ClientSynthPlugin)
+    .add_plugins(MenuAudioPlugin)
+    .add_plugins(PlayerCameraPlugin)
+    .add_plugins(PlayerInputPlugin)
+    .add_plugins(PlayerClientPlugin)
+    .add_plugins(PlayerMovementPlugin)
+    .add_plugins(PlayerControllerPlugin)
+    .add_plugins(PlayerEnvironmentPlugin)
+    .insert_resource(GuiState {
+        show_stats: true,
+        ..default()
+    })
+    // req'd by player plugins
+    .insert_resource(OurUser(default()))
+    // .insert_resource(PlayerMode::Fps)
+    // .insert_resource(PlayerInputSettings::for_fps())
+    .insert_resource(PlayerMode::Space)
+    .insert_resource(PlayerInputSettings {
+        max_xz_speed: 128.0,
+        accelerate_scale: 2.0,
+        ..PlayerInputSettings::for_space()
+    })
+    .add_plugins(MyMenuPlugin)
+    .init_resource::<LevelDifficulty>()
+    .add_plugins(MyGamePlugin)
+    .add_systems(
+        Startup,
+        (register_dummy_level, initialize_audio, setup_adapter),
+    )
+    .add_systems(OnEnter(GameplayState::Playing), ensure_3d_camera)
+    .add_systems(
+        Update,
+        ensure_midi_synths
+            .run_if(resource_exists::<CommonSoundFontAssets>)
+            .run_if(not(is_overlay_active))
+            .run_if(in_state(ProgramState::InGame)),
+    )
+    .add_systems(
+        Update,
+        spawn_midi_sphere
+            .run_if(not(is_overlay_active))
+            .run_if(is_trigger_pressed)
+            .run_if(in_state(ProgramState::InGame)),
+    )
+    .add_systems(
+        FixedUpdate,
+        trigger_midi_notes
+            .run_if(not(is_paused))
+            .run_if(not(is_overlay_active))
+            .run_if(in_state(ProgramState::InGame)),
+    )
+    .add_systems(
+        Update,
+        move_midi_spheres
+            .run_if(not(is_paused))
+            .run_if(not(is_overlay_active))
+            .run_if(in_state(ProgramState::InGame)),
+    );
 
     #[cfg(feature = "input_bei")]
     app.add_systems(Startup, create_input_map);
@@ -173,9 +158,7 @@ fn main() -> AppExit {
     app.add_plugins(SkeinPlugin::default());
 
     if dev_tools_enabled() {
-        app
-            .add_plugins(DebugPlugin)
-
+        app.add_plugins(DebugPlugin)
             .add_systems(
                 First,
                 (
@@ -185,8 +168,7 @@ fn main() -> AppExit {
                     bevy::dev_tools::states::log_transitions::<LevelState>,
                 ),
             )
-            .add_plugins(StatsOverlayPlugin)
-        ;
+            .add_plugins(StatsOverlayPlugin);
     }
 
     app.run()
@@ -205,11 +187,12 @@ fn is_trigger_pressed(
 ) -> bool {
     let ignore_mouse = wants_input.is_some_and(|wi| wi.is_pointer_over_area());
     if mouse_buttons.pressed(MouseButton::Left) && !ignore_mouse {
-        return true
+        return true;
     }
     if let Ok(gamepad) = gamepads.single()
-    && gamepad.pressed(GamepadButton::LeftTrigger2) {
-        return true
+        && gamepad.pressed(GamepadButton::LeftTrigger2)
+    {
+        return true;
     }
     false
 }
@@ -218,34 +201,23 @@ fn is_trigger_pressed(
 fn create_input_map(mut commands: Commands) {
     use bevy_enhanced_input::prelude::ActionOf;
 
-    let menu_entity = commands.spawn((
-        MenuContext,
-        Name::new("MenuContext"),
-    )).id();
-    let include = (
-        ActionOf::<MenuContext>::new(menu_entity),
-    );
+    let menu_entity = commands.spawn((MenuContext, Name::new("MenuContext"))).id();
+    let include = (ActionOf::<MenuContext>::new(menu_entity),);
     assign_stock_common_actions(commands.reborrow(), include.clone());
     assign_stock_menu_actions(commands.reborrow(), include.clone());
 
     ///////
 
-    let player_entity = commands.spawn((
-        PlayerContext,
-        Name::new("PlayerContext"),
-    )).id();
+    let player_entity = commands
+        .spawn((PlayerContext, Name::new("PlayerContext")))
+        .id();
 
-    let include = (
-        ActionOf::<PlayerContext>::new(player_entity),
-    );
+    let include = (ActionOf::<PlayerContext>::new(player_entity),);
     assign_stock_common_actions(commands.reborrow(), include.clone());
     assign_stock_player_actions(commands.reborrow(), include.clone());
 }
 
-
-fn register_dummy_level(
-    assets: Res<AssetServer>,
-    mut list: ResMut<LevelList>) {
+fn register_dummy_level(assets: Res<AssetServer>, mut list: ResMut<LevelList>) {
     list.0.push(LevelInfo {
         id: "test0".to_string(),
         label: "Level 0 (Intro)".to_string(),
@@ -299,7 +271,6 @@ fn configure_world_camera(mut ent_commands: EntityCommands) {
             OurCamera::default(),
             Msaa::Off,
         ),
-
         // Audio is from the perspective of the camera.
         SpatialListener3D,
     ));
@@ -310,8 +281,7 @@ fn configure_world_camera(mut ent_commands: EntityCommands) {
 pub struct MyMenuPlugin;
 impl Plugin for MyMenuPlugin {
     fn build(&self, app: &mut App) {
-        app
-            .add_plugins(MenuCommonPlugin)
+        app.add_plugins(MenuCommonPlugin)
             .add_systems(OnEnter(OverlayState::MainMenu), on_enter_main_menu)
             .add_systems(OnEnter(OverlayState::EscapeMenu), on_enter_escape_menu)
             .add_systems(OnExit(OverlayState::EscapeMenu), on_exit_escape_menu)
@@ -401,7 +371,7 @@ impl MenuItemHandler for SimpleMenuActions {
 
 fn on_enter_main_menu(
     mut commands: Commands,
-    font: Res<UiFont>,
+    style: Res<MenuStyle>,
     mut history: ResMut<MenuItemSelectionHistory>,
     current_level: Option<Res<CurrentLevel>>,
 ) {
@@ -412,7 +382,7 @@ fn on_enter_main_menu(
         Text2d::new(GAME_TITLE),
         TextFont {
             font_size: FontSize::Px(128.0),
-            font: font.0.clone().into(),
+            font: style.font.clone().into(),
             ..default()
         },
         Text2dShadow {
@@ -435,17 +405,19 @@ fn on_enter_main_menu(
         commands,
         OverlayState::MainMenu,
         ProgramState::LaunchMenu,
-        font.0.clone(),
-        1.0,
+        &style,
         &history,
     )
+    .page()
     .add_item(
         if let Some(level) = current_level {
             format!("Reset ({})", level.info.label)
         } else {
             "Play".to_string()
         },
-        (), SimpleMenuActions::PlayGame)
+        (),
+        SimpleMenuActions::PlayGame,
+    )
     .add_item("Game", (), SimpleMenuActions::GameMenu)
     .add_item("Options", (), SimpleMenuActions::OptionsMenu)
     .add_item("Quit", (), SimpleMenuActions::Quit)
@@ -453,7 +425,7 @@ fn on_enter_main_menu(
 }
 
 fn on_enter_game_menu(
-    font: Res<UiFont>,
+    style: Res<MenuStyle>,
     program_state: Res<State<ProgramState>>,
     mut commands: Commands,
     mut history: ResMut<MenuItemSelectionHistory>,
@@ -481,7 +453,11 @@ fn on_enter_game_menu(
 
     make_res_enum_getter_setter!(get_difficulty set_difficulty => Difficulty LevelDifficulty 0);
 
-    fn get_level(In(entity): In<Entity>, mut enum_q: Query<&mut MenuEnum>, next_level_index: Option<Res<LevelIndex>>) {
+    fn get_level(
+        In(entity): In<Entity>,
+        mut enum_q: Query<&mut MenuEnum>,
+        next_level_index: Option<Res<LevelIndex>>,
+    ) {
         let index = next_level_index.map_or(0, |nli| nli.0);
         enum_q.get_mut(entity).unwrap().current = Some(index);
     }
@@ -493,16 +469,19 @@ fn on_enter_game_menu(
 
     let level_infos = &level_list.0;
     let level_count = level_infos.len();
-    let level_names = level_infos.iter().map(|info| info.label.clone()).collect::<Vec<_>>();
+    let level_names = level_infos
+        .iter()
+        .map(|info| info.label.clone())
+        .collect::<Vec<_>>();
 
     MenuItemBuilder::new(
         commands,
         OverlayState::GameMenu,
         *program_state.get(),
-        font.0.clone(),
-        1.0,
+        &style,
         &history,
     )
+    .page()
     .add_item(
         "Level",
         MenuEnum::new(
@@ -528,7 +507,7 @@ fn on_enter_game_menu(
 }
 
 fn on_enter_escape_menu(
-    font: Res<UiFont>,
+    style: Res<MenuStyle>,
     commands: Commands,
     mut history: ResMut<MenuItemSelectionHistory>,
     current_level: Res<CurrentLevel>,
@@ -541,16 +520,20 @@ fn on_enter_escape_menu(
         commands,
         OverlayState::EscapeMenu,
         ProgramState::InGame,
-        font.0.clone(),
-        1.0,
+        &style,
         &history,
     )
+    .page()
     // (), SimpleMenuActions::ResumeGame)
     .add_item("Audio", (), SimpleMenuActions::AudioMenu)
     .add_item("Video", (), SimpleMenuActions::VideoMenu)
     .add_item("Controls", (), SimpleMenuActions::ControlsMenu)
     .add_item("Stop", (), SimpleMenuActions::StopGame)
-    .add_item(format!("Resume ({})", current_level.info.label), (), SimpleMenuActions::ResumeGame)
+    .add_item(
+        format!("Resume ({})", current_level.info.label),
+        (),
+        SimpleMenuActions::ResumeGame,
+    )
     .finish(&mut history);
 }
 
@@ -601,7 +584,7 @@ enum ControlMenuToggleActions {
 impl MenuItemHandler for ControlMenuToggleActions {}
 
 fn on_enter_controls_menu(
-    font: Res<UiFont>,
+    style: Res<MenuStyle>,
     program_state: Res<State<ProgramState>>,
     mut commands: Commands,
     mut history: ResMut<MenuItemSelectionHistory>,
@@ -637,7 +620,7 @@ fn on_enter_controls_menu(
                 |In(entity): In<Entity>,
                  mut toggle_q: Query<&mut MenuToggle>,
                  res: Res<PlayerControllerSettings>| {
-                     let current = res.$field;
+                    let current = res.$field;
                     toggle_q.get_mut(entity).unwrap().current = Some(current);
                 },
             ));
@@ -663,10 +646,11 @@ fn on_enter_controls_menu(
         commands,
         OverlayState::ControlsMenu,
         *program_state.get(),
-        font.0.clone(),
-        0.75,
+        &style,
         &history,
     )
+    .with_font_scale(0.75)
+    .page()
     .add_item(
         "Move Left/Right Power",
         MenuSlider::new(
@@ -706,12 +690,16 @@ fn on_enter_controls_menu(
         ),
         SliderMenuActions::MoveSensitivityZSlider,
     )
-    .add_item("Invert Turn X", (
-        MenuToggle::new(get_invert_turn_x, set_invert_turn_x),
-    ), ControlMenuToggleActions::TurnInvertX)
-    .add_item("Invert Turn Y", (
-        MenuToggle::new(get_invert_turn_y, set_invert_turn_y),
-    ), ControlMenuToggleActions::TurnInvertY)
+    .add_item(
+        "Invert Turn X",
+        (MenuToggle::new(get_invert_turn_x, set_invert_turn_x),),
+        ControlMenuToggleActions::TurnInvertX,
+    )
+    .add_item(
+        "Invert Turn Y",
+        (MenuToggle::new(get_invert_turn_y, set_invert_turn_y),),
+        ControlMenuToggleActions::TurnInvertY,
+    )
     .add_item(
         "Turn X Power",
         MenuSlider::new(
@@ -756,7 +744,7 @@ fn on_enter_controls_menu(
 }
 
 fn on_enter_video_menu(
-    font: Res<UiFont>,
+    style: Res<MenuStyle>,
     program_state: Res<State<ProgramState>>,
     mut commands: Commands,
     mut history: ResMut<MenuItemSelectionHistory>,
@@ -799,10 +787,10 @@ fn on_enter_video_menu(
         commands,
         OverlayState::VideoMenu,
         *program_state.get(),
-        font.0.clone(),
-        1.0,
+        &style,
         &history,
     )
+    .page()
     .add_item(
         "Field of View",
         MenuSlider::new(
@@ -890,69 +878,38 @@ struct MyGamePlugin;
 
 impl Plugin for MyGamePlugin {
     fn build(&self, app: &mut App) {
-        app
-            .insert_resource(NoteRate(2.0))
-
-            .add_systems(
-                OnExit(ProgramState::New),
-                ensure_levels
-            )
+        app.insert_resource(NoteRate(2.0))
+            .add_systems(OnExit(ProgramState::New), ensure_levels)
             .add_systems(
                 OnEnter(GameplayState::Setup),
-                (
-                    level_spawn_started,
-                    spawn_level,
-                ).chain()
+                (level_spawn_started, spawn_level).chain(),
             )
-
             .add_systems(
                 OnExit(GameplayState::Setup),
-                (
-                    level_spawn_finished,
-                ).chain()
-            )
-
-            .add_systems(OnEnter(LevelState::LevelLoaded),
-                (
-                    add_player,
-                    start_configuring,
-                ).chain()
-                .run_if(in_state(ProgramState::InGame))
-            )
-
-            .add_systems(
-                OnEnter(LevelState::Enter),
-                start_game
+                (level_spawn_finished,).chain(),
             )
             .add_systems(
-                OnEnter(LevelState::Advance),
-                advance_level
+                OnEnter(LevelState::LevelLoaded),
+                (add_player, start_configuring)
+                    .chain()
+                    .run_if(in_state(ProgramState::InGame)),
             )
-
+            .add_systems(OnEnter(LevelState::Enter), start_game)
+            .add_systems(OnEnter(LevelState::Advance), advance_level)
             .add_systems(
                 FixedUpdate,
                 spawn_player_on_start
                     .run_if(added_player_start)
-                    .run_if(in_state(GameplayState::Playing))
+                    .run_if(in_state(GameplayState::Playing)),
             )
-
-            .add_systems(
-                OnEnter(LevelState::Won),
-                won_level,
-            )
-            .add_systems(
-                OnEnter(LevelState::Lost),
-                lost_level
-            )
+            .add_systems(OnEnter(LevelState::Won), won_level)
+            .add_systems(OnEnter(LevelState::Lost), lost_level)
             .add_systems(
                 FixedUpdate,
-                check_end_level
-                    .run_if(resource_exists::<AutoEndLevelTimer>)
-            )
-        ;
+                check_end_level.run_if(resource_exists::<AutoEndLevelTimer>),
+            );
     }
 }
-
 
 const END_LEVEL_DELAY_SECS: u64 = 3;
 
@@ -968,11 +925,16 @@ fn won_level(
     mut score_q: Query<(&mut Text, &mut TextColor)>,
 ) {
     gui_area.with_first(GuiAreaMarker::GameStatusArea, |ent| {
-        let Ok((ref mut text, ref mut color)) = score_q.get_mut(ent) else { return };
+        let Ok((ref mut text, ref mut color)) = score_q.get_mut(ent) else {
+            return;
+        };
         text.0 = "Passed!".to_string();
         color.0 = Color::Srgba(tailwind::LIME_300);
     });
-    commands.insert_resource(AutoEndLevelTimer(Timer::new(Duration::from_secs(END_LEVEL_DELAY_SECS), TimerMode::Once)));
+    commands.insert_resource(AutoEndLevelTimer(Timer::new(
+        Duration::from_secs(END_LEVEL_DELAY_SECS),
+        TimerMode::Once,
+    )));
 }
 
 fn lost_level(
@@ -981,11 +943,16 @@ fn lost_level(
     mut score_q: Query<(&mut Text, &mut TextColor)>,
 ) {
     gui_area.with_first(GuiAreaMarker::GameStatusArea, |ent| {
-        let Ok((ref mut text, ref mut color)) = score_q.get_mut(ent) else { return };
+        let Ok((ref mut text, ref mut color)) = score_q.get_mut(ent) else {
+            return;
+        };
         text.0 = "Failed...\nTry again!".to_string();
         color.0 = Color::Srgba(tailwind::RED_700);
     });
-    commands.insert_resource(AutoEndLevelTimer(Timer::new(Duration::from_secs(END_LEVEL_DELAY_SECS), TimerMode::Once)));
+    commands.insert_resource(AutoEndLevelTimer(Timer::new(
+        Duration::from_secs(END_LEVEL_DELAY_SECS),
+        TimerMode::Once,
+    )));
 }
 
 fn check_end_level(
@@ -1008,20 +975,12 @@ pub(crate) fn ensure_levels(mut level_list: ResMut<LevelList>) {
     level_list.0.sort_by(|a, b| a.id.cmp(&b.id));
 }
 
-fn add_player(
-    mut commands: Commands,
-) {
+fn add_player(mut commands: Commands) {
     // Our model doesn't have a PlayerStart, so make one.
-    commands.spawn((
-        Name::new("PlayerStart"),
-        PlayerStart,
-        Transform::IDENTITY,
-    ));
+    commands.spawn((Name::new("PlayerStart"), PlayerStart, Transform::IDENTITY));
 }
 
-fn start_configuring(
-    mut commands: Commands,
-) {
+fn start_configuring(mut commands: Commands) {
     // None in this game.
     commands.set_state(LevelState::Playing);
 }
@@ -1039,10 +998,7 @@ pub(crate) fn level_spawn_started(mut commands: Commands, mut pause: ResMut<Paus
 #[derive(Component, Deref)]
 struct OrigPosition(Vec3);
 
-pub(crate) fn level_spawn_finished(
-    mut commands: Commands,
-    mut pause: ResMut<PauseState>,
-) {
+pub(crate) fn level_spawn_finished(mut commands: Commands, mut pause: ResMut<PauseState>) {
     commands.spawn((
         DirectionalLight {
             illuminance: 5000.0,
@@ -1076,20 +1032,14 @@ pub(crate) fn spawn_level(
             WorldAssetRoot(level.scene.clone()),
             ChildOf(world.0),
         ))
-        .observe(|_event: On<WorldInstanceReady>, mut commands: Commands,| {
+        .observe(|_event: On<WorldInstanceReady>, mut commands: Commands| {
             commands.set_state(GameplayState::Playing);
-        })
-    ;
+        });
 }
 
 pub(crate) fn spawn_player_on_start(world: &mut World) {
     // Make the player collision model and Player
-    let player_ent = spawn_fps_player(
-        world,
-        Uuid::default(),
-        QUAKE_SCALE,
-        Transform::IDENTITY,
-    );
+    let player_ent = spawn_fps_player(world, Uuid::default(), QUAKE_SCALE, Transform::IDENTITY);
 
     // Move to start position/orientation.
     let mut start_q = world.query_filtered::<&Transform, With<PlayerStart>>();
@@ -1105,8 +1055,11 @@ pub(crate) fn spawn_player_on_start(world: &mut World) {
 
     // Put and orient the new Player where the PlayerStart is.
     commands.entity(player_ent).insert((
-        PlayerLook { rotation: xfrm.rotation, .. default() },
-        xfrm
+        PlayerLook {
+            rotation: xfrm.rotation,
+            ..default()
+        },
+        xfrm,
     ));
 
     queue.apply(world);
@@ -1126,18 +1079,20 @@ pub(crate) fn setup_level(
     }
 
     let level = &level_list.0[level_index.0];
-    commands.insert_resource(CurrentLevel{ index, info: level.clone() });
+    commands.insert_resource(CurrentLevel {
+        index,
+        info: level.clone(),
+    });
 
     commands.insert_resource(InstructionText(
         r#"
         Left Click / Trigger: Spawn noisy sphere
-        "#.to_string()))
+        "#
+        .to_string(),
+    ))
 }
 
-pub(crate) fn advance_level(
-    mut commands: Commands,
-    spawned_q: Query<Entity, With<Spawned>>,
-) {
+pub(crate) fn advance_level(mut commands: Commands, spawned_q: Query<Entity, With<Spawned>>) {
     for ent in spawned_q.iter() {
         commands.entity(ent).try_despawn();
     }
@@ -1185,9 +1140,7 @@ pub(crate) fn ensure_midi_synths(
             sample_sender,
             sample_receiver,
         )?;
-        commands.entity(ent).insert((
-            synth,
-        ));
+        commands.entity(ent).insert((synth,));
 
         synth_map.register_synth(ent);
 
@@ -1210,7 +1163,7 @@ pub(crate) fn spawn_midi_sphere(
 ) {
     const SPAWN_RATE: f32 = 4.0;
     if last_time.abs_diff(time.elapsed()).as_secs_f32() < 1.0 / SPAWN_RATE {
-        return
+        return;
     }
     *last_time = time.elapsed();
 
@@ -1225,41 +1178,36 @@ pub(crate) fn spawn_midi_sphere(
 
     commands.spawn((
         ChildOf(world.0),
-
         Name::new("Synth"),
         OrigPosition(pos),
         Transform::from_translation(pos),
-
         OurMidiSynth {
             id: rng.next_u64(),
             start_time: *last_time,
         },
         Lifetime(Duration::ZERO),
         CrosshairTargetable,
-
         Mesh3d(the_mesh),
         MeshMaterial3d(materials.add(Color::oklab(
-            rng.random_range(0.5 .. 1.0),
-            rng.random_range(-1.0 .. 1.0),
-            rng.random_range(-1.0 .. 1.0),
+            rng.random_range(0.5..1.0),
+            rng.random_range(-1.0..1.0),
+            rng.random_range(-1.0..1.0),
         ))),
-
     ));
 }
 
 pub(crate) fn move_midi_spheres(
-    mut xfrm_q: Query<(Entity, &mut Transform, &OrigPosition, &mut Lifetime), (With<OurMidiSynth>, With<MidiSynth>)>,
+    mut xfrm_q: Query<
+        (Entity, &mut Transform, &OrigPosition, &mut Lifetime),
+        (With<OurMidiSynth>, With<MidiSynth>),
+    >,
     time: Res<Time<Physics>>,
 ) {
     for (_ent, mut xfrm, orig, mut lifetime) in xfrm_q.iter_mut() {
         let ang = (lifetime.0.as_secs_f32() * 10.0).to_radians();
         let (s, c) = f32::sin_cos(ang);
 
-        let offs = Vec3::new(
-            s * 5.0,
-            (ang * 15.0).sin() * 2.0,
-            c * 7.0,
-        );
+        let offs = Vec3::new(s * 5.0, (ang * 15.0).sin() * 2.0, c * 7.0);
         xfrm.translation = orig.0 + offs * lifetime.0.as_secs_f32().min(1.0);
         lifetime.0 += time.delta();
     }
@@ -1313,19 +1261,22 @@ pub(crate) fn trigger_midi_notes(
         let should_fire = phase == 0 && last_phase != phase;
 
         if !should_fire {
-            continue
+            continue;
         }
 
         commands.write_message(SynthMessage(
-            ent, SynthCommand::ProgramChange(channel, program),
-            Duration::ZERO
+            ent,
+            SynthCommand::ProgramChange(channel, program),
+            Duration::ZERO,
         ));
         commands.write_message(SynthMessage(
-            ent, SynthCommand::NoteOn(channel, note, 1.0),
-            Duration::ZERO
+            ent,
+            SynthCommand::NoteOn(channel, note, 1.0),
+            Duration::ZERO,
         ));
         commands.write_message(SynthMessage(
-            ent, SynthCommand::NoteOff(channel, note),
+            ent,
+            SynthCommand::NoteOff(channel, note),
             Duration::from_secs_f32(0.5),
         ));
     }

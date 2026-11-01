@@ -27,9 +27,9 @@ use crate::prelude::actions;
 use crate::prelude::debug_gui_wants_direct_input;
 use crate::prelude::debug_gui_wants_input;
 #[cfg(feature = "input_bei")]
-use crate::prelude::is_in_menu;
-#[cfg(feature = "input_bei")]
 use crate::prelude::is_level_active;
+#[cfg(feature = "input_bei")]
+use crate::prelude::is_overlay_active;
 #[cfg(feature = "input_bei")]
 use crate::prelude::is_paused;
 
@@ -40,8 +40,7 @@ impl Plugin for GrabbingPlugin {
         if !app.is_plugin_added::<OutlinesPlugin>() {
             app.add_plugins(OutlinesPlugin);
         }
-        app
-            .init_resource::<GrabbingBehavior>()
+        app.init_resource::<GrabbingBehavior>()
             .init_resource::<HighlightedIsGrabbable>()
             .init_resource::<GrabbedItemStyle>()
             .add_message::<GrabbingCommand>()
@@ -50,29 +49,25 @@ impl Plugin for GrabbingPlugin {
                 (
                     sync_grabbable_with_highlighted
                         .run_if(highlighted_is_grabbable)
-                        .run_if(not(is_grabbing_item))
-                        ,
+                        .run_if(not(is_grabbing_item)),
                     process_grab_commands,
                     move_grabbed_item
                         .run_if(is_grabbing_item)
                         .run_if(not(debug_gui_wants_input)),
                 )
-                .chain()
-                .run_if(not(is_in_menu))
-                .run_if(is_level_active)
-                .run_if(not(is_paused))
-                .run_if(not(debug_gui_wants_direct_input))
-                .run_if(in_state(ProgramState::InGame)),
-            )
-        ;
+                    .chain()
+                    .run_if(not(is_overlay_active))
+                    .run_if(is_level_active)
+                    .run_if(not(is_paused))
+                    .run_if(not(debug_gui_wants_direct_input))
+                    .run_if(in_state(ProgramState::InGame)),
+            );
 
         if cfg!(feature = "input_bei") {
-            app
-                .add_observer(on_start_grab)
+            app.add_observer(on_start_grab)
                 .add_observer(on_change_grab_distance)
                 .add_observer(on_end_grab_drop)
-                .add_observer(on_end_grab_fire)
-                ;
+                .add_observer(on_end_grab_fire);
         }
     }
 }
@@ -191,7 +186,6 @@ pub struct GrabbedItem {
     orig_layers_opt: Option<CollisionLayers>,
     /// original GravityScale before grabbing.
     orig_gravity_opt: Option<GravityScale>,
-
 }
 
 pub fn is_grabbing_item(res: Option<Res<GrabbedItem>>) -> bool {
@@ -232,7 +226,6 @@ impl Default for GrabbingBehavior {
         }
     }
 }
-
 
 /// See if the user is grabbing/dragging/ungrabbing something.
 fn on_start_grab(
@@ -297,8 +290,7 @@ fn on_change_grab_distance(
     mut grabbed_opt: Option<ResMut<GrabbedItem>>,
 ) {
     // Still grabbing?
-    if let Some(grabbed) = &mut grabbed_opt
-    {
+    if let Some(grabbed) = &mut grabbed_opt {
         let new_dist = (grabbed.distance + event.value * 10.0).clamp(0.1, 100.0);
         grabbed.distance = new_dist;
     }
@@ -313,12 +305,17 @@ fn process_grab_commands(
 
     camera_q: Query<&GlobalTransform, (With<Camera3d>, With<WorldCamera>)>,
 
-    #[cfg(feature = "highlighting")]
-    mut mode: If<ResMut<HighlightingMode>>,
+    #[cfg(feature = "highlighting")] mut mode: If<ResMut<HighlightingMode>>,
 
     mut raycast: MeshRayCast,
-    phys_info_q: Query<(&GlobalTransform, &Transform,
-        Option<&RigidBody>, Option<&CollisionLayers>, Option<&LockedAxes>, Option<&GravityScale>)>,
+    phys_info_q: Query<(
+        &GlobalTransform,
+        &Transform,
+        Option<&RigidBody>,
+        Option<&CollisionLayers>,
+        Option<&LockedAxes>,
+        Option<&GravityScale>,
+    )>,
 ) {
     for command in reader.read() {
         match command {
@@ -327,14 +324,16 @@ fn process_grab_commands(
 
                 let Ok(cam_global_xfrm) = camera_q.single() else {
                     log::warn!("no camera for grabbing {entity}");
-                    continue
+                    continue;
                 };
 
-                let Ok((item_global_xfrm, _, rigid_opt, layers_opt, axes_opt, gravity_opt)) = phys_info_q.get(entity) else {
+                let Ok((item_global_xfrm, _, rigid_opt, layers_opt, axes_opt, gravity_opt)) =
+                    phys_info_q.get(entity)
+                else {
                     log::warn!("no world-located item {entity}");
                     // Whatever we have is not valid, so clear it out.
                     commands.write_message(GrabbingCommand::CancelGrabItems);
-                    continue
+                    continue;
                 };
 
                 // See where we're looking -- likely at some random point
@@ -346,7 +345,7 @@ fn process_grab_commands(
                     Ray3d::new(cam_pos, cam_dir),
                     &MeshRayCastSettings::default()
                         .with_filter(&|ent| ent == entity)
-                        .always_early_exit()
+                        .always_early_exit(),
                 );
                 let surface_pos = if let Some(hit) = hits.first() {
                     hit.1.point
@@ -355,7 +354,7 @@ fn process_grab_commands(
                 };
                 let distance = cam_pos.distance(surface_pos);
 
-                commands.insert_resource(GrabbedItem{
+                commands.insert_resource(GrabbedItem {
                     entity,
                     orig_offset: cam_global_xfrm.rotation().inverse() * (surface_pos - cur_pos),
                     #[cfg(feature = "highlighting")]
@@ -389,7 +388,7 @@ fn process_grab_commands(
                             // 2) avoid disturbing the player also to avoid unwanted movement
                             CollisionLayers::from_bits(
                                 *layers.memberships,
-                                *((layers.filters | GameLayer::Player) ^ GameLayer::Player)
+                                *((layers.filters | GameLayer::Player) ^ GameLayer::Player),
                             )
                         } else {
                             CollisionLayers::default()
@@ -404,10 +403,10 @@ fn process_grab_commands(
             GrabbingCommand::ReleaseItems(vel) => {
                 commands.remove_resource::<GrabbedItem>();
                 if let Some(grabbed) = &grabbed_opt {
-
                     // The entity may have been deleted, so, be extra-careful here.
                     let Ok(mut ent_commands) = commands.get_spawned_entity(grabbed.entity) else {
-                        log::warn!("grabbed is gone"); continue
+                        log::warn!("grabbed is gone");
+                        continue;
                     };
 
                     ent_commands.try_remove::<Grabbed>();
@@ -418,7 +417,8 @@ fn process_grab_commands(
                     if let Some(rigid) = grabbed.orig_rigid_opt {
                         is_rigid = true;
                         if let Ok((_, _, rigid_opt, _, _, _)) = phys_info_q.get(grabbed.entity)
-                        && rigid_opt != Some(&rigid) {
+                            && rigid_opt != Some(&rigid)
+                        {
                             // Don't mutate the RigidBody to avoid a "hop"
                             ent_commands.try_insert(rigid);
                         }
@@ -478,31 +478,39 @@ fn move_grabbed_item(
     camera_q: Query<&GlobalTransform, (With<Camera3d>, With<WorldCamera>)>,
 
     mut gizmos: Gizmos,
-    mut world_info_q: Query<(Option<Forces>, &mut Transform, &GlobalTransform, Option<&Mass>)>,
+    mut world_info_q: Query<(
+        Option<Forces>,
+        &mut Transform,
+        &GlobalTransform,
+        Option<&Mass>,
+    )>,
     time: Res<Time>,
     physics_paused: Res<PhysicsPaused>,
 
     key_input: Res<ButtonInput<KeyCode>>,
 ) {
-    let Ok((forces_opt, mut item_xfrm, item_global_xfrm, mass_opt)) = world_info_q.get_mut(grabbed.entity) else {
+    let Ok((forces_opt, mut item_xfrm, item_global_xfrm, mass_opt)) =
+        world_info_q.get_mut(grabbed.entity)
+    else {
         // Despawned?
         warn!("missing grabbable {}", grabbed.entity);
         commands.write_message(GrabbingCommand::CancelGrabItems);
-        return
+        return;
     };
 
     let Ok(cam_global_xfrm) = camera_q.single() else {
         // This might mean we've left gameplay... stop already.
         warn!("no camera for grabbing {}", grabbed.entity);
         commands.write_message(GrabbingCommand::CancelGrabItems);
-        return
+        return;
     };
 
     // Compute the desired new location, i.e. the current
     // position plus the camera's position + original distance.
     let cur_pos = item_global_xfrm.translation() + cam_global_xfrm.rotation() * grabbed.orig_offset;
 
-    let new_pos = cam_global_xfrm.translation() + cam_global_xfrm.rotation() * Vec3::NEG_Z * grabbed.distance;
+    let new_pos =
+        cam_global_xfrm.translation() + cam_global_xfrm.rotation() * Vec3::NEG_Z * grabbed.distance;
 
     const MIN_MOVE: Scalar = 0.01;
 
@@ -539,7 +547,10 @@ fn move_grabbed_item(
             new_vel.z = 0.;
         }
 
-        if !**physics_paused && is_rigid && let Some(mut forces) = forces_opt {
+        if !**physics_paused
+            && is_rigid
+            && let Some(mut forces) = forces_opt
+        {
             // Convert movement in world space to an effective impulse.
             // We directly set the linear velocity so it will move
             // in sync with the camera movement.
@@ -547,7 +558,8 @@ fn move_grabbed_item(
             *forces.angular_velocity_mut() = default();
         } else {
             // Non-physical, just move.
-            item_xfrm.translation += item_global_xfrm.rotation().inverse() * new_vel * time.delta_secs().min(1.0);
+            item_xfrm.translation +=
+                item_global_xfrm.rotation().inverse() * new_vel * time.delta_secs().min(1.0);
         }
 
         grabbed.movement += movement;
@@ -556,8 +568,9 @@ fn move_grabbed_item(
     }
 
     let rot = grabbing_force.turn_speed * time.delta_secs();
-    let ctrl_pressed = key_input.pressed(KeyCode::ControlLeft) ||key_input.pressed(KeyCode::ControlRight);
-    let alt_pressed = key_input.pressed(KeyCode::AltLeft) ||key_input.pressed(KeyCode::AltRight);
+    let ctrl_pressed =
+        key_input.pressed(KeyCode::ControlLeft) || key_input.pressed(KeyCode::ControlRight);
+    let alt_pressed = key_input.pressed(KeyCode::AltLeft) || key_input.pressed(KeyCode::AltRight);
     if key_input.pressed(KeyCode::BracketLeft) {
         if ctrl_pressed {
             item_xfrm.rotate_x(-rot);
@@ -566,8 +579,7 @@ fn move_grabbed_item(
         } else {
             item_xfrm.rotate_y(-rot);
         }
-    }
-    else if key_input.pressed(KeyCode::BracketRight) {
+    } else if key_input.pressed(KeyCode::BracketRight) {
         if ctrl_pressed {
             item_xfrm.rotate_x(rot);
         } else if alt_pressed {
