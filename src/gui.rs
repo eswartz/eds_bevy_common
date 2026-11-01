@@ -84,9 +84,6 @@ impl Plugin for GuiPlugin {
         .add_systems(OnExit(OverlayState::Loading),
             on_loading_finished)
 
-        .add_systems(OnExit(OverlayState::Hidden),
-            hide_instructions,
-        )
         .add_systems(OnEnter(LevelState::Playing),
             show_instructions_from_resource,
         )
@@ -111,6 +108,7 @@ impl Plugin for GuiPlugin {
                 update_pause_ui,
                 update_mute_ui,
                 update_physics_pause_ui,
+                update_instructions_ui.run_if(state_changed::<OverlayState>),
             )
             // .in_set(InteractionSystems)
             .run_if(in_state(ProgramState::InGame))
@@ -1033,7 +1031,7 @@ fn show_instructions_from_resource(
 
 /// Call with run_system_cached_with to set the instruction text.
 /// This text will fade out over time.
-pub fn show_instructions(
+fn show_instructions(
     In((text, tween_time)): In<(String, Duration)>,
     mut commands: Commands,
     fonts: Res<CommonGuiAssets>,
@@ -1108,7 +1106,7 @@ pub fn show_instructions(
     ));
 }
 
-pub fn hide_instructions(gui_area: GuiAreaMarkerLocator, mut vis_q: Query<&mut Visibility>) {
+fn hide_instructions(gui_area: GuiAreaMarkerLocator, mut vis_q: Query<&mut Visibility>) {
     gui_area.with_marker(GuiAreaMarker::InstructionsArea, |ent| {
         if let Ok(mut vis) = vis_q.get_mut(ent) {
             *vis = Visibility::Hidden;
@@ -1116,6 +1114,24 @@ pub fn hide_instructions(gui_area: GuiAreaMarkerLocator, mut vis_q: Query<&mut V
     });
 }
 
-pub fn reset_instructions(mut commands: Commands) {
+fn reset_instructions(mut commands: Commands) {
     commands.remove_resource::<InstructionText>();
+}
+
+/// Hide instructions when menu or dialog is up.
+fn update_instructions_ui(
+    overlay: Res<State<OverlayState>>,
+    gui_area: GuiAreaMarkerLocator,
+    mut vis_q: Query<&mut Visibility>,
+    instructions: Option<Res<InstructionText>>,
+) {
+    gui_area.with_marker(GuiAreaMarker::InstructionsArea, |ent| {
+        if let Ok(mut vis) = vis_q.get_mut(ent) {
+            *vis = if overlay.is_hidden() && instructions.is_some() {
+                Visibility::Inherited
+            } else {
+                Visibility::Hidden
+            };
+        }
+    });
 }
