@@ -253,7 +253,7 @@ pub fn add_level_selector(
                 if let Some(level) = &current_level
                     && level.info.id == level_infos[index].id
                 {
-                    format!("{} (reset)", level_names[index])
+                    format!("{} (new)", level_names[index])
                 } else if !level_names.is_empty() {
                     level_names[index].clone()
                 } else {

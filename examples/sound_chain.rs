@@ -649,7 +649,7 @@ fn on_enter_controls_menu(
         &style,
         &history,
     )
-    .with_font_scale(0.75)
+    .with_font_size_scale(0.75)
     .page()
     .add_item(
         "Move Left/Right Power",

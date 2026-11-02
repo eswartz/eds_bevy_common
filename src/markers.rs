@@ -1,8 +1,8 @@
 //! This defines generic markers for use in most contexts.
 
-use std::time::Duration;
-use bevy::prelude::*;
 use crate::prelude::PlayerMode;
+use bevy::prelude::*;
+use std::time::Duration;
 
 /// Mark the object for persistence.
 #[derive(Default, Component, Reflect, Debug)]
@@ -114,11 +114,3 @@ pub struct WorldCamera;
 #[reflect(Component)]
 #[type_path = "game"]
 pub struct ViewerCamera;
-
-/////
-
-/// Mark a glass item, to tweak materials.
-#[derive(Component, Reflect, Debug)]
-#[reflect(Component)]
-#[type_path = "game"]
-pub struct GlassTweak;

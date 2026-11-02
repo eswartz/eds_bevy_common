@@ -60,7 +60,6 @@ use bevy_enhanced_input::prelude::*;
 use rustc_hash::FxBuildHasher;
 
 use crate::gui::UiFont;
-use crate::gui::ensure_ui_font;
 use crate::prelude::RENDER_LAYER_UI;
 #[cfg(feature = "input_bei")]
 use crate::prelude::actions;
@@ -72,29 +71,76 @@ use super::states_sets::ProgramState;
 const MARGIN: Val = Val::Px(16.);
 const SHADOW_OFFSET: f32 = 4.0;
 
-const MENU_ITEM_FONT_SIZE: f32 = 40.0;
-
-const TEXT_SHADOW_COLOR: Color = Color::hsva(0.0, 0.0, 0.25, 1.0);
-const NORMAL_BUTTON: Color = Color::hsva(0.0, 0.0, 0.75, 1.0);
-const HOVERED_BUTTON: Color = Color::hsva(0.0, 0.0, 1.0, 1.0);
-const PRESSED_BUTTON: Color = Color::srgb(0.35, 0.75, 0.35);
+const MENU_ITEM_FONT_SIZE: Val = Val::Px(40.0);
 
 /// Style settings for the menu.
-#[derive(Debug, Resource, Reflect)]
+#[derive(Debug, Clone, PartialEq, Resource, Reflect)]
 #[type_path = "game"]
 pub struct MenuStyle {
     /// Color for the background in menus.
-    pub page_color: Color,
+    /// This is applied by [MenuItemBuilder::page].
+    pub page_color: Option<Color>,
+    pub page_image: Option<Handle<Image>>,
     /// Font for menu text.
     pub font: Handle<Font>,
+    /// Font for menu text.
+    pub font_size_scale: f32,
+
+    pub text_shadow_color: Color,
+    pub normal_button_color: Color,
+    pub hovered_button_color: Color,
+    pub pressed_button_color: Color,
+}
+
+impl MenuStyle {
+    pub fn with_font(self, font: Handle<Font>) -> Self {
+        Self { font, ..self }
+    }
+    pub fn with_font_size_scale(self, font_size_scale: f32) -> Self {
+        Self {
+            font_size_scale,
+            ..self
+        }
+    }
+    pub fn with_page_color(self, page_color: Option<Color>) -> Self {
+        Self { page_color, ..self }
+    }
+    pub fn with_page_image(self, page_image: Option<Handle<Image>>) -> Self {
+        Self { page_image, ..self }
+    }
+    pub fn with_text_shadow_color(self, text_shadow_color: Color) -> Self {
+        Self {
+            text_shadow_color,
+            ..self
+        }
+    }
+    pub fn with_normal_button_color(self, normal_button_color: Color) -> Self {
+        Self {
+            normal_button_color,
+            ..self
+        }
+    }
+    pub fn with_pressed_button_color(self, pressed_button_color: Color) -> Self {
+        Self {
+            pressed_button_color,
+            ..self
+        }
+    }
 }
 
 impl Default for MenuStyle {
     fn default() -> Self {
         Self {
-            page_color: tailwind::BLUE_900.with_alpha(0.25).into(),
-            // These are set in [set_default_menu_style]
+            // This are set in [set_default_menu_style]
             font: default(),
+            font_size_scale: 1.0,
+
+            page_color: Some(tailwind::BLUE_900.with_alpha(0.25).into()),
+            page_image: None,
+            text_shadow_color: Color::hsva(0.0, 0.0, 0.25, 1.0),
+            normal_button_color: Color::hsva(0.0, 0.0, 0.75, 1.0),
+            hovered_button_color: Color::hsva(0.0, 0.0, 1.0, 1.0),
+            pressed_button_color: Color::srgb(0.35, 0.75, 0.35),
         }
     }
 }
@@ -103,14 +149,12 @@ pub struct MenuCommonPlugin;
 impl Plugin for MenuCommonPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(TabNavigationPlugin)
+            .insert_resource(MenuStyle::default())
             .insert_resource(DraggingMenuItem(None))
             .insert_resource(MenuItemSelectionHistory::default())
             .insert_resource(PreviousMenuStack::default())
             .add_message::<MenuActionMessage>()
-            .add_systems(
-                OnEnter(ProgramState::New),
-                set_default_menu_style.after(ensure_ui_font),
-            )
+            .add_systems(PreUpdate, on_uifont_init.run_if(resource_changed::<UiFont>))
             .add_systems(
                 PreUpdate,
                 // Common handling for any menu.
@@ -147,16 +191,9 @@ impl Plugin for MenuCommonPlugin {
     }
 }
 
-fn set_default_menu_style(
-    mut commands: Commands,
-    style: Option<Res<MenuStyle>>,
-    ui_font: Res<UiFont>,
-) {
-    if style.is_none() {
-        commands.insert_resource(MenuStyle {
-            font: ui_font.0.clone(),
-            ..default()
-        });
+fn on_uifont_init(ui_font: Res<UiFont>, mut menu_style: If<ResMut<MenuStyle>>) {
+    if menu_style.font == Handle::default() {
+        menu_style.font = ui_font.0.clone();
     }
 }
 
@@ -267,9 +304,7 @@ pub struct MenuItemBuilder<'w, 's> {
     page: Entity,
     overlay: OverlayState,
     program: ProgramState,
-    font: Handle<Font>,
-    font_scale: f32,
-    bg_color: Color,
+    style: MenuStyle,
     commands: Commands<'w, 's>,
     item_index: i32,
     previous_first_ent_label: Option<(Entity, String)>,
@@ -287,9 +322,7 @@ impl<'w, 's> MenuItemBuilder<'w, 's> {
         Self {
             overlay,
             program,
-            font: style.font.clone(),
-            font_scale: 1.0,
-            bg_color: style.page_color,
+            style: (*style).clone(),
             page: Entity::PLACEHOLDER,
             commands,
             item_index: 0,
@@ -299,13 +332,22 @@ impl<'w, 's> MenuItemBuilder<'w, 's> {
     }
 
     pub fn with_font(self, font: Handle<Font>) -> Self {
-        Self { font, ..self }
+        Self {
+            style: self.style.with_font(font),
+            ..self
+        }
     }
-    pub fn with_font_scale(self, font_scale: f32) -> Self {
-        Self { font_scale, ..self }
+    pub fn with_font_size_scale(self, font_scale: f32) -> Self {
+        Self {
+            style: self.style.with_font_size_scale(font_scale),
+            ..self
+        }
     }
-    pub fn with_page_color(self, font_scale: f32) -> Self {
-        Self { font_scale, ..self }
+    pub fn with_page_color(self, page_color: Option<Color>) -> Self {
+        Self {
+            style: self.style.with_page_color(page_color),
+            ..self
+        }
     }
 
     /// Create the menu page, applying the desired styling.
@@ -315,7 +357,7 @@ impl<'w, 's> MenuItemBuilder<'w, 's> {
             .commands
             .spawn((
                 DespawnOnExit(self.overlay),
-                create_menu_page_node(self.bg_color),
+                create_menu_page_node(&self.style),
                 TabGroup::new(FxBuildHasher.hash_one(self.overlay) as _),
             ))
             .with_child(Node {
@@ -329,6 +371,27 @@ impl<'w, 's> MenuItemBuilder<'w, 's> {
                 },
                 ..default()
             })
+            .with_child((
+                ZIndex(-5),
+                FixedNode,
+                Node {
+                    width: percent(100),
+                    height: percent(100),
+                    align_items: AlignItems::Center,
+                    justify_content: JustifyContent::Center,
+                    ..default()
+                },
+                ImageNode {
+                    image: self
+                        .style
+                        .page_image
+                        .clone()
+                        .unwrap_or(bevy::image::TRANSPARENT_IMAGE_HANDLE),
+                    image_mode: NodeImageMode::Auto,
+                    visual_box: VisualBox::ContentBox,
+                    ..default()
+                },
+            ))
             .id();
 
         Self { page, ..self }
@@ -356,8 +419,7 @@ impl<'w, 's> MenuItemBuilder<'w, 's> {
             ent_id = spawn_menu_button_bundle(
                 builder,
                 text.clone(),
-                self.font.clone(),
-                self.font_scale,
+                &self.style,
                 tab_index,
                 Arc::new(Mutex::new(handler)),
             );
@@ -386,19 +448,14 @@ impl<'w, 's> MenuItemBuilder<'w, 's> {
     pub fn add_label(
         &mut self,
         text: impl Into<String>,
-        font_scale_scale: f32,
+        style: &MenuStyle,
         other_menu_items: impl Bundle,
     ) -> &mut Self {
         let text: String = text.into();
         let mut ent_commands = self.commands.entity(self.page);
         let mut ent_id = Entity::PLACEHOLDER;
         ent_commands.with_children(|builder| {
-            ent_id = spawn_menu_label_bundle(
-                builder,
-                text.clone(),
-                self.font.clone(),
-                self.font_scale * font_scale_scale,
-            );
+            ent_id = spawn_menu_label_bundle(builder, text.clone(), style);
             builder
                 .commands()
                 .entity(ent_id)
@@ -644,7 +701,7 @@ pub trait MenuItemHandler: Send + Sync {
     }
 }
 
-fn create_menu_page_node(bg_color: Color) -> impl Bundle {
+fn create_menu_page_node(style: &MenuStyle) -> impl Bundle {
     (
         Node {
             width: Val::Percent(100.),
@@ -652,10 +709,9 @@ fn create_menu_page_node(bg_color: Color) -> impl Bundle {
             flex_direction: FlexDirection::Column,
             align_items: AlignItems::Center,
             justify_content: JustifyContent::Center,
-            padding: UiRect::all(MARGIN),
             ..default()
         },
-        BackgroundColor(bg_color),
+        BackgroundColor(style.page_color.unwrap_or(Color::BLACK)),
         RenderLayers::from_layers(&[RENDER_LAYER_UI]),
     )
 }
@@ -663,17 +719,16 @@ fn create_menu_page_node(bg_color: Color) -> impl Bundle {
 fn spawn_menu_button_bundle(
     builder: &mut ChildSpawnerCommands,
     text: String,
-    font: Handle<Font>,
-    font_size_scale: f32,
+    style: &MenuStyle,
     tab_index: TabIndex,
     handler: Arc<Mutex<dyn MenuItemHandler>>,
 ) -> Entity {
-    let ent_id = spawn_menu_row_bundle(builder, font, font_size_scale);
+    let ent_id = spawn_menu_row_bundle(builder, style);
     builder.commands().entity(ent_id).try_insert((
         Button,
         Hovered::default(),
         Text::new(text.clone()),
-        MenuBaseText(text, font_size_scale),
+        MenuBaseText(text, style.font_size_scale),
         tab_index,
         MenuItem(handler),
         RelativeCursorPosition::default(),
@@ -684,41 +739,36 @@ fn spawn_menu_button_bundle(
 fn spawn_menu_label_bundle(
     builder: &mut ChildSpawnerCommands,
     text: String,
-    font: Handle<Font>,
-    font_size_scale: f32,
+    style: &MenuStyle,
 ) -> Entity {
-    let ent_id = spawn_menu_row_bundle(builder, font, font_size_scale);
-    builder
-        .commands()
-        .entity(ent_id)
-        .try_insert((Text::new(text.clone()), MenuBaseText(text, font_size_scale)));
+    let ent_id = spawn_menu_row_bundle(builder, style);
+    builder.commands().entity(ent_id).try_insert((
+        Text::new(text.clone()),
+        MenuBaseText(text, style.font_size_scale),
+    ));
     ent_id
 }
 
 /// Add a menu item row to a given menu page.
-pub fn spawn_menu_row_bundle(
-    builder: &mut ChildSpawnerCommands,
-    font: Handle<Font>,
-    font_size_scale: f32,
-) -> Entity {
+fn spawn_menu_row_bundle(builder: &mut ChildSpawnerCommands, style: &MenuStyle) -> Entity {
     builder
         .spawn((
             Node {
                 padding: UiRect::axes(MARGIN, MARGIN),
                 align_self: AlignSelf::Center,
-                height: Val::Px(MENU_ITEM_FONT_SIZE * font_size_scale * 2.0),
+                height: (MENU_ITEM_FONT_SIZE * style.font_size_scale * 2.0).into(),
                 ..default()
             },
             TextFont {
-                font: font.into(),
-                font_size: FontSize::Px(MENU_ITEM_FONT_SIZE * font_size_scale),
+                font: style.font.clone().into(),
+                font_size: (MENU_ITEM_FONT_SIZE * style.font_size_scale).into(),
                 ..default()
             },
-            LineHeight::RelativeToFont(font_size_scale),
+            LineHeight::RelativeToFont(style.font_size_scale),
             TextColor::WHITE,
             TextShadow {
-                color: TEXT_SHADOW_COLOR,
-                offset: Vec2::splat(SHADOW_OFFSET * font_size_scale),
+                color: style.text_shadow_color,
+                offset: Vec2::splat(SHADOW_OFFSET * style.font_size_scale),
             },
         ))
         .id()
@@ -987,28 +1037,28 @@ fn on_menu_down_up(
 
     let dir = event.value.signum() as i32;
     // Move in menu?
-    let nav_dir = match dir {
+    let Some(nav_dir) = (match dir {
         -1 => Some(NavAction::Previous),
         1 => Some(NavAction::Next),
-        _ => None,
+        _ => return,
+    }) else {
+        return;
     };
-    if let Some(nav_dir) = nav_dir {
-        let maybe_next = nav.navigate(&focus, nav_dir);
+    let maybe_next = nav.navigate(&focus, nav_dir);
 
-        match maybe_next {
-            Ok(next) => {
-                focus.set(next, FocusCause::Navigated);
+    match maybe_next {
+        Ok(next) => {
+            focus.set(next, FocusCause::Navigated);
+            visible.0 = true;
+            commands.write_message(MenuActionMessage::Navigate(next));
+        }
+        Err(e) => {
+            // This failure mode is recoverable, but still indicates a problem.
+            // warn!("Tab navigation error: {}", e);
+            if let TabNavigationError::NoTabGroupForCurrentFocus { new_focus, .. } = e {
+                focus.set(new_focus, FocusCause::Navigated);
                 visible.0 = true;
-                commands.write_message(MenuActionMessage::Navigate(next));
-            }
-            Err(e) => {
-                // This failure mode is recoverable, but still indicates a problem.
-                // warn!("Tab navigation error: {}", e);
-                if let TabNavigationError::NoTabGroupForCurrentFocus { new_focus, .. } = e {
-                    focus.set(new_focus, FocusCause::Navigated);
-                    visible.0 = true;
-                    commands.write_message(MenuActionMessage::Navigate(new_focus));
-                }
+                commands.write_message(MenuActionMessage::Navigate(new_focus));
             }
         }
     }
@@ -1088,20 +1138,31 @@ fn handle_menu_item_decoration(
         With<Button>,
     >,
     focus: Res<InputFocus>,
+    style: Res<MenuStyle>,
 ) {
     for (ent, hovered, pressed, MenuBaseText(_, scale), mut text, mut color) in
         &mut interaction_query
     {
         let (font_size, item_color) = match (hovered.get(), pressed, focus.get() == Some(ent)) {
-            (_, _, true) => (MENU_ITEM_FONT_SIZE * scale * 1.1, PRESSED_BUTTON.into()),
-            (_, true, _) => (MENU_ITEM_FONT_SIZE * scale * 1.1, PRESSED_BUTTON.into()),
-            (true, false, _) => (MENU_ITEM_FONT_SIZE * scale * 1.1, HOVERED_BUTTON.into()),
-            (false, _, _) => (MENU_ITEM_FONT_SIZE * scale, NORMAL_BUTTON.into()),
+            (_, _, true) => (
+                MENU_ITEM_FONT_SIZE * *scale * 1.1,
+                style.pressed_button_color,
+            ),
+            (_, true, _) => (
+                MENU_ITEM_FONT_SIZE * *scale * 1.1,
+                style.pressed_button_color,
+            ),
+            (true, false, _) => (
+                MENU_ITEM_FONT_SIZE * *scale * 1.1,
+                style.hovered_button_color,
+            ),
+            (false, _, _) => (MENU_ITEM_FONT_SIZE * *scale, style.normal_button_color),
         };
+        let font_size: FontSize = font_size.into();
         #[expect(clippy::float_cmp, reason = "binary diff checking")]
-        if text.font_size != FontSize::Px(font_size) || *color != item_color {
-            text.font_size = FontSize::Px(font_size);
-            *color = item_color;
+        if text.font_size != font_size || color.0 != item_color {
+            text.font_size = font_size;
+            color.0 = item_color;
         }
     }
 }

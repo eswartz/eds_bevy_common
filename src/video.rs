@@ -15,7 +15,6 @@ use bevy::pbr::ScreenSpaceAmbientOcclusion;
 use bevy::pbr::ScreenSpaceAmbientOcclusionQualityLevel;
 use bevy::pbr::ScreenSpaceTransmissionQuality;
 
-use crate::markers::GlassTweak;
 use crate::prelude::GameplayState;
 use crate::prelude::LevelState;
 use crate::prelude::WorldCamera;
@@ -24,31 +23,43 @@ pub struct VideoPlugin;
 
 impl Plugin for VideoPlugin {
     fn build(&self, app: &mut App) {
-        app
-            .add_systems(OnEnter(GameplayState::Playing),
-                (
-                    apply_effect_settings,
-                    apply_camera_settings,
-                    apply_glass_tweak,
-                )
-            )
-            .add_systems(OnEnter(LevelState::Configuring),
-                (
-                    apply_effect_settings,
-                    apply_camera_settings,
-                    apply_glass_tweak,
-                )
-            )
-            .add_systems(PreUpdate,
-                (
-                    apply_effect_settings.run_if(resource_changed::<VideoSettings>),
-                    apply_camera_settings.run_if(resource_changed::<VideoSettings>.or_else(resource_changed::<FovDelta>)),
-                    apply_glass_tweak,
-                )
-            )
-        ;
+        app.add_systems(
+            OnEnter(GameplayState::Playing),
+            (
+                apply_effect_settings,
+                apply_camera_settings,
+                apply_glass_tweak,
+            ),
+        )
+        .add_systems(
+            OnEnter(LevelState::Configuring),
+            (
+                apply_effect_settings,
+                apply_camera_settings,
+                apply_glass_tweak,
+            ),
+        )
+        .add_systems(
+            PreUpdate,
+            (
+                apply_effect_settings.run_if(resource_changed::<VideoSettings>),
+                apply_camera_settings.run_if(
+                    resource_changed::<VideoSettings>.or_else(resource_changed::<FovDelta>),
+                ),
+                apply_glass_tweak,
+            ),
+        );
     }
 }
+/////
+
+/// Mark a glass item, to tweak materials.
+#[derive(Component, Reflect, Debug)]
+#[reflect(Component)]
+#[type_path = "game"]
+pub struct GlassTweak;
+
+/////
 
 #[derive(Resource, Debug, Clone, Reflect)]
 #[reflect(Default, Clone, Resource)]
@@ -92,39 +103,35 @@ pub enum OrderIndependentTransparencyQuality {
 impl OrderIndependentTransparencyQuality {
     pub fn to_settings(&self) -> Option<OrderIndependentTransparencySettings> {
         if cfg!(any(target_arch = "wasm32", feature = "solari")) {
-            return None
+            return None;
         }
 
         Some(match self {
             OrderIndependentTransparencyQuality::Off => return None,
-            OrderIndependentTransparencyQuality::Low =>
-                OrderIndependentTransparencySettings {
-                    sorted_fragment_max_count: 4,
-                    fragments_per_pixel_average: 2.0,
-                    alpha_threshold: 0.0,
-                    ..default()
-                },
-            OrderIndependentTransparencyQuality::Medium =>
-                OrderIndependentTransparencySettings {
-                    sorted_fragment_max_count: 8,
-                    fragments_per_pixel_average: 4.0,
-                    alpha_threshold: 0.0,
-                    ..default()
-                },
-            OrderIndependentTransparencyQuality::High =>
-                OrderIndependentTransparencySettings {
-                    sorted_fragment_max_count: 16,
-                    fragments_per_pixel_average: 6.0,
-                    alpha_threshold: 0.0,
-                    ..default()
-                },
-            OrderIndependentTransparencyQuality::Ultra =>
-                OrderIndependentTransparencySettings {
-                    sorted_fragment_max_count: 24,
-                    fragments_per_pixel_average: 8.0,
-                    alpha_threshold: 0.0,
-                    ..default()
-                },
+            OrderIndependentTransparencyQuality::Low => OrderIndependentTransparencySettings {
+                sorted_fragment_max_count: 4,
+                fragments_per_pixel_average: 2.0,
+                alpha_threshold: 0.0,
+                ..default()
+            },
+            OrderIndependentTransparencyQuality::Medium => OrderIndependentTransparencySettings {
+                sorted_fragment_max_count: 8,
+                fragments_per_pixel_average: 4.0,
+                alpha_threshold: 0.0,
+                ..default()
+            },
+            OrderIndependentTransparencyQuality::High => OrderIndependentTransparencySettings {
+                sorted_fragment_max_count: 16,
+                fragments_per_pixel_average: 6.0,
+                alpha_threshold: 0.0,
+                ..default()
+            },
+            OrderIndependentTransparencyQuality::Ultra => OrderIndependentTransparencySettings {
+                sorted_fragment_max_count: 24,
+                fragments_per_pixel_average: 8.0,
+                alpha_threshold: 0.0,
+                ..default()
+            },
         })
     }
 }
@@ -259,6 +266,8 @@ pub enum GlassQuality {
 #[derive(
     Component,
     Reflect,
+    Serialize,
+    Deserialize,
     EnumIter,
     EnumString,
     VariantArray,
@@ -273,8 +282,6 @@ pub enum GlassQuality {
     Hash,
     PartialOrd,
     Ord,
-    Serialize,
-    Deserialize,
 )]
 #[reflect(Default, Clone, Component)]
 #[type_path = "game"]
@@ -293,7 +300,7 @@ fn apply_camera_settings(
     fov_delta: Res<FovDelta>,
 ) {
     let Ok(mut proj) = camera_q.single_mut() else {
-        return
+        return;
     };
 
     if let Projection::Perspective(proj) = &mut *proj {
@@ -317,30 +324,26 @@ fn apply_effect_settings(
 
         match video_settings.antialiasing {
             Antialiasing::Off => {
-                ent_commands.try_remove::<(
-                    ScreenSpaceAmbientOcclusion,
-                    TemporalAntiAliasing,
-                )>();
+                ent_commands.try_remove::<(ScreenSpaceAmbientOcclusion, TemporalAntiAliasing)>();
 
-                ent_commands.try_insert((
-                    Msaa::Off,
-                ));
+                ent_commands.try_insert((Msaa::Off,));
 
                 if let Some(settings) = video_settings.oit_settings.to_settings() {
                     ent_commands.try_insert(settings);
                 }
-            },
+            }
             Antialiasing::TSAA => {
                 ent_commands.try_insert((
                     Msaa::Off,
                     ScreenSpaceAmbientOcclusion {
-                        quality_level:
-                            match video_settings.texture_quality {
-                                TextureQuality::Low => ScreenSpaceAmbientOcclusionQualityLevel::Low,
-                                TextureQuality::Medium => ScreenSpaceAmbientOcclusionQualityLevel::Medium,
-                                TextureQuality::High => ScreenSpaceAmbientOcclusionQualityLevel::High,
-                                TextureQuality::Ultra => ScreenSpaceAmbientOcclusionQualityLevel::Ultra,
-                            },
+                        quality_level: match video_settings.texture_quality {
+                            TextureQuality::Low => ScreenSpaceAmbientOcclusionQualityLevel::Low,
+                            TextureQuality::Medium => {
+                                ScreenSpaceAmbientOcclusionQualityLevel::Medium
+                            }
+                            TextureQuality::High => ScreenSpaceAmbientOcclusionQualityLevel::High,
+                            TextureQuality::Ultra => ScreenSpaceAmbientOcclusionQualityLevel::Ultra,
+                        },
                         ..default()
                     },
                     TemporalAntiAliasing::default(),
@@ -350,7 +353,12 @@ fn apply_effect_settings(
                 }
             }
             Antialiasing::MSAA => {
-                ent_commands.try_remove::<(Msaa, ScreenSpaceAmbientOcclusion, TemporalAntiAliasing, OrderIndependentTransparencySettings)>();
+                ent_commands.try_remove::<(
+                    Msaa,
+                    ScreenSpaceAmbientOcclusion,
+                    TemporalAntiAliasing,
+                    OrderIndependentTransparencySettings,
+                )>();
                 ent_commands.try_insert(Msaa::Sample4);
             }
         }
@@ -397,16 +405,17 @@ fn apply_glass_tweak(
     for (mut mat_h, _) in glass_mat_q.iter_mut() {
         if video_settings.is_changed() || mat_h.is_changed() {
             if let Some(mat) = mats.get(mat_h.id())
-            && mat.specular_transmission != 0.0 {
+                && mat.specular_transmission != 0.0
+            {
                 let new_mat = if video_settings.glass_quality == GlassQuality::Off {
                     StandardMaterial {
                         alpha_mode: AlphaMode::Add,
-                        .. mat.clone()
+                        ..mat.clone()
                     }
                 } else {
                     StandardMaterial {
                         alpha_mode: AlphaMode::Opaque,
-                        .. mat.clone()
+                        ..mat.clone()
                     }
                 };
                 if new_mat.alpha_mode != mat.alpha_mode {
