@@ -1,9 +1,9 @@
 //! This defines generic markers for use in most contexts.
 
-use std::marker::PhantomData;
 use bevy::ecs::entity_disabling::Disabled;
 use bevy::prelude::*;
 use bevy::state::state::StateTransitionSystems;
+use std::marker::PhantomData;
 
 /// Add this plugin along with any user States with which you use [DespawnOnReset].
 #[derive(Default)]
@@ -13,7 +13,8 @@ pub struct DespawnOnResetPlugin<S: States> {
 
 impl<S: States> Plugin for DespawnOnResetPlugin<S> {
     fn build(&self, app: &mut App) {
-        app.add_systems(StateTransition,
+        app.add_systems(
+            StateTransition,
             despawn_entities_on_state_set::<S>.in_set(StateTransitionSystems::EnterSchedules),
         );
     }

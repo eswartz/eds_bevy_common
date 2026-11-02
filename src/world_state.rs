@@ -8,25 +8,19 @@ pub struct WorldStatePlugin;
 
 impl Plugin for WorldStatePlugin {
     fn build(&self, app: &mut App) {
-        app
-            .insert_resource(Gravity(9.8 * Vector::NEG_Y))
-
+        app.insert_resource(Gravity(9.8 * Vector::NEG_Y))
             // Spawn the [WorldMarker] once per game.
-            .add_systems(OnEnter(GameplayState::Setup),
-                (
-                    setup_world_marker,
-                )
-            )
-
+            .add_systems(OnEnter(GameplayState::Setup), (setup_world_marker,))
             // Despawn the whole world [WorldMarker] on down,
             // on exiting a game. This is the last-ditch cleanup which
             // a game should handle instead in [GameplayState::]
-            .add_systems(OnTransition{ exited: ProgramState::InGame, entered: ProgramState::LaunchMenu },
-                (
-                    despawn_world,
-                )
-            )
-        ;
+            .add_systems(
+                OnTransition {
+                    exited: ProgramState::InGame,
+                    entered: ProgramState::LaunchMenu,
+                },
+                (despawn_world,),
+            );
     }
 }
 
@@ -59,19 +53,22 @@ pub fn setup_world_marker(
     child_q: Query<&Children>,
 ) {
     if let Some(ent) = &world_marker
-    && let Ok(children) = child_q.get(ent.0) {
+        && let Ok(children) = child_q.get(ent.0)
+    {
         for kid in children {
             commands.entity(*kid).despawn();
         }
     }
     if world_q.is_empty() {
-        let ent = commands.spawn((
-            Name::new("World"),
-            //DespawnOnExit(ProgramState::InGame),
-            WorldMarker::default(),
-            Transform::IDENTITY,
-            Visibility::Inherited,
-        )).id();
+        let ent = commands
+            .spawn((
+                Name::new("World"),
+                //DespawnOnExit(ProgramState::InGame),
+                WorldMarker::default(),
+                Transform::IDENTITY,
+                Visibility::Inherited,
+            ))
+            .id();
         commands.insert_resource(WorldMarkerEntity(ent));
     }
 }

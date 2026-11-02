@@ -14,38 +14,33 @@ pub struct LifecyclePlugin;
 
 impl Plugin for LifecyclePlugin {
     fn build(&self, app: &mut App) {
-        app
-            .init_resource::<PauseState>()
+        app.init_resource::<PauseState>()
             .init_resource::<NonPauseTime>()
-            .add_systems(Startup,
-                init_phased_winit_settings,
+            .add_systems(Startup, init_phased_winit_settings)
+            .add_systems(
+                Update,
+                (
+                    check_pause_request,
+                    reset_pause_on_enter_launch_menu
+                        .run_if(resource_changed::<State<ProgramState>>),
+                    check_despawners.run_if(not(is_paused)),
+                    check_configure_before_playing,
+                    update_frame_rate_on_pause.run_if(resource_changed::<PauseState>),
+                    count_nonpaused_time.run_if(not(is_paused)),
+                ),
             )
-            .add_systems(Update, (
-                check_pause_request,
-                reset_pause_on_enter_launch_menu
-                    .run_if(resource_changed::<State<ProgramState>>),
-                check_despawners
-                    .run_if(not(is_paused)),
-                check_configure_before_playing,
-                update_frame_rate_on_pause
-                    .run_if(resource_changed::<PauseState>),
-                count_nonpaused_time
-                    .run_if(not(is_paused)),
-            ))
-
             .add_systems(
                 OnEnter(ProgramState::InGame),
                 |mut time: If<ResMut<Time<Physics>>>| {
                     time.unpause();
-                }
+                },
             )
             .add_systems(
                 OnEnter(GameplayState::Setup),
                 |mut time: If<ResMut<Time<Physics>>>| {
                     time.pause();
-                }
-            )
-        ;
+                },
+            );
     }
 }
 
@@ -58,7 +53,7 @@ fn check_despawners(
     for (ent, mut despawn) in despawn_q.iter_mut() {
         if despawn.0.is_zero() {
             // Ignore these as in a default component.
-            continue
+            continue;
         }
         if despawn.0 <= dt {
             commands.entity(ent).try_despawn();
@@ -81,12 +76,18 @@ pub struct PauseState {
 
 impl PauseState {
     pub fn new(user: bool) -> Self {
-        Self{ user, menu: false }
+        Self { user, menu: false }
     }
 
-    pub fn is_paused(&self) -> bool { self.user | self.menu }
-    pub fn is_user_paused(&self) -> bool { self.user }
-    pub fn is_menu_paused(&self) -> bool { self.menu }
+    pub fn is_paused(&self) -> bool {
+        self.user | self.menu
+    }
+    pub fn is_user_paused(&self) -> bool {
+        self.user
+    }
+    pub fn is_menu_paused(&self) -> bool {
+        self.menu
+    }
 
     pub fn set_user_paused(&mut self, paused: bool) {
         self.user = paused
@@ -106,13 +107,15 @@ fn check_pause_request(
     mut animator_transform_q: Query<&mut TweenAnim>,
 ) {
     if !paused.is_changed() {
-        return
+        return;
     }
     // Get the current, changed value, read as "our action: pause".
     let pause = paused.is_paused();
     // refactor?
     if pause {
-        time.map(|mut time| { time.pause(); });
+        time.map(|mut time| {
+            time.pause();
+        });
         for mut animator in animator_transform_q.iter_mut() {
             // By our convention,
             animator.playback_state = bevy_tweening::PlaybackState::Paused;
@@ -120,8 +123,12 @@ fn check_pause_request(
         // for mut runner in time_runner_q.iter_mut() {
         //     runner.set_paused(true);
         // }
-    } else /* !pause ==> resume */ {
-        time.map(|mut time| { time.unpause(); });
+    } else
+    /* !pause ==> resume */
+    {
+        time.map(|mut time| {
+            time.unpause();
+        });
         for mut animator in animator_transform_q.iter_mut() {
             animator.playback_state = bevy_tweening::PlaybackState::Playing;
         }
@@ -134,7 +141,7 @@ fn check_pause_request(
 /// This stores the winit settings to apply when the main program is running vs. paused.
 /// These are orthogonal from the focused/unfocused state.
 #[derive(Resource)]
-pub struct PhasedWinitSettings{
+pub struct PhasedWinitSettings {
     pub running: WinitSettings,
     pub paused: WinitSettings,
 }
@@ -144,14 +151,14 @@ fn init_phased_winit_settings(
     winit_settings: Res<WinitSettings>,
     phased_settings: Option<Res<PhasedWinitSettings>>,
 ) {
-    if phased_settings.is_some() { return };
+    if phased_settings.is_some() {
+        return;
+    };
 
-    commands.insert_resource(PhasedWinitSettings{
+    commands.insert_resource(PhasedWinitSettings {
         running: winit_settings.clone(),
         paused: WinitSettings {
-            focused_mode: UpdateMode::reactive_low_power(
-                Duration::from_secs_f32(1.0 / 1.0)
-            ),
+            focused_mode: UpdateMode::reactive_low_power(Duration::from_secs_f32(1.0 / 1.0)),
             unfocused_mode: winit_settings.unfocused_mode,
         },
     });
@@ -179,13 +186,12 @@ fn reset_pause_on_enter_launch_menu(
 ) {
     if **program_state != ProgramState::LaunchMenu {
         // Nope
-        return
+        return;
     }
 
     pause_state.set_menu_paused(false);
     pause_state.set_user_paused(false);
 }
-
 
 fn check_configure_before_playing(
     mut commands: Commands,

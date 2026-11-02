@@ -1,4 +1,7 @@
-use std::{cmp::Ordering, hash::{Hash, Hasher}};
+use std::{
+    cmp::Ordering,
+    hash::{Hash, Hasher},
+};
 
 use bevy::prelude::*;
 

@@ -14,7 +14,7 @@ pub enum SurfaceMaterial {
     Unknown,
 
     Water,
-    Synthetic,  // e.g. plastic or epoxy or whatever
+    Synthetic, // e.g. plastic or epoxy or whatever
     Wood,
     Metal,
     Glass,

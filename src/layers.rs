@@ -1,9 +1,8 @@
+use crate::physics::*;
 /// Common render and physics layers.
 use bevy::prelude::*;
-use crate::physics::*;
 
-#[derive(PhysicsLayer, Clone, Copy, Debug, Default)]
-#[derive(Reflect)]
+#[derive(PhysicsLayer, Clone, Copy, Debug, Default, Reflect)]
 #[reflect(Default)]
 #[type_path = "game"]
 pub enum GameLayer {
@@ -26,7 +25,6 @@ pub enum GameLayer {
     /// Layer 5 (32) - enemy entities.
     Enemy,
 }
-
 
 /// Used implicitly by all entities without a `RenderLayers` component.
 /// Our world model camera and all objects other than the player are on this layer.

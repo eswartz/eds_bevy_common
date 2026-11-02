@@ -1,12 +1,23 @@
 use std::{collections::BTreeMap, io::Write, sync::LazyLock};
 
-use bevy::{ecs::{query::QueryFilter, system::SystemParam}, prelude::*};
-use bevy_egui::{EguiContext, EguiContexts, EguiGlobalSettings, EguiPlugin, EguiPrimaryContextPass, PrimaryEguiContext, helpers::*, input::{EguiWantsInput, egui_wants_any_keyboard_input, egui_wants_any_pointer_input}};
+use bevy::{
+    ecs::{query::QueryFilter, system::SystemParam},
+    prelude::*,
+};
 use bevy_egui::egui;
-use bevy_inspector_egui::{DefaultInspectorConfigPlugin};
+use bevy_egui::{
+    EguiContext, EguiContexts, EguiGlobalSettings, EguiPlugin, EguiPrimaryContextPass,
+    PrimaryEguiContext,
+    helpers::*,
+    input::{EguiWantsInput, egui_wants_any_keyboard_input, egui_wants_any_pointer_input},
+};
+use bevy_inspector_egui::DefaultInspectorConfigPlugin;
 use fuzzy_matcher::skim::SkimMatcherV2;
 
-use crate::{prelude::*, world_load_save::{fetch_saveable_entities, save_world_state}};
+use crate::{
+    prelude::*,
+    world_load_save::{fetch_saveable_entities, save_world_state},
+};
 
 use super::gui::GuiState;
 
@@ -52,33 +63,25 @@ impl Plugin for DebugPlugin {
             app.add_plugins(DefaultInspectorConfigPlugin);
         }
 
-        app
-            .init_resource::<DebugEguiCamera>()
+        app.init_resource::<DebugEguiCamera>()
             .init_resource::<DebugLayout>()
-
             .add_systems(
                 PreUpdate,
                 (setup_egui_style, ensure_egui_context)
                     .chain()
                     .run_if(not(egui_initialized))
-                    .run_if(in_state(GameplayState::Playing))
-                    ,
-            )
-
-            .add_systems(
-                EguiPrimaryContextPass,
-                update_egui_inspector_ui
-                .run_if(is_debug_ui_inspector_visible),
+                    .run_if(in_state(GameplayState::Playing)),
             )
             .add_systems(
                 EguiPrimaryContextPass,
-                update_egui_settings_ui
-                .run_if(is_debug_ui_enabled),
+                update_egui_inspector_ui.run_if(is_debug_ui_inspector_visible),
             )
-        ;
+            .add_systems(
+                EguiPrimaryContextPass,
+                update_egui_settings_ui.run_if(is_debug_ui_enabled),
+            );
     }
 }
-
 
 /// Which 3D camera hosts egui UI?
 #[derive(Resource, Reflect, Default, PartialEq, Debug)]
@@ -115,8 +118,7 @@ impl<'w, 's> DebugEguiCameraQuery<'w, 's> {
 pub fn egui_initialized(
     camera_q: Query<Entity, (With<Camera3d>, With<PrimaryEguiContext>)>,
     debug: DebugEguiCameraQuery,
-) -> bool
-{
+) -> bool {
     for ent in camera_q.iter() {
         if debug.is_debug_camera(ent) {
             return true;
@@ -133,17 +135,15 @@ pub fn ensure_egui_context(
 ) {
     for camera_ent in camera_q.iter() {
         if debug.is_debug_camera(camera_ent) {
-            commands.entity(camera_ent).try_insert(
-                PrimaryEguiContext,
-            );
+            commands.entity(camera_ent).try_insert(PrimaryEguiContext);
         }
     }
 }
 
-pub fn setup_egui_style(
-    mut q: Query<(&mut EguiContext, Option<&PrimaryEguiContext>)>,
-) {
-    let Ok((mut ctx, Some(_))) = q.single_mut() else { return };
+pub fn setup_egui_style(mut q: Query<(&mut EguiContext, Option<&PrimaryEguiContext>)>) {
+    let Ok((mut ctx, Some(_))) = q.single_mut() else {
+        return;
+    };
     let ctx = ctx.get_mut();
     {
         use egui::FontFamily::Proportional;
@@ -193,42 +193,37 @@ pub fn update_egui_settings_ui(
         window = window.current_pos(rect.min);
     }
 
-    window
-        .show(ctx, |ui| {
-            egui::CollapsingHeader::new("UI")
-                .default_open(true)
-
-                .show(ui, |ui| {
+    window.show(ctx, |ui| {
+        egui::CollapsingHeader::new("UI")
+            .default_open(true)
+            .show(ui, |ui| {
                 ui.checkbox(&mut state.show_stats, "Always Show Stats")
                     .on_hover_text("Show stats overlay even during play.");
                 ui.checkbox(&mut state.show_inspector, "Show World Inspector")
                     .on_hover_text("Show World Inspector.");
-                ui.add_enabled_ui(state.show_inspector, |ui|
+                ui.add_enabled_ui(state.show_inspector, |ui| {
                     ui.indent("inspector", |ui| {
                         ui.checkbox(&mut state.show_inspector_always, "Always Show")
-                        .on_hover_text("Show even in gameplay.");
+                            .on_hover_text("Show even in gameplay.");
                     })
-                );
+                });
                 ui.checkbox(&mut state.show_physics_gizmos, "Show Physics Gizmos")
                     .on_hover_text("Show Avian physics gizmo overlays.");
-
             });
 
-            // if let Ok((player, cheats)) = player_cheat_q.single_mut() {
-            //     let mut enabled = cheats.has(Cheats::Noclip);
-            //     if ui.checkbox(&mut enabled, "Enable Noclip")
-            //         .on_hover_text("Toggle collision bounds for player.")
-            //         .changed() {
+        // if let Ok((player, cheats)) = player_cheat_q.single_mut() {
+        //     let mut enabled = cheats.has(Cheats::Noclip);
+        //     if ui.checkbox(&mut enabled, "Enable Noclip")
+        //         .on_hover_text("Toggle collision bounds for player.")
+        //         .changed() {
 
-            //         commands.write_message(PlayerRequestMessage{
-            //             request: PlayerRequest::SetCheat(Cheats::Noclip, enabled),
-            //             player,
-            //         });
-            //     }
-            // }
-
-        }
-    );
+        //         commands.write_message(PlayerRequestMessage{
+        //             request: PlayerRequest::SetCheat(Cheats::Noclip, enabled),
+        //             player,
+        //         });
+        //     }
+        // }
+    });
 
     in_state.set_if_neq(state);
 }
@@ -238,9 +233,8 @@ pub(crate) const ENTITY_FILTER_ID: &str = "my_inspector_entity_filter";
 pub(crate) const SELECTED_ENTITY_FILTER_ID: &str = "selected_inspector_entity_filter";
 
 // pattern for an Entity filter
-static ENT_RX: LazyLock<regex::Regex> = LazyLock::new(||
-    regex::Regex::new("^([0-9]+)v([0-9]+)$").expect("valid regex")
-);
+static ENT_RX: LazyLock<regex::Regex> =
+    LazyLock::new(|| regex::Regex::new("^([0-9]+)v([0-9]+)$").expect("valid regex"));
 
 pub fn update_egui_inspector_ui(
     world: &mut World,
@@ -291,7 +285,10 @@ pub fn update_egui_inspector_ui(
     // stealing them from the bevy-egui-inspector plugin!)
     let Ok(egui_context) = world
         .query_filtered::<&mut EguiContext, (With<Camera3d>, With<ViewerCamera>)>()
-        .single_mut(world) else { return };
+        .single_mut(world)
+    else {
+        return;
+    };
 
     window.show(
         egui_context.clone().get_mut(),
@@ -418,16 +415,12 @@ pub fn update_egui_inspector_ui(
                 }
                 .map_err(|e| error!("failed to save: {e}"));
             }
-            Err(e) => error!("failed to save: {e}")
+            Err(e) => error!("failed to save: {e}"),
         };
     }
 }
 
-fn name_satisfies_filter(
-    name: &str,
-    filter: &str,
-    is_fuzzy: bool,
-) -> bool {
+fn name_satisfies_filter(name: &str, filter: &str, is_fuzzy: bool) -> bool {
     use fuzzy_matcher::FuzzyMatcher;
     if filter.is_empty() {
         true
@@ -454,11 +447,12 @@ pub fn ui_for_filtered_resources(
     let mut resources: Vec<_> = type_registry
         .iter()
         .filter(|registration| {
-            registration.data::<ReflectResource>().is_some() &&
-            name_satisfies_filter(
-                registration.type_info().type_path(),
-                &filter.word,
-                filter.is_fuzzy)
+            registration.data::<ReflectResource>().is_some()
+                && name_satisfies_filter(
+                    registration.type_info().type_path(),
+                    &filter.word,
+                    filter.is_fuzzy,
+                )
         })
         .map(|registration| {
             (

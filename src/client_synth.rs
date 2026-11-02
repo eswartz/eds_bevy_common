@@ -25,29 +25,20 @@ pub struct ClientSynthPlugin;
 
 impl Plugin for ClientSynthPlugin {
     fn build(&self, app: &mut App) {
-        app
-            .init_resource::<PendingSynthEvents>()
+        app.init_resource::<PendingSynthEvents>()
             .init_resource::<SynthController>()
             .init_resource::<SynthProxyMap>()
-
             .configure_loading_state(
                 LoadingStateConfig::new(ProgramState::Initializing)
-                    .load_collection::<CommonSoundFontAssets>()
+                    .load_collection::<CommonSoundFontAssets>(),
             )
-
             // Reset when we know no gameplay should be active.
             // Other clients should use DespawnOnExit for MidiSynth.
-            .add_systems(OnExit(GameplayState::Playing),
-                reset_synth_config,
-            )
-            .add_systems(FixedUpdate,
-                (
-                    handle_synth_events,
-                    cleanup_synths,
-                )
-                .run_if(not(is_paused))
-            )
-        ;
+            .add_systems(OnExit(GameplayState::Playing), reset_synth_config)
+            .add_systems(
+                FixedUpdate,
+                (handle_synth_events, cleanup_synths).run_if(not(is_paused)),
+            );
     }
 }
 
@@ -61,9 +52,7 @@ pub struct SynthController {
 
 impl Default for SynthController {
     fn default() -> Self {
-        Self {
-            max_midi_synths: 8,
-        }
+        Self { max_midi_synths: 8 }
     }
 }
 
@@ -120,7 +109,9 @@ fn handle_synth_events(
         let SynthMessage(_, _, delay) = event;
         let delay = *delay + clock.delay_to_next();
         // See if we're adding anything ahead of schedule.
-        if let Some(last) = waiting.back() && delay < last.0 {
+        if let Some(last) = waiting.back()
+            && delay < last.0
+        {
             need_sort = true;
         }
         if matches!(event, SynthMessage(_, SynthCommand::Reset, _)) {
@@ -133,7 +124,7 @@ fn handle_synth_events(
     if need_sort {
         waiting.make_contiguous().sort_by(|a, b| {
             if a.0 == b.0 && matches!(a.1, SynthMessage(_, SynthCommand::Reset, _)) {
-                return std::cmp::Ordering::Less
+                return std::cmp::Ordering::Less;
             }
             a.0.cmp(&b.0)
         });
@@ -160,17 +151,14 @@ fn handle_synth_events(
                 let _ = waiting.drain(..);
             }
         } else {
-            break
+            break;
         }
     }
 
     clock.tick(time.delta());
 }
 
-fn send_synth_command(
-    command: &SynthCommand,
-    synth: &mut MidiSynth,
-) {
+fn send_synth_command(command: &SynthCommand, synth: &mut MidiSynth) {
     let to_channel = |c: &SynthChannel| match c {
         SynthChannel::Voice(v) => {
             let c = *v & 15;
@@ -183,40 +171,42 @@ fn send_synth_command(
     let to_key = |n: &SynthNote| n.to_midi();
 
     match command {
-        SynthCommand::NoteOn(channel, note, vel) => synth.handle_event(
-            MidiMessage::NoteOn{ channel: to_channel(channel), note: to_key(note), velocity: to_data(vel) },
-        ),
-        SynthCommand::NoteOff(channel, note) => synth.handle_event(
-            MidiMessage::NoteOff{ channel: to_channel(channel), note: to_key(note) },
-        ),
-        SynthCommand::ChannelOff(channel) => synth.handle_event(
-            MidiMessage::Controller {
+        SynthCommand::NoteOn(channel, note, vel) => synth.handle_event(MidiMessage::NoteOn {
+            channel: to_channel(channel),
+            note: to_key(note),
+            velocity: to_data(vel),
+        }),
+        SynthCommand::NoteOff(channel, note) => synth.handle_event(MidiMessage::NoteOff {
+            channel: to_channel(channel),
+            note: to_key(note),
+        }),
+        SynthCommand::ChannelOff(channel) => synth.handle_event(MidiMessage::Controller {
+            channel: to_channel(channel),
+            ctrl: MidiMessage::CTRL_ALL_SOUNDS_OFF,
+            data: 0,
+        }),
+        SynthCommand::ProgramChange(channel, program) => {
+            synth.handle_event(MidiMessage::SetPatch {
                 channel: to_channel(channel),
-                ctrl: MidiMessage::CTRL_ALL_SOUNDS_OFF,
-                data: 0,
-            }
-        ),
-        SynthCommand::ProgramChange(channel, program) => synth.handle_event(
-            MidiMessage::SetPatch{ channel: to_channel(channel), patch: *program }
-        ),
-        SynthCommand::ChannelVolume(channel, volume) => synth.handle_event(
-            MidiMessage::Controller{
+                patch: *program,
+            })
+        }
+        SynthCommand::ChannelVolume(channel, volume) => {
+            synth.handle_event(MidiMessage::Controller {
                 channel: to_channel(channel),
                 ctrl: MidiMessage::CTRL_SET_VOLUME_COARSE,
                 data: to_data(volume),
-            }
-        ),
+            })
+        }
         SynthCommand::Reset => {
             for channel in 0..16 {
-                synth.handle_event(
-                    MidiMessage::Controller {
-                        channel,
-                        ctrl: MidiMessage::CTRL_ALL_SOUNDS_OFF,
-                        data: 0,
-                    }
-                );
+                synth.handle_event(MidiMessage::Controller {
+                    channel,
+                    ctrl: MidiMessage::CTRL_ALL_SOUNDS_OFF,
+                    data: 0,
+                });
             }
-        },
+        }
     }
 }
 
@@ -229,9 +219,9 @@ fn cleanup_synths(
     for ent in removed_proxies.read() {
         synth_map.map.remove(&ent);
 
-        waiting.0.retain_mut(|(_, event)| {
-            !matches!(event, SynthMessage(sent, _, _) if *sent == ent)
-        });
+        waiting
+            .0
+            .retain_mut(|(_, event)| !matches!(event, SynthMessage(sent, _, _) if *sent == ent));
     }
     for ent in removed_synths.read() {
         synth_map.synths.remove(&ent);

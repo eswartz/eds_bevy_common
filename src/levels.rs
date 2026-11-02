@@ -8,13 +8,10 @@ pub struct LevelsPlugin;
 
 impl Plugin for LevelsPlugin {
     fn build(&self, app: &mut App) {
-        app
-            .insert_resource(LevelList(default()))
-            .insert_resource(LevelIndex(0))
-            ;
+        app.insert_resource(LevelList(default()))
+            .insert_resource(LevelIndex(0));
     }
 }
-
 
 /// This defines a specific level.
 #[derive(Reflect, Default, Clone, PartialEq, Debug)]
@@ -36,11 +33,7 @@ pub struct LevelInfo {
 pub struct LevelList(pub Vec<LevelInfo>);
 
 pub fn is_in_level(id: &str) -> impl Fn(Option<Res<CurrentLevel>>) -> bool {
-    move |level: Option<Res<CurrentLevel>>| -> bool {
-        level.is_some_and(|l| {
-            l.info.id == id
-        })
-    }
+    move |level: Option<Res<CurrentLevel>>| -> bool { level.is_some_and(|l| l.info.id == id) }
 }
 
 /// The current level, which holds the index of and a copy of the level info.

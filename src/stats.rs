@@ -17,35 +17,26 @@ pub struct StatsOverlayPlugin;
 
 impl Plugin for StatsOverlayPlugin {
     fn build(&self, app: &mut App) {
-        app
-            .insert_resource(StatsOverlayVisible(false))
+        app.insert_resource(StatsOverlayVisible(false))
             .init_resource::<StatsOverlayStyle>()
             .init_resource::<StatsRegistry>()
             .init_resource::<DeltaBuffer>()
             .init_resource::<SysInfoBuffer>()
-
-            .add_systems(
-                Startup,
-                add_default_providers,
-            )
-            .add_systems(
-                OnEnter(ProgramState::LaunchMenu),
-                    update_stats_visibility
-            )
+            .add_systems(Startup, add_default_providers)
+            .add_systems(OnEnter(ProgramState::LaunchMenu), update_stats_visibility)
             .add_systems(
                 Update,
-                    update_stats_visibility
-                        .run_if(resource_changed::<StatsOverlayVisible>)
+                update_stats_visibility.run_if(resource_changed::<StatsOverlayVisible>),
             )
             .add_systems(
                 Update,
                 (
-                    refresh_sys_info.run_if(repeating_with_delay(Duration::from_secs_f32(1.0 / 15.0))),
+                    refresh_sys_info
+                        .run_if(repeating_with_delay(Duration::from_secs_f32(1.0 / 15.0))),
                     refresh_fps_info,
                     diagnostic_system,
-                )
-            )
-        ;
+                ),
+            );
     }
 }
 
@@ -63,13 +54,13 @@ pub struct StatsValue {
 impl StatsValue {
     pub fn new(label: impl Into<String>) -> Self {
         let text = label.into();
-        Self { label: text, important: false }
+        Self {
+            label: text,
+            important: false,
+        }
     }
     pub fn with_importance(self, important: bool) -> Self {
-        Self {
-            important,
-            ..self
-        }
+        Self { important, ..self }
     }
 }
 
@@ -80,7 +71,9 @@ pub trait StatsProvider: Send + Sync + 'static {
     /// Compute the value string and importance.
     fn fetch_value(&self, world: &mut World) -> StatsValue;
     /// Override sort order.
-    fn priority(&self) -> i32 { 0 }
+    fn priority(&self) -> i32 {
+        0
+    }
 }
 
 /// This organizes all the stats providers.
@@ -113,7 +106,6 @@ impl StatsRegistry {
     }
 }
 
-
 const DELTA_BUFFER_LEN: usize = 16;
 
 /// Track the .delta counts from the last [DELTA_BUFFER_LEN] frames.
@@ -127,7 +119,9 @@ impl StatsProvider for FpsProvider {
     fn get_label(&self) -> String {
         "FPS".to_string()
     }
-    fn priority(&self) -> i32 { -10 }
+    fn priority(&self) -> i32 {
+        -10
+    }
 
     fn fetch_value(&self, world: &mut World) -> StatsValue {
         if let Some(time_buffer) = world.get_resource::<DeltaBuffer>() {
@@ -157,13 +151,17 @@ impl StatsProvider for FpsMaxProvider {
     fn get_label(&self) -> String {
         "Max Frame".to_string()
     }
-    fn priority(&self) -> i32 { -9 }
+    fn priority(&self) -> i32 {
+        -9
+    }
 
     fn fetch_value(&self, world: &mut World) -> StatsValue {
         if let Some(time_buffer) = world.get_resource::<DeltaBuffer>() {
-            let max_ft = time_buffer.0.iter().max_by(|a, b|
-                a.partial_cmp(b).unwrap_or(::core::cmp::Ordering::Equal)
-                ).unwrap_or(&Duration::ZERO);
+            let max_ft = time_buffer
+                .0
+                .iter()
+                .max_by(|a, b| a.partial_cmp(b).unwrap_or(::core::cmp::Ordering::Equal))
+                .unwrap_or(&Duration::ZERO);
             StatsValue::new(format!("{:.2?}", max_ft))
         } else {
             StatsValue::new("???")
@@ -178,7 +176,9 @@ impl StatsProvider for EntCountProvider {
         "Entities".to_string()
     }
 
-    fn priority(&self) -> i32 { -8 }
+    fn priority(&self) -> i32 {
+        -8
+    }
 
     fn fetch_value(&self, world: &mut World) -> StatsValue {
         let count = world.entities().count_spawned() as usize;
@@ -193,7 +193,9 @@ impl StatsProvider for ContactCountProvider {
         "Contacts".to_string()
     }
 
-    fn priority(&self) -> i32 { -7 }
+    fn priority(&self) -> i32 {
+        -7
+    }
 
     fn fetch_value(&self, world: &mut World) -> StatsValue {
         if let Some(solver_diags) = world.get_resource::<SolverDiagnostics>() {
@@ -238,14 +240,16 @@ impl StatsProvider for CpuUsageProvider {
         "CPU Usage".to_string()
     }
 
-    fn priority(&self) -> i32 { -6 }
+    fn priority(&self) -> i32 {
+        -6
+    }
 
     fn fetch_value(&self, world: &mut World) -> StatsValue {
-         if let Some(info) = world.get_resource::<SysInfoBuffer>() {
+        if let Some(info) = world.get_resource::<SysInfoBuffer>() {
             StatsValue::new(format!("{}%", info.0.global_cpu_usage() as i32))
-         } else {
+        } else {
             StatsValue::default()
-         }
+        }
     }
 }
 
@@ -257,15 +261,19 @@ impl StatsProvider for MemoryUsageProvider {
         "Memory Usage".to_string()
     }
 
-    fn priority(&self) -> i32 { -5 }
+    fn priority(&self) -> i32 {
+        -5
+    }
 
     fn fetch_value(&self, world: &mut World) -> StatsValue {
         if let Some(sys_info) = world.get_resource::<SysInfoBuffer>() {
-            let pct = (sys_info.0.used_memory() * 100).checked_div(sys_info.0.total_memory()).unwrap_or(0);
+            let pct = (sys_info.0.used_memory() * 100)
+                .checked_div(sys_info.0.total_memory())
+                .unwrap_or(0);
             StatsValue::new(format!("{}%", pct))
-         } else {
+        } else {
             StatsValue::default()
-         }
+        }
     }
 }
 
@@ -277,22 +285,22 @@ impl StatsProvider for PlayerPosProvider {
         "Player Pos".to_string()
     }
 
-    fn priority(&self) -> i32 { -4 }
+    fn priority(&self) -> i32 {
+        -4
+    }
 
     fn fetch_value(&self, world: &mut World) -> StatsValue {
         let mut xfrm_q = world.query_filtered::<&Transform, With<Player>>();
         if let Some(xfrm) = xfrm_q.iter(world).next() {
-            StatsValue::new(format!("[{:.1?},{:.1?},{:.1?}]",
-                xfrm.translation.x,
-                xfrm.translation.y,
-                xfrm.translation.z,
+            StatsValue::new(format!(
+                "[{:.1?},{:.1?},{:.1?}]",
+                xfrm.translation.x, xfrm.translation.y, xfrm.translation.z,
             ))
         } else {
             default()
         }
     }
 }
-
 
 #[derive(Default)]
 pub struct PlayerAngProvider;
@@ -302,7 +310,9 @@ impl StatsProvider for PlayerAngProvider {
         "Player Look".to_string()
     }
 
-    fn priority(&self) -> i32 { -4 }
+    fn priority(&self) -> i32 {
+        -4
+    }
 
     fn fetch_value(&self, world: &mut World) -> StatsValue {
         let mut look_q = world.query_filtered::<&PlayerLook, With<Player>>();
@@ -327,7 +337,6 @@ fn add_default_providers(mut regy: ResMut<StatsRegistry>) {
     regy.add_provider(Box::new(PlayerMoveProvider));
 }
 
-
 #[derive(Default)]
 pub struct PlayerMoveProvider;
 
@@ -336,17 +345,19 @@ impl StatsProvider for PlayerMoveProvider {
         "Player State/Move".to_string()
     }
 
-    fn priority(&self) -> i32 { -4 }
+    fn priority(&self) -> i32 {
+        -4
+    }
 
     fn fetch_value(&self, world: &mut World) -> StatsValue {
         let mut query = world.query_filtered::<(&PlayerMovement, &LinearVelocity), With<Player>>();
         if let Some((movement, vel)) = query.iter(world).next() {
-            StatsValue::new(format!("{:?}|{:.3} m/s|{:?}",
+            StatsValue::new(format!(
+                "{:?}|{:.3} m/s|{:?}",
                 movement.state,
                 vel.0.xy().length(),
                 movement.area,
             ))
-
         } else {
             default()
         }
@@ -369,7 +380,11 @@ fn update_stats_visibility(
     visible: Res<StatsOverlayVisible>,
     mut marker_vis_q: Query<(&StatsOverlayMarker, &mut Visibility)>,
 ) {
-    let new_vis = if !visible.0 { Visibility::Hidden } else { Visibility::Inherited };
+    let new_vis = if !visible.0 {
+        Visibility::Hidden
+    } else {
+        Visibility::Inherited
+    };
     for (_, mut vis) in marker_vis_q.iter_mut() {
         *vis = new_vis;
     }
@@ -410,16 +425,23 @@ fn diagnostic_system(
     let mut commands = Commands::new(&mut queue, world);
 
     {
-        let Some(stats_registry) = world.get_resource::<StatsRegistry>() else { return };
-        let Some(style) = world.get_resource::<StatsOverlayStyle>() else { return };
-        let Some(time) = world.get_resource::<Time>() else { return };
+        let Some(stats_registry) = world.get_resource::<StatsRegistry>() else {
+            return;
+        };
+        let Some(style) = world.get_resource::<StatsOverlayStyle>() else {
+            return;
+        };
+        let Some(time) = world.get_resource::<Time>() else {
+            return;
+        };
 
         // Fetch the [Entity]s for the [Text] nodes to edit.
-        let need_new = if let Some(prev_ents) = cached.get() && prev_ents.len() != stats_registry.len() {
+        let need_new = if let Some(prev_ents) = cached.get()
+            && prev_ents.len() != stats_registry.len()
+        {
             log::warn!("resetting {} vs {}", prev_ents.len(), stats_registry.len());
             true
-        }
-        else if world.is_resource_changed::<StatsOverlayStyle>() {
+        } else if world.is_resource_changed::<StatsOverlayStyle>() {
             log::warn!("resetting stats");
             true
         } else {
@@ -427,81 +449,88 @@ fn diagnostic_system(
         };
 
         if need_new {
-            let _  = cached.take();
+            let _ = cached.take();
             let marker_q = marker_qs.iter(world);
             for ent in marker_q {
                 commands.entity(ent).try_despawn();
             }
         }
 
-        let text_ents = cached.get_or_init(|| {
-            // Generate the UI once.
+        let text_ents = cached
+            .get_or_init(|| {
+                // Generate the UI once.
 
-            let mut result  = Vec::with_capacity(stats_registry.len());
-            let font = TextFont {
-                font: style.font.clone().into(),
-                font_size: FontSize::Px(style.font_size),
-                ..default()
-            };
-            commands.spawn((
-                StatsOverlayMarker,
-                Node {
-                    margin: UiRect {
-                        right: Val::Auto,
-                        left: Val::Px(style.outer_margin),
-                        top: Val::Px(style.outer_margin),
-                        bottom: Val::Auto
-                    },
-                    ..Default::default()
-                },
-                BackgroundColor(Color::srgba(0.2, 0.2, 0.2, 0.5)),
-                Visibility::Hidden,  // updated in `update_stats_visibility`
-            )).with_children(|c| {
-                c.spawn(Node {
-                    flex_direction: FlexDirection::Column,
-                    margin: UiRect {
-                        left: Val::Px(style.inner_margin),
-                        right: Val::Px(style.inner_margin),
-                        top: Val::Px(style.inner_margin),
-                        bottom: Val::Px(style.inner_margin)
-                    },
-                    align_items: AlignItems::FlexStart,
-                    ..Default::default()
-                }).with_children(|c| {
-                    stats_registry
-                        .providers()
-                        .iter()
-                        .for_each(|prov|
-                            result.push(c.spawn((Node::default(), font.clone(), Text::new(prov.get_label()))).id())
-                        );
-                });
-                c.spawn(Node {
-                    flex_direction: FlexDirection::Column,
-                    margin: UiRect {
-                        left: Val::Px(style.inner_margin),
-                        right: Val::Px(style.inner_margin),
-                        top: Val::Px(style.inner_margin),
-                        bottom: Val::Px(style.inner_margin)
-                    },
-                    min_width: Val::Px(80.),
-                    align_items: AlignItems::FlexEnd,
-                    ..Default::default()
-                }).with_children(|c| {
-                    result.clear();
-                    stats_registry
-                        .providers()
-                        .iter()
-                        .for_each(|_provider| result.push(c.spawn((
-                            Node::default(),
-                            font.clone(),
-                            Text::default(),
-                        )).id()
-                    ));
-                });
-            });
+                let mut result = Vec::with_capacity(stats_registry.len());
+                let font = TextFont {
+                    font: style.font.clone().into(),
+                    font_size: FontSize::Px(style.font_size),
+                    ..default()
+                };
+                commands
+                    .spawn((
+                        StatsOverlayMarker,
+                        Node {
+                            margin: UiRect {
+                                right: Val::Auto,
+                                left: Val::Px(style.outer_margin),
+                                top: Val::Px(style.outer_margin),
+                                bottom: Val::Auto,
+                            },
+                            ..Default::default()
+                        },
+                        BackgroundColor(Color::srgba(0.2, 0.2, 0.2, 0.5)),
+                        Visibility::Hidden, // updated in `update_stats_visibility`
+                    ))
+                    .with_children(|c| {
+                        c.spawn(Node {
+                            flex_direction: FlexDirection::Column,
+                            margin: UiRect {
+                                left: Val::Px(style.inner_margin),
+                                right: Val::Px(style.inner_margin),
+                                top: Val::Px(style.inner_margin),
+                                bottom: Val::Px(style.inner_margin),
+                            },
+                            align_items: AlignItems::FlexStart,
+                            ..Default::default()
+                        })
+                        .with_children(|c| {
+                            stats_registry.providers().iter().for_each(|prov| {
+                                result.push(
+                                    c.spawn((
+                                        Node::default(),
+                                        font.clone(),
+                                        Text::new(prov.get_label()),
+                                    ))
+                                    .id(),
+                                )
+                            });
+                        });
+                        c.spawn(Node {
+                            flex_direction: FlexDirection::Column,
+                            margin: UiRect {
+                                left: Val::Px(style.inner_margin),
+                                right: Val::Px(style.inner_margin),
+                                top: Val::Px(style.inner_margin),
+                                bottom: Val::Px(style.inner_margin),
+                            },
+                            min_width: Val::Px(80.),
+                            align_items: AlignItems::FlexEnd,
+                            ..Default::default()
+                        })
+                        .with_children(|c| {
+                            result.clear();
+                            stats_registry.providers().iter().for_each(|_provider| {
+                                result.push(
+                                    c.spawn((Node::default(), font.clone(), Text::default()))
+                                        .id(),
+                                )
+                            });
+                        });
+                    });
 
-            result
-        }).clone();
+                result
+            })
+            .clone();
 
         *refresh_timer += time.delta_secs();
         if *refresh_timer > 0.05 {
@@ -521,12 +550,15 @@ fn diagnostic_system(
                     if let Ok((mut text, mut color)) = text_color.get_mut(world, text_ents[index]) {
                         text.clear();
                         **text = value.label;
-                        **color = if value.important { IMPORTANT_COLOR } else { PLAIN_COLOR };
+                        **color = if value.important {
+                            IMPORTANT_COLOR
+                        } else {
+                            PLAIN_COLOR
+                        };
                     }
                 }
             });
         }
-
     }
     queue.apply(world);
 }

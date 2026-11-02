@@ -1,17 +1,18 @@
-use std::{any::TypeId, sync::{Arc, atomic::AtomicBool}};
-use bevy::{ecs::entity::EntityHashSet, prelude::*};
 use crate::prelude::*;
+use bevy::{ecs::entity::EntityHashSet, prelude::*};
+use std::{
+    any::TypeId,
+    sync::{Arc, atomic::AtomicBool},
+};
 
 pub struct WorldLoadSavePlugin;
 
 impl Plugin for WorldLoadSavePlugin {
     fn build(&self, app: &mut App) {
-        app
-            .init_resource::<SavedResources>()
+        app.init_resource::<SavedResources>()
             .init_resource::<SavedComponents>()
             .register_type_data::<Arc<AtomicBool>, ReflectSerialize>()
-            .register_type_data::<Arc<AtomicBool>, ReflectDeserialize>()
-        ;
+            .register_type_data::<Arc<AtomicBool>, ReflectDeserialize>();
     }
 }
 
@@ -81,7 +82,6 @@ impl Default for SavedComponents {
     }
 }
 
-
 /// Get all the entities that should be saved.
 pub fn fetch_saveable_entities(world: &mut World, from_world_marker: bool) -> Vec<Entity> {
     let mut saveable_query_state = world.query_filtered::<Entity, With<Saveable>>();
@@ -90,7 +90,7 @@ pub fn fetch_saveable_entities(world: &mut World, from_world_marker: bool) -> Ve
     if from_world_marker {
         let Some(world_marker) = world.get_resource_ref::<WorldMarkerEntity>() else {
             error!("no WorldMarkerEntity");
-            return saveables
+            return saveables;
         };
 
         let world_marker = world_marker.0;
@@ -98,7 +98,9 @@ pub fn fetch_saveable_entities(world: &mut World, from_world_marker: bool) -> Ve
         let mut parent_query_state = world.query::<&ChildOf>();
         let parent_query = parent_query_state.query(world);
         for saveable in saveable_query_state.iter(&world) {
-            let found = parent_query.iter_ancestors(saveable).any(|e| e == world_marker);
+            let found = parent_query
+                .iter_ancestors(saveable)
+                .any(|e| e == world_marker);
             if found {
                 saveables.push(saveable);
             }
@@ -139,12 +141,16 @@ pub fn save_world_state(world: &mut World, ents: Vec<Entity>) -> anyhow::Result<
     let resource_filter = saved_resources
         .0
         .into_iter()
-        .fold(WorldFilter::deny_all(), |rf, type_id| rf.allow_by_id(type_id));
+        .fold(WorldFilter::deny_all(), |rf, type_id| {
+            rf.allow_by_id(type_id)
+        });
 
     let component_filter = saved_components
         .0
         .into_iter()
-        .fold(WorldFilter::deny_all(), |rf, type_id| rf.allow_by_id(type_id));
+        .fold(WorldFilter::deny_all(), |rf, type_id| {
+            rf.allow_by_id(type_id)
+        });
 
     let dynamic_world = dynamic_world_builder
         .with_resource_filter(resource_filter)
@@ -162,7 +168,10 @@ pub fn save_world_state(world: &mut World, ents: Vec<Entity>) -> anyhow::Result<
 
 /// Given a [DynamicWorld] handle (e.g. loaded from `.scn` or `.scn.ron`),
 /// apply its `resources` to the `world`.
-pub fn load_world_resources(world: &mut World, custom_resources: Handle<DynamicWorld>) -> Result<(), String> {
+pub fn load_world_resources(
+    world: &mut World,
+    custom_resources: Handle<DynamicWorld>,
+) -> Result<(), String> {
     let mut new_resources = vec![];
 
     let mut errors = String::new();

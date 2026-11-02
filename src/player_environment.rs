@@ -7,23 +7,19 @@ pub struct PlayerEnvironmentPlugin;
 
 impl Plugin for PlayerEnvironmentPlugin {
     fn build(&self, app: &mut App) {
-        app
-            .add_systems(
-                FixedPreUpdate,
-                (
-                    check_player_environment_fps
-                        .run_if(resource_exists_and_equals(PlayerMode::Fps))
-                    ,
-                    check_player_environment_space
-                        .run_if(resource_exists_and_equals(PlayerMode::Space))
-                    ,
-                ).chain()
+        app.add_systems(
+            FixedPreUpdate,
+            (
+                check_player_environment_fps.run_if(resource_exists_and_equals(PlayerMode::Fps)),
+                check_player_environment_space
+                    .run_if(resource_exists_and_equals(PlayerMode::Space)),
+            )
+                .chain()
                 .before(TransformSystems::Propagate)
                 .after(PhysicsSystems::Writeback)
                 .run_if(not(is_paused))
-                .run_if(in_state(GameplayState::Playing))
-            )
-        ;
+                .run_if(in_state(GameplayState::Playing)),
+        );
     }
 }
 
@@ -63,12 +59,7 @@ pub(crate) fn check_player_environment_fps(
                 }
 
                 for manifold in pair.manifolds.iter() {
-                    if manifold
-                        .normal
-                        .dot(gxfrm.rotation() * Vector::Y)
-                        .abs()
-                        <= 0.25
-                    {
+                    if manifold.normal.dot(gxfrm.rotation() * Vector::Y).abs() <= 0.25 {
                         // warn!("jump ignoring {:?}", manifold.normal);
                         continue;
                     }
@@ -95,7 +86,6 @@ pub(crate) fn check_player_environment_fps(
             movement.state = MovementState::Falling;
             movement.jumping_out = false;
             try_to_land = true;
-
         } else if is_flying {
             movement.medium_friction = 0.0;
             if movement.state != MovementState::Jumping {
@@ -120,7 +110,9 @@ pub(crate) fn check_player_environment_fps(
             let mut colliding = false;
             let mut floor_steepness = 1.0f32;
             for c in collisions.entities_colliding_with(player_ent) {
-                let Some(coll) = collisions.get(player_ent, c) else { continue };
+                let Some(coll) = collisions.get(player_ent, c) else {
+                    continue;
+                };
 
                 // See if we're on a floor or close enough.
 
@@ -168,7 +160,9 @@ pub(crate) fn check_player_environment_fps(
                     let feet_range = aabb.size().y / 4.0;
                     if hit_distance < feet_range {
                         // OK, we should contact with the ground.
-                        if movement.state != MovementState::Jumping || (!movement.had_jump_event && vel.0.y >= 0.0 && vel.0.y < 0.01) {
+                        if movement.state != MovementState::Jumping
+                            || (!movement.had_jump_event && vel.0.y >= 0.0 && vel.0.y < 0.01)
+                        {
                             movement.state = movement.state.to_grounded();
                             colliding = false;
                         }
@@ -202,14 +196,7 @@ pub(crate) fn check_player_environment_fps(
 }
 
 pub(crate) fn check_player_environment_space(
-    mut player_q: Query<
-        (
-            Entity,
-            &PlayerMovement,
-            &mut LinearVelocity,
-        ),
-        With<Player>,
-    >,
+    mut player_q: Query<(Entity, &PlayerMovement, &mut LinearVelocity), With<Player>>,
     settings: Res<PlayerInputSettings>,
 ) {
     for (_player_ent, movement, mut vel) in player_q.iter_mut() {

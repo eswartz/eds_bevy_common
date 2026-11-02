@@ -1,4 +1,3 @@
-
 use std::time::Duration;
 
 use bevy::prelude::*;
@@ -15,10 +14,8 @@ impl Plugin for EffectsPlugin {
         if !app.is_plugin_added::<bevy_tweening::TweeningPlugin>() {
             app.add_plugins(bevy_tweening::TweeningPlugin);
         }
-        app
-            .add_systems(PostUpdate, shrink_and_disappear)
-            .add_systems(PostUpdate, aim_for_camera)
-        ;
+        app.add_systems(PostUpdate, shrink_and_disappear)
+            .add_systems(PostUpdate, aim_for_camera);
     }
 }
 
@@ -34,7 +31,11 @@ pub struct ShrinkAndDisappear {
 
 impl Default for ShrinkAndDisappear {
     fn default() -> Self {
-        Self { time: 0.0, func: EaseFunction::Linear, orig_scale: None }
+        Self {
+            time: 0.0,
+            func: EaseFunction::Linear,
+            orig_scale: None,
+        }
     }
 }
 
@@ -42,20 +43,18 @@ impl ShrinkAndDisappear {
     pub fn new(time: Duration) -> Self {
         Self {
             time: time.as_secs_f32(),
-            .. default()
+            ..default()
         }
     }
     pub fn with_ease_function(self, func: EaseFunction) -> Self {
-        Self {
-            func,
-            .. self
-        }
+        Self { func, ..self }
     }
 }
 
-fn shrink_and_disappear(mut commands: Commands,
+fn shrink_and_disappear(
+    mut commands: Commands,
     time: Res<Time>,
-    mut shrink_q: Query<(Entity, &mut ShrinkAndDisappear, &mut Transform)>
+    mut shrink_q: Query<(Entity, &mut ShrinkAndDisappear, &mut Transform)>,
 ) {
     for (ent, mut sad, mut xfrm) in shrink_q.iter_mut() {
         if sad.orig_scale.is_none() {
@@ -85,14 +84,13 @@ pub struct AimForCamera;
 
 fn aim_for_camera(
     camera_q: Single<(Entity, &Transform), (With<WorldCamera>, Without<AimForCamera>)>,
-    mut aim_q: Query<(Entity, &mut Transform, &GlobalTransform), With<AimForCamera>>
+    mut aim_q: Query<(Entity, &mut Transform, &GlobalTransform), With<AimForCamera>>,
 ) {
     let (_cam_ent, cam_xfrm) = *camera_q;
     for (_ent, mut xfrm, _gxfrm) in aim_q.iter_mut() {
         xfrm.translation = xfrm.translation.lerp(cam_xfrm.translation, 0.25);
     }
 }
-
 
 #[derive(Debug)]
 pub struct TransformPositionScaleLens {

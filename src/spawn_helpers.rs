@@ -18,34 +18,19 @@ pub struct SpawnHelpersPlugin;
 
 impl Plugin for SpawnHelpersPlugin {
     fn build(&self, app: &mut App) {
-        app
-            .insert_resource(SpawnMaterialHandles::default())
+        app.insert_resource(SpawnMaterialHandles::default())
             .insert_resource(SpawnMeshHandles::default())
             .add_message::<RefreshImages>()
             .add_systems(
                 PreUpdate,
-                (
-                    handle_spawn_material,
-                    handle_spawn_shape,
-                ).chain()
+                (handle_spawn_material, handle_spawn_shape).chain(),
             )
-            .add_systems(
-                PostUpdate,
-                (
-                    refresh_materials,
-                    apply_uv_box_map,
-                )
-            )
-
+            .add_systems(PostUpdate, (refresh_materials, apply_uv_box_map))
             .add_systems(
                 OnEnter(LevelState::Advance),
-                (
-                    cleanup_materials,
-                    cleanup_meshes,
-                )
+                (cleanup_materials, cleanup_meshes),
             )
-            .add_observer(twiddle_spawn_materials)
-        ;
+            .add_observer(twiddle_spawn_materials);
     }
 }
 
@@ -129,11 +114,17 @@ pub fn handle_depth_map(
     images: Res<Assets<Image>>,
     mut std_mats: ResMut<Assets<StandardMaterial>>,
     mut dm_storage: ResMut<DepthMapStorage>,
-    mut mat_q: Query<(Entity, &mut EnsureDepthMapMaterial, &mut MeshMaterial3d<StandardMaterial>),
-    Or<(
-        Changed<EnsureDepthMapMaterial>,
-        Changed<MeshMaterial3d<StandardMaterial>>,
-    )>>,
+    mut mat_q: Query<
+        (
+            Entity,
+            &mut EnsureDepthMapMaterial,
+            &mut MeshMaterial3d<StandardMaterial>,
+        ),
+        Or<(
+            Changed<EnsureDepthMapMaterial>,
+            Changed<MeshMaterial3d<StandardMaterial>>,
+        )>,
+    >,
 ) -> Result {
     for (entity, mut depth_map_mat, mut mesh_mat) in mat_q.iter_mut() {
         let orig_std_mat_handle = mesh_mat.0.clone();
@@ -151,15 +142,17 @@ pub fn handle_depth_map(
             depth_map_mat.source = TextureSource::Handle(new_depth_map);
             depth_map_mat.ticks = 10;
             continue;
-        }
-        else if depth_map_mat.source.is_handle() && depth_map_mat.ticks != 0 {
+        } else if depth_map_mat.source.is_handle() && depth_map_mat.ticks != 0 {
             debug!("Waiting...");
             continue;
         }
 
         let new_mat_handle = if let Some(exist_handle) = dm_storage.orig_to_edited.get(&mesh_mat)
             && let Some(depth_mat) = std_mats.get(exist_handle)
-            && depth_mat.depth_map.as_ref().is_some_and(|dm| dm.id() == new_depth_map.id())
+            && depth_mat
+                .depth_map
+                .as_ref()
+                .is_some_and(|dm| dm.id() == new_depth_map.id())
         {
             info!("Reusing {exist_handle:?} on depth map in {entity}");
             exist_handle.clone()
@@ -174,10 +167,9 @@ pub fn handle_depth_map(
             let new_mat_handle = std_mats.add(new_mat);
 
             info!("New depth map material {:?}", new_mat_handle);
-            dm_storage.orig_to_edited.insert(
-                mesh_mat.0.clone(),
-                new_mat_handle.clone(),
-            );
+            dm_storage
+                .orig_to_edited
+                .insert(mesh_mat.0.clone(), new_mat_handle.clone());
             new_mat_handle.clone()
         };
 
@@ -194,8 +186,9 @@ pub fn tick_depth_map(
 ) -> Result {
     for mut depth_map in depth_q.iter_mut() {
         if depth_map.ticks > 0
-        && let TextureSource::Handle(handle) = &depth_map.source
-        && images.get(handle).is_some() {
+            && let TextureSource::Handle(handle) = &depth_map.source
+            && images.get(handle).is_some()
+        {
             depth_map.ticks -= 1;
         }
     }
@@ -218,10 +211,15 @@ pub struct ApplyUvBoxMap {
 
 fn apply_uv_box_map(
     mut meshes: ResMut<Assets<Mesh>>,
-    mut mesh_q: Query<(Entity, &ApplyUvBoxMap, &mut Mesh3d), Or<(Changed<ApplyUvBoxMap>, Changed<Mesh3d>)>>,
+    mut mesh_q: Query<
+        (Entity, &ApplyUvBoxMap, &mut Mesh3d),
+        Or<(Changed<ApplyUvBoxMap>, Changed<Mesh3d>)>,
+    >,
 ) -> Result {
     for (_entity, uv_map, mut mesh3d) in mesh_q.iter_mut() {
-        let Some(mesh) = meshes.get(mesh3d.id()) else { continue };
+        let Some(mesh) = meshes.get(mesh3d.id()) else {
+            continue;
+        };
 
         let mesh = create_uvmapped_mesh_scaled(mesh.clone(), uv_map.repeats);
 
@@ -249,7 +247,10 @@ pub enum SpawnShapeKind {
     Sphere(f32),
     Plane(Vec2),
     Model(String),
-    MeshMaterial{ mesh: String, material: String },
+    MeshMaterial {
+        mesh: String,
+        material: String,
+    },
     #[default]
     None,
 }
@@ -311,7 +312,9 @@ fn handle_spawn_shape(
         let mut ent_commands = commands.entity(ent);
         match &shape.kind {
             SpawnShapeKind::Cube(vec3) => {
-                let mesh = mesh_cache.0.entry((shape.clone(), MeshQuality::Low))
+                let mesh = mesh_cache
+                    .0
+                    .entry((shape.clone(), MeshQuality::Low))
                     .or_insert_with(|| {
                         let shape = Cuboid::new(vec3.x, vec3.y, vec3.z);
                         let mut mesh: Mesh = shape.mesh().into();
@@ -321,7 +324,9 @@ fn handle_spawn_shape(
                 ent_commands.try_insert(Mesh3d(mesh.clone()));
             }
             SpawnShapeKind::Sphere(rad) => {
-                let mesh = mesh_cache.0.entry((shape.clone(), vid_settings.mesh_quality))
+                let mesh = mesh_cache
+                    .0
+                    .entry((shape.clone(), vid_settings.mesh_quality))
                     .or_insert_with(|| {
                         let (sectors, stacks) = {
                             {
@@ -342,7 +347,9 @@ fn handle_spawn_shape(
                 ent_commands.try_insert(Mesh3d(mesh.clone()));
             }
             SpawnShapeKind::Plane(vec2) => {
-                let mesh = mesh_cache.0.entry((shape.clone(), MeshQuality::Low))
+                let mesh = mesh_cache
+                    .0
+                    .entry((shape.clone(), MeshQuality::Low))
                     .or_insert_with(|| {
                         let mesh = PlaneMeshBuilder::from_size(Vec2::new(vec2.x, vec2.y))
                             .subdivisions(shape.info.subdivisions as u32)
@@ -356,25 +363,22 @@ fn handle_spawn_shape(
                 let scene = assets.load::<WorldAsset>(path);
                 ent_commands.try_insert(WorldAssetRoot(scene));
             }
-            SpawnShapeKind::MeshMaterial{ mesh, material } => {
+            SpawnShapeKind::MeshMaterial { mesh, material } => {
                 if !mesh.contains("#Mesh") {
                     error!("unexpected Mesh Model path {mesh}");
                     ent_commands.try_remove::<SpawnShape>();
-                    return
+                    return;
                 }
                 if !material.contains("#Material") {
                     error!("unexpected Material path {material}");
                     ent_commands.try_remove::<SpawnShape>();
-                    return
+                    return;
                 }
 
                 let mesh_handle = assets.load::<Mesh>(mesh);
                 let mat_handle = assets.load::<StandardMaterial>(material);
 
-                ent_commands.try_insert((
-                    Mesh3d(mesh_handle),
-                    MeshMaterial3d(mat_handle),
-                ));
+                ent_commands.try_insert((Mesh3d(mesh_handle), MeshMaterial3d(mat_handle)));
             }
 
             // 'twas just a placeholder.
@@ -400,23 +404,21 @@ pub enum SpawnMaterial {
 
 /// Record which materials we generated.
 #[derive(Resource, Default)]
-pub struct SpawnMaterialHandles (
-    HashMap<StandardMaterialModel, Handle<StandardMaterial>>,
-);
+pub struct SpawnMaterialHandles(HashMap<StandardMaterialModel, Handle<StandardMaterial>>);
 
 impl SpawnMaterialHandles {
-    pub fn allocate(&mut self,
+    pub fn allocate(
+        &mut self,
         mat: &SpawnMaterial,
         assets: &AssetServer,
         mut mats: Mut<Assets<StandardMaterial>>,
     ) -> Handle<StandardMaterial> {
         match mat {
             SpawnMaterial::StdMat(mat_model) => {
-                let std_mat = self.0.entry(mat_model.clone())
-                    .or_insert_with(|| {
-                        let mat: StandardMaterial = mat_model.into_standard_material(assets);
-                        mats.add(mat)
-                    });
+                let std_mat = self.0.entry(mat_model.clone()).or_insert_with(|| {
+                    let mat: StandardMaterial = mat_model.into_standard_material(assets);
+                    mats.add(mat)
+                });
 
                 std_mat.clone()
             }
@@ -458,7 +460,9 @@ fn handle_spawn_material(
 
         // Simple mesh?
         if mesh_q.contains(ent) && !scene_q.contains(ent) {
-            commands.entity(ent).try_insert(MeshMaterial3d(std_mat.clone()));
+            commands
+                .entity(ent)
+                .try_insert(MeshMaterial3d(std_mat.clone()));
         } else {
             // Else, assume it's a complex model and all the mesh children need to be affected.
             for kid in child_q.iter_descendants(ent) {
@@ -466,7 +470,9 @@ fn handle_spawn_material(
                     break;
                 }
                 if mesh_q.contains(kid) {
-                    commands.entity(kid).try_insert(MeshMaterial3d(std_mat.clone()));
+                    commands
+                        .entity(kid)
+                        .try_insert(MeshMaterial3d(std_mat.clone()));
                     if glass_q.contains(ent) {
                         commands.entity(kid).try_insert(GlassTweak);
                     }
@@ -476,15 +482,11 @@ fn handle_spawn_material(
     }
 }
 
-fn cleanup_materials(
-    mut mats: If<ResMut<SpawnMaterialHandles>>,
-) {
+fn cleanup_materials(mut mats: If<ResMut<SpawnMaterialHandles>>) {
     mats.0.0.clear();
 }
 
-fn cleanup_meshes(
-    mut meshes: If<ResMut<SpawnMeshHandles>>,
-) {
+fn cleanup_meshes(mut meshes: If<ResMut<SpawnMeshHandles>>) {
     meshes.0.0.clear();
 }
 

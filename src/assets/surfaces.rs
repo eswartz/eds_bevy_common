@@ -1,11 +1,13 @@
+use crate::prelude::SurfaceMaterial;
 use bevy::prelude::*;
 use bevy_seedling::sample::AudioSample;
 use rustc_hash::FxHashMap;
-use crate::prelude::SurfaceMaterial;
 
 use super::CommonFxAssets;
 
-pub fn sounds_for_surface_impact(fx: &CommonFxAssets) -> FxHashMap<SurfaceMaterial, Vec<Handle<AudioSample>>> {
+pub fn sounds_for_surface_impact(
+    fx: &CommonFxAssets,
+) -> FxHashMap<SurfaceMaterial, Vec<Handle<AudioSample>>> {
     let unk_synth = &[
         &fx.thump_1a,
         &fx.thump_2a,
@@ -75,13 +77,11 @@ pub fn sounds_for_surface_impact(fx: &CommonFxAssets) -> FxHashMap<SurfaceMateri
         &fx.metal_bowl_1e,
         &fx.metal_bowl_1g,
         &fx.metal_slide_1b,
-
         &fx.metal_hammer_1b,
         &fx.metal_hammer_1d,
         &fx.metal_hammer_1e,
         &fx.metal_hammer_1f,
         &fx.metal_hammer_1j,
-
         &fx.metal_1a,
         &fx.metal_1b,
         &fx.metal_1c,
@@ -157,11 +157,9 @@ pub fn sounds_for_surface_impact(fx: &CommonFxAssets) -> FxHashMap<SurfaceMateri
         &fx.gravel_1i,
     ];
 
-    let fabric = &[
-        &fx.gravel_1i,
-    ];
+    let fabric = &[&fx.gravel_1i];
 
-    let mut map : FxHashMap::<SurfaceMaterial, Vec<Handle<AudioSample>>> = default();
+    let mut map: FxHashMap<SurfaceMaterial, Vec<Handle<AudioSample>>> = default();
 
     let to_vec = |arr: &[&Handle<AudioSample>]| -> Vec<Handle<AudioSample>> {
         arr.iter().map(|h| (*h).clone()).collect::<Vec<_>>()
@@ -182,7 +180,9 @@ pub fn sounds_for_surface_impact(fx: &CommonFxAssets) -> FxHashMap<SurfaceMateri
     map
 }
 
-pub fn sounds_for_surface_slide(fx: &CommonFxAssets) -> FxHashMap<SurfaceMaterial, Vec<Handle<AudioSample>>> {
+pub fn sounds_for_surface_slide(
+    fx: &CommonFxAssets,
+) -> FxHashMap<SurfaceMaterial, Vec<Handle<AudioSample>>> {
     let unk_synth_fabric = &[
         &fx.brush1a,
         &fx.brush1b,
@@ -224,13 +224,11 @@ pub fn sounds_for_surface_slide(fx: &CommonFxAssets) -> FxHashMap<SurfaceMateria
         &fx.metal_bowl_1d,
         &fx.metal_bowl_1f,
         &fx.metal_slide_1a,
-
         &fx.metal_hammer_1a,
         &fx.metal_hammer_1c,
         &fx.metal_hammer_1g,
         &fx.metal_hammer_1h,
         &fx.metal_hammer_1i,
-
         &fx.metal_1k,
         &fx.metal_1l,
         &fx.metal_1m,
@@ -285,12 +283,7 @@ pub fn sounds_for_surface_slide(fx: &CommonFxAssets) -> FxHashMap<SurfaceMateria
         &fx.rock_2d,
     ];
 
-    let sand = &[
-        &fx.sand_1a,
-        &fx.sand_1b,
-        &fx.sand_1f,
-        &fx.sand_1i,
-    ];
+    let sand = &[&fx.sand_1a, &fx.sand_1b, &fx.sand_1f, &fx.sand_1i];
 
     let gravel = &[
         &fx.gravel_1a,
@@ -309,7 +302,7 @@ pub fn sounds_for_surface_slide(fx: &CommonFxAssets) -> FxHashMap<SurfaceMateria
         &fx.footsteps_4h,
     ];
 
-    let mut map : FxHashMap::<SurfaceMaterial, Vec<Handle<AudioSample>>> = default();
+    let mut map: FxHashMap<SurfaceMaterial, Vec<Handle<AudioSample>>> = default();
 
     let to_vec = |arr: &[&Handle<AudioSample>]| -> Vec<Handle<AudioSample>> {
         arr.iter().map(|h| (*h).clone()).collect::<Vec<_>>()
@@ -330,7 +323,9 @@ pub fn sounds_for_surface_slide(fx: &CommonFxAssets) -> FxHashMap<SurfaceMateria
     map
 }
 
-pub fn sounds_for_footsteps_impact(fx: &CommonFxAssets) -> FxHashMap<SurfaceMaterial, Vec<Handle<AudioSample>>> {
+pub fn sounds_for_footsteps_impact(
+    fx: &CommonFxAssets,
+) -> FxHashMap<SurfaceMaterial, Vec<Handle<AudioSample>>> {
     let unk_synth = &[
         &fx.footsteps_1a,
         &fx.footsteps_1b,
@@ -399,7 +394,6 @@ pub fn sounds_for_footsteps_impact(fx: &CommonFxAssets) -> FxHashMap<SurfaceMate
         &fx.brush1d,
         &fx.brush1e,
         &fx.brush1f,
-
         &fx.metal_1k,
         &fx.metal_1l,
         &fx.metal_1m,
@@ -415,11 +409,9 @@ pub fn sounds_for_footsteps_impact(fx: &CommonFxAssets) -> FxHashMap<SurfaceMate
         &fx.footsteps_1c,
         &fx.footsteps_1d,
         &fx.footsteps_1e,
-
         &fx.footsteps_5a,
         &fx.footsteps_5b,
         &fx.footsteps_5g,
-
         &fx.footsteps_6a,
         &fx.footsteps_6b,
         &fx.footsteps_6c,
@@ -479,7 +471,7 @@ pub fn sounds_for_footsteps_impact(fx: &CommonFxAssets) -> FxHashMap<SurfaceMate
         &fx.footsteps_2m,
     ];
 
-    let mut map : FxHashMap::<SurfaceMaterial, Vec<Handle<AudioSample>>> = default();
+    let mut map: FxHashMap<SurfaceMaterial, Vec<Handle<AudioSample>>> = default();
 
     let to_vec = |arr: &[&Handle<AudioSample>]| -> Vec<Handle<AudioSample>> {
         arr.iter().map(|h| (*h).clone()).collect::<Vec<_>>()
@@ -500,7 +492,9 @@ pub fn sounds_for_footsteps_impact(fx: &CommonFxAssets) -> FxHashMap<SurfaceMate
     map
 }
 
-pub fn sounds_for_footsteps_slide(fx: &CommonFxAssets) -> FxHashMap<SurfaceMaterial, Vec<Handle<AudioSample>>> {
+pub fn sounds_for_footsteps_slide(
+    fx: &CommonFxAssets,
+) -> FxHashMap<SurfaceMaterial, Vec<Handle<AudioSample>>> {
     let unk_synth_stone = &[
         &fx.footsteps_1a,
         &fx.footsteps_1b,
@@ -569,7 +563,6 @@ pub fn sounds_for_footsteps_slide(fx: &CommonFxAssets) -> FxHashMap<SurfaceMater
         &fx.brush1d,
         &fx.brush1e,
         &fx.brush1f,
-
         &fx.metal_1k,
         &fx.metal_1l,
         &fx.metal_1m,
@@ -601,7 +594,6 @@ pub fn sounds_for_footsteps_slide(fx: &CommonFxAssets) -> FxHashMap<SurfaceMater
         &fx.footsteps_1t,
         &fx.footsteps_1u,
         &fx.footsteps_1v,
-
         &fx.glass_scrape1a,
         &fx.glass_scrape1b,
         &fx.glass_scrape1c,
@@ -674,7 +666,7 @@ pub fn sounds_for_footsteps_slide(fx: &CommonFxAssets) -> FxHashMap<SurfaceMater
         &fx.footsteps_2m,
     ];
 
-    let mut map : FxHashMap::<SurfaceMaterial, Vec<Handle<AudioSample>>> = default();
+    let mut map: FxHashMap<SurfaceMaterial, Vec<Handle<AudioSample>>> = default();
 
     let to_vec = |arr: &[&Handle<AudioSample>]| -> Vec<Handle<AudioSample>> {
         arr.iter().map(|h| (*h).clone()).collect::<Vec<_>>()

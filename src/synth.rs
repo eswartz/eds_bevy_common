@@ -3,18 +3,16 @@
 //! at some point in the future.
 //!
 //! This defines the basic data model.
-use bevy::prelude::*;
 use crate::midi_synth::synth::MidiSynthParams;
+use bevy::prelude::*;
 use std::time::Duration;
 
 pub struct SynthPlugin;
 
 impl Plugin for SynthPlugin {
     fn build(&self, app: &mut App) {
-        app
-            .insert_resource(SynthClock::new(Duration::from_secs_f32(0.0)))
-            .add_message::<SynthMessage>()
-            ;
+        app.insert_resource(SynthClock::new(Duration::from_secs_f32(0.0)))
+            .add_message::<SynthMessage>();
     }
 }
 
@@ -31,7 +29,7 @@ impl SynthClock {
     pub fn new(beat_time: Duration) -> Self {
         Self {
             beat_time,
-            beat_tick: beat_time
+            beat_tick: beat_time,
         }
     }
     pub fn delay_to_next(&self) -> Duration {
@@ -39,7 +37,9 @@ impl SynthClock {
     }
     pub fn tick(&mut self, delta: Duration) {
         if !self.beat_time.is_zero() {
-            self.beat_tick = Duration::from_secs_f32((self.beat_tick + delta).as_secs_f32() % self.beat_time.as_secs_f32());
+            self.beat_tick = Duration::from_secs_f32(
+                (self.beat_tick + delta).as_secs_f32() % self.beat_time.as_secs_f32(),
+            );
         }
     }
 }
@@ -92,7 +92,9 @@ impl SynthNote {
     pub fn to_midi(&self) -> u8 {
         match self {
             SynthNote::Midi(midi) => *midi,
-            SynthNote::Hertz(hz) => (69.0 + (12.0 * (*hz as f32 / 440.0).log2())).clamp(0., 127.) as u8,
+            SynthNote::Hertz(hz) => {
+                (69.0 + (12.0 * (*hz as f32 / 440.0).log2())).clamp(0., 127.) as u8
+            }
         }
     }
 }
@@ -104,7 +106,6 @@ impl SynthNote {
 #[reflect(Component)]
 #[type_path = "game"]
 pub struct SynthVirtualChannel();
-
 
 /// Specifies the target of synth notes and events.
 ///
@@ -183,7 +184,6 @@ impl SynthMessage {
     }
 }
 
-
 /// This component, added by the server, marks an entity as a proxy for
 /// various [SynthEvent]s. Its entity is passed along in SynthEvents.
 /// The client will farm the events out to actual MidiSynths, based on
@@ -191,7 +191,7 @@ impl SynthMessage {
 #[derive(Component, Reflect)]
 #[reflect(Component)]
 #[type_path = "game"]
-pub struct MidiSynthProxy{
+pub struct MidiSynthProxy {
     pub params: MidiSynthParams,
     pub bank: String,
 }

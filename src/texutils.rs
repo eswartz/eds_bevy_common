@@ -1,14 +1,12 @@
+use bevy::image::TextureFormatPixelInfo;
 use bevy::{
-    prelude::*,
     asset::RenderAssetUsages,
-    render::{
-        render_resource::{Extent3d, TextureDimension},
-    },
+    prelude::*,
+    render::render_resource::{Extent3d, TextureDimension},
 };
-use bevy::{image::TextureFormatPixelInfo};
-use image::{imageops::FilterType, DynamicImage, ImageBuffer};
-use wgpu::TextureViewDescriptor;
+use image::{DynamicImage, ImageBuffer, imageops::FilterType};
 use thiserror::Error;
+use wgpu::TextureViewDescriptor;
 
 #[derive(Debug, Error)]
 pub enum ImageError {
@@ -52,11 +50,18 @@ impl<'a> CubeTextureMapper<'a> {
     pub fn new(image: &'a bevy::image::Image) -> Result<Self, ImageError> {
         let width = image.width() as usize;
         let height = image.height() as usize;
-        let pixel_size = image.texture_descriptor.format.pixel_size().map_err(ImageError::TextureError)?;
+        let pixel_size = image
+            .texture_descriptor
+            .format
+            .pixel_size()
+            .map_err(ImageError::TextureError)?;
 
         // Images are stacked in a long vertical strip.
         if width * 6 != height {
-            return Err(ImageError::BadSize(format!("size of image is {}x{}, expecting Nx(N*6)", width, height)));
+            return Err(ImageError::BadSize(format!(
+                "size of image is {}x{}, expecting Nx(N*6)",
+                width, height
+            )));
         }
 
         // Copy out the data, face-by-face.
@@ -82,19 +87,31 @@ impl<'a> CubeTextureMapper<'a> {
 
     /// Write everything from input to output as-is.
     pub fn write_all(&mut self) {
-        self.out_image_data.extend_from_slice(&self.in_image_data[..]);
+        self.out_image_data
+            .extend_from_slice(&self.in_image_data[..]);
     }
 
     /// Write an entire side (e.g. `side_byte_size * N`) from input to output as-is.
-    #[expect(clippy::indexing_slicing, reason = "we want to panic, since caller has bug")]
+    #[expect(
+        clippy::indexing_slicing,
+        reason = "we want to panic, since caller has bug"
+    )]
     pub fn write_side(&mut self, side_offset: usize) {
-        self.out_image_data.extend_from_slice(&self.in_image_data[side_offset..side_offset + self.side_byte_size]);
+        self.out_image_data
+            .extend_from_slice(&self.in_image_data[side_offset..side_offset + self.side_byte_size]);
     }
 
     // Write an entire side by transforming (e.g. `side_byte_size * N`) from input to output as-is.
     // The `map` function maps the input (x,y) to the output (x,y).
-    #[expect(clippy::indexing_slicing, reason = "we want to panic, since caller has bug")]
-    pub fn write_side_map(&mut self, side_offset: usize, map_x_y: impl Fn(usize, usize) -> (usize, usize)) {
+    #[expect(
+        clippy::indexing_slicing,
+        reason = "we want to panic, since caller has bug"
+    )]
+    pub fn write_side_map(
+        &mut self,
+        side_offset: usize,
+        map_x_y: impl Fn(usize, usize) -> (usize, usize),
+    ) {
         for o_row in 0..self.side_height {
             for o_col in 0..self.side_width {
                 let (i_col, i_row) = map_x_y(o_col, o_row);
@@ -102,7 +119,9 @@ impl<'a> CubeTextureMapper<'a> {
                 let pixel_offs = i_row * self.side_row_stride + i_col * self.pixel_size;
                 // Wrap to buffer to avoid panic (so we see the error rendered)
                 let pixel_offs = side_offset + pixel_offs % self.side_byte_size;
-                self.out_image_data.extend_from_slice(&self.in_image_data[pixel_offs..pixel_offs + self.pixel_size]);
+                self.out_image_data.extend_from_slice(
+                    &self.in_image_data[pixel_offs..pixel_offs + self.pixel_size],
+                );
             }
         }
     }
@@ -131,7 +150,6 @@ impl<'a> CubeTextureMapper<'a> {
 
         cubemap_image
     }
-
 }
 
 /// Process a 6-cube-sided image into a cubemap texture.
@@ -147,8 +165,10 @@ impl<'a> CubeTextureMapper<'a> {
 /// for use with a skybox. That image is expected to be in Rgba32F format
 /// and be N by N*6 pixels, laying out images in order dictated by `mapping`.
 ///
-pub fn convert_strip_to_cubemap(image: &bevy::image::Image, mapping: CubemapMapping) -> Result<Image, ImageError> {
-
+pub fn convert_strip_to_cubemap(
+    image: &bevy::image::Image,
+    mapping: CubemapMapping,
+) -> Result<Image, ImageError> {
     let mut mapper = CubeTextureMapper::new(image)?;
     let side_byte_size = mapper.side_byte_size;
     let side_width = mapper.side_width;
@@ -223,22 +243,27 @@ pub fn convert_strip_to_cubemap(image: &bevy::image::Image, mapping: CubemapMapp
     Ok(cubemap_image)
 }
 
-pub fn resize_for_quality(input_image: &Image, new_width: u32, new_height: u32, filter: FilterType) -> Option<DynamicImage>
-{
+pub fn resize_for_quality(
+    input_image: &Image,
+    new_width: u32,
+    new_height: u32,
+    filter: FilterType,
+) -> Option<DynamicImage> {
     let width = input_image.width();
     let height = input_image.height();
     if input_image.width() != new_width || input_image.height() != new_height {
         // Manually convert since Bevy image only supports 8-bit formats.
         let Some(data) = input_image.data.clone() else {
             warn!("cannot convert uninitialized skybox");
-            return None
+            return None;
         };
         let bytesfmt: &[f32] = bytemuck::cast_slice(&data[..]);
         let vecfmt: Vec<f32> = bytesfmt.to_vec();
         let dyn_image_fmt = DynamicImage::ImageRgba32F;
-        let Some(dyn_image) = ImageBuffer::from_raw(width, height, vecfmt).map(dyn_image_fmt) else {
+        let Some(dyn_image) = ImageBuffer::from_raw(width, height, vecfmt).map(dyn_image_fmt)
+        else {
             warn!("cannot convert skybox image");
-            return None
+            return None;
         };
         Some(dyn_image.resize(new_width, new_height, filter))
     } else {

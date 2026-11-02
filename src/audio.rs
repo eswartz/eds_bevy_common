@@ -1,7 +1,7 @@
 use bevy::prelude::*;
+use bevy_asset_loader::prelude::*;
 use bevy_seedling::context::AudioContextConfig;
 use bevy_seedling::prelude::*;
-use bevy_asset_loader::prelude::*;
 use bevy_tweening::Lens;
 
 use bevy_seedling::prelude::PlaybackSettings;
@@ -17,29 +17,14 @@ pub struct AudioCommonPlugin;
 
 impl Plugin for AudioCommonPlugin {
     fn build(&self, app: &mut App) {
-        app
-            .add_plugins(SeedlingPlugins)
-
-            .insert_resource(AudioContextConfig(FirewheelConfig {
-                ..default()
-            }))
-
+        app.add_plugins(SeedlingPlugins)
+            .insert_resource(AudioContextConfig(FirewheelConfig { ..default() }))
             .configure_loading_state(
                 LoadingStateConfig::new(ProgramState::Initializing)
-                    .load_collection::<CommonFxAssets>()
+                    .load_collection::<CommonFxAssets>(),
             )
-
-            .add_systems(FixedPreUpdate,
-                (
-                    check_pause_request,
-                )
-            )
-            .add_systems(PostUpdate,
-                (
-                    apply_volumes,
-                )
-            )
-        ;
+            .add_systems(FixedPreUpdate, (check_pause_request,))
+            .add_systems(PostUpdate, (apply_volumes,));
     }
 }
 
@@ -117,69 +102,60 @@ pub fn initialize_audio(master: Single<Entity, With<MainBus>>, mut commands: Com
         muted: false,
     });
 
-
     // For each new pool, we can provide non-default initial values for the volume.
 
     commands.spawn((
         MusicNode,
-
         // This ensures a sibling VolumeNode.
         UserVolume {
             volume: DEFAULT_POOL_VOLUME,
             muted: false,
         },
-    ))
-    ;
+    ));
 
-    commands.spawn((
-        Name::new("Music"),
-        SamplerPool(Music),
+    commands
+        .spawn((
+            Name::new("Music"),
+            SamplerPool(Music),
+            // This accounts, in theory, for two crossfading songs.
+            // Otherwise use the dynamic pool...?
+            PoolSize(1..=2),
+            // Use for e.g. fading *on top of* the [VolumeNode] (fade-out, fade-in) on this node.
+            // The [UserVolume] above is the base sound channel volume.
+            sample_effects![VolumeNode::default(),],
+        ))
+        .connect(MusicNode);
 
-        // This accounts, in theory, for two crossfading songs.
-        // Otherwise use the dynamic pool...?
-        PoolSize(1 ..= 2),
+    let sfx_bus = commands
+        .spawn((
+            // Marker for the bus.
+            SfxNode,
+            UserVolume {
+                volume: DEFAULT_POOL_VOLUME,
+                muted: false,
+            },
+        ))
+        .id();
 
-        // Use for e.g. fading *on top of* the [VolumeNode] (fade-out, fade-in) on this node.
-        // The [UserVolume] above is the base sound channel volume.
-        sample_effects![
-            VolumeNode::default(),
-        ],
-    ))
-    .connect(MusicNode)
-    ;
-
-    let sfx_bus = commands.spawn((
-        // Marker for the bus.
-        SfxNode,
-
-        UserVolume {
-            volume: DEFAULT_POOL_VOLUME,
-            muted: false,
-        },
-    ))
-    .id();
-
-    let send = commands.spawn((
-        SfxReverbNode,
-
-        FreeverbNode {
-            room_size: 0.25,
-            width: 0.5,
-            damping: 0.5,
-            ..default()
-        },
-    ))
-    .connect(sfx_bus)
-    .head();
+    let send = commands
+        .spawn((
+            SfxReverbNode,
+            FreeverbNode {
+                room_size: 0.25,
+                width: 0.5,
+                damping: 0.5,
+                ..default()
+            },
+        ))
+        .connect(sfx_bus)
+        .head();
 
     // All the desired effects must be placed in the pool.
     // Then a given SamplePlayer targeting this pool can override the effects.
     commands
         .spawn((
             SamplerPool(Sfx),
-
-            PoolSize(0 ..= 256),
-
+            PoolSize(0..=256),
             sample_effects![
                 // Order matters! Put SpatialBasicNode first so effects happen after
                 // the sound is localized.
@@ -199,24 +175,24 @@ pub fn initialize_audio(master: Single<Entity, With<MainBus>>, mut commands: Com
             volume: DEFAULT_POOL_VOLUME,
             muted: false,
         },
-        PoolSize(0 ..= 8),
-
+        PoolSize(0..=8),
         // Marker for the node for UI effects.
         UiSfxNode,
-
     ));
 }
-
 
 /// Apply mute-able UserVolume to VolumeNodes.
 pub fn apply_volumes(
     mut vol_q: Query<(Entity, &UserVolume, &mut VolumeNode), Changed<UserVolume>>,
 ) {
     for (_ent, user, mut vol) in vol_q.iter_mut() {
-        vol.volume = if user.muted { Volume::SILENT } else { user.volume };
+        vol.volume = if user.muted {
+            Volume::SILENT
+        } else {
+            user.volume
+        };
     }
 }
-
 
 /// Fixme, VolumeNode/VolumeFade should work...
 #[derive(Debug)]
@@ -227,7 +203,11 @@ pub struct VolumeNodeLens {
 
 impl Lens<VolumeNode> for VolumeNodeLens {
     fn lerp(&mut self, mut target: Mut<VolumeNode>, ratio: f32) {
-        let new_linear = self.start.volume.linear().lerp(self.end.volume.linear(), ratio);
+        let new_linear = self
+            .start
+            .volume
+            .linear()
+            .lerp(self.end.volume.linear(), ratio);
         target.set_linear(new_linear);
     }
 }
@@ -241,10 +221,13 @@ struct PlaybackPaused;
 fn check_pause_request(
     mut commands: Commands,
     paused: ResMut<PauseState>,
-    mut settings_q: Query<(Entity, &mut PlaybackSettings, Option<&PlaybackPaused>), With<SamplePlayer>>,
+    mut settings_q: Query<
+        (Entity, &mut PlaybackSettings, Option<&PlaybackPaused>),
+        With<SamplePlayer>,
+    >,
 ) {
     if !paused.is_changed() {
-        return
+        return;
     }
     let pause = paused.is_paused();
     if pause {
@@ -254,7 +237,9 @@ fn check_pause_request(
                 commands.entity(ent).try_insert(PlaybackPaused);
             }
         }
-    } else /* !pause ==> resume */ {
+    } else
+    /* !pause ==> resume */
+    {
         for (ent, mut settings, paused) in settings_q.iter_mut() {
             if paused.is_some() {
                 settings.play();

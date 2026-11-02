@@ -16,8 +16,7 @@ impl Plugin for DetailNormalPlugin {
             .add_systems(
                 PreUpdate,
                 handle_assign_detail_normals.run_if(in_state(ProgramState::InGame)),
-            )
-        ;
+            );
     }
 }
 
@@ -74,7 +73,7 @@ pub struct AssignDetailNormal {
 }
 impl AssignDetailNormal {
     fn make_extension(&self, assets: &AssetServer) -> DetailNormalExtension {
-         DetailNormalExtension {
+        DetailNormalExtension {
             uv_scale: self.uv_scale,
             blend: self.blend,
             normal_texture: assets.load(&self.asset_path),
@@ -109,7 +108,7 @@ fn handle_assign_detail_normals(
                 Changed<AssignDetailNormal>,
                 Changed<CustomMaterialNormalExtension>,
             )>,
-        )
+        ),
     >,
     materials: Res<Assets<StandardMaterial>>,
     mut ext_materials: ResMut<Assets<ExtendedMaterial<StandardMaterial, DetailNormalExtension>>>,
@@ -117,9 +116,7 @@ fn handle_assign_detail_normals(
 ) {
     for (ent, dec, mat_opt, cust_opt) in meshes_q.iter() {
         let std_mat = match cust_opt {
-            Some(cust) => {
-                cust.std.clone()
-            }
+            Some(cust) => cust.std.clone(),
             None => {
                 let Some(mat) = mat_opt else {
                     continue;

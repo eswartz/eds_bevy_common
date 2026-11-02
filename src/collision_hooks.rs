@@ -1,8 +1,8 @@
+use crate::physics::*;
+use crate::prelude::*;
 use bevy::ecs::system::SystemParam;
 use bevy::ecs::system::lifetimeless::Read;
 use bevy::prelude::*;
-use crate::physics::*;
-use crate::prelude::*;
 
 /// Define a `SystemParam` for modifying collision hooks.
 #[derive(SystemParam)]
@@ -41,13 +41,12 @@ impl GeometryCollisionHooks<'_, '_> {
     }
 
     fn is_projectile(&self, body_opt: Option<Entity>, body: Entity) -> bool {
-        self.projectile_q.contains(
-            if let Some(the_body) = body_opt {
+        self.projectile_q
+            .contains(if let Some(the_body) = body_opt {
                 the_body
             } else {
                 body
-            }
-        )
+            })
     }
 }
 
@@ -61,17 +60,26 @@ impl CollisionHooks for GeometryCollisionHooks<'_, '_> {
 
             // See what things are colliding.
             let ((player1, proj1), (player2, proj2)) = (
-                (self.is_player(contacts.body1), self.is_projectile(contacts.body1, contacts.collider1)),
-                (self.is_player(contacts.body2), self.is_projectile(contacts.body2, contacts.collider2)),
+                (
+                    self.is_player(contacts.body1),
+                    self.is_projectile(contacts.body1, contacts.collider1),
+                ),
+                (
+                    self.is_player(contacts.body2),
+                    self.is_projectile(contacts.body2, contacts.collider2),
+                ),
             );
             if player1 && player2 {
                 // Player V. Player, ignore
-                return true
+                return true;
             }
             if !player1 && !proj1 && !player2 && !proj2 {
                 // Shouldn't be here unless we added an ActiveCollisionHooks and forgot to handle it
-                warn!("not handling hook for {:?} and {:?}", contacts.body1, contacts.body2);
-                return true
+                warn!(
+                    "not handling hook for {:?} and {:?}",
+                    contacts.body1, contacts.body2
+                );
+                return true;
             }
 
             // Make player or projectile first.
@@ -89,13 +97,15 @@ impl CollisionHooks for GeometryCollisionHooks<'_, '_> {
 
         if deepest.penetration < units(0.125)
             && let Some(cb) = &self.cb_opt
-            && (cb.is_liquid)(world) {
-                debug!("ignoring grazing with liquid {world} @ {deepest:?}");
-                return false;
-            }
+            && (cb.is_liquid)(world)
+        {
+            debug!("ignoring grazing with liquid {world} @ {deepest:?}");
+            return false;
+        }
 
         // Ignore cases where we hit an embedded and invisible collider face in the ground.
-        if deepest.penetration < units(0.1) /* && deepest.local_point2.y < -units(0.05) */ && deepest.normal_impulse.abs() < 0.01 {
+        if deepest.penetration < units(0.1) /* && deepest.local_point2.y < -units(0.05) */ && deepest.normal_impulse.abs() < 0.01
+        {
             // let mut any_edges = false;
             for man in &mut contacts.manifolds {
                 for pt in &man.points {

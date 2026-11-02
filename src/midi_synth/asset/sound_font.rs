@@ -1,4 +1,3 @@
-
 use std::{io::Read, sync::Arc};
 use thiserror::Error;
 
@@ -18,7 +17,9 @@ impl SoundFont {
     fn new<R: Read>(file: &mut R) -> Self {
         let sf = Sf::new(file).unwrap();
 
-        Self { content: Arc::new(sf) }
+        Self {
+            content: Arc::new(sf),
+        }
     }
 }
 

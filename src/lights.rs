@@ -14,22 +14,15 @@ pub struct LightsPlugin;
 
 impl Plugin for LightsPlugin {
     fn build(&self, app: &mut App) {
-        app
+        app.add_systems(OnEnter(LevelState::Configuring), fixup_light_shadows)
             .add_systems(
-                OnEnter(LevelState::Configuring),
-                fixup_light_shadows
+                OnEnter(GameplayState::Playing),
+                (apply_light_effect_settings,),
             )
-            .add_systems(OnEnter(GameplayState::Playing),
-                (
-                    apply_light_effect_settings,
-                )
-            )
-            .add_systems(PreUpdate,
-                (
-                    apply_light_effect_settings.run_if(resource_changed::<VideoSettings>),
-                )
-            )
-        ;
+            .add_systems(
+                PreUpdate,
+                (apply_light_effect_settings.run_if(resource_changed::<VideoSettings>),),
+            );
     }
 }
 
@@ -100,7 +93,6 @@ fn apply_light_effect_settings(
                 }
                 ShadowQuality::Low => {
                     new_config.num_cascades = 1;
-
                 }
                 ShadowQuality::Medium => {
                     // default
@@ -115,7 +107,6 @@ fn apply_light_effect_settings(
                     new_config.num_cascades = 8;
                     // new_config.maximum_distance = 50.0;
                 }
-
             }
 
             if new_config.num_cascades > 0 {
@@ -142,7 +133,7 @@ fn apply_light_effect_settings(
             {
                 $light.soft_shadows_enabled = $value;
             }
-        }
+        };
     }
 
     for (ent, mut light) in point_light_q.iter_mut() {
@@ -155,7 +146,9 @@ fn apply_light_effect_settings(
             ShadowQuality::Low => {
                 light.shadow_maps_enabled = true;
                 set_soft_shadows_enabled!(light, false);
-                commands.entity(ent).try_insert(ShadowFilteringMethod::Hardware2x2);
+                commands
+                    .entity(ent)
+                    .try_insert(ShadowFilteringMethod::Hardware2x2);
             }
             ShadowQuality::Medium => {
                 // default
@@ -173,7 +166,6 @@ fn apply_light_effect_settings(
                 set_soft_shadows_enabled!(light, true);
                 commands.entity(ent).try_insert(default_method);
             }
-
         };
     }
 
@@ -185,7 +177,9 @@ fn apply_light_effect_settings(
             }
             ShadowQuality::Low => {
                 set_soft_shadows_enabled!(light, false);
-                commands.entity(ent).try_insert(ShadowFilteringMethod::Hardware2x2);
+                commands
+                    .entity(ent)
+                    .try_insert(ShadowFilteringMethod::Hardware2x2);
             }
             ShadowQuality::Medium => {
                 // default
@@ -200,7 +194,6 @@ fn apply_light_effect_settings(
                 set_soft_shadows_enabled!(light, true);
                 commands.entity(ent).try_insert(default_method);
             }
-
         };
     }
 
@@ -209,20 +202,28 @@ fn apply_light_effect_settings(
             ShadowQuality::Off => {
                 light.shadow_maps_enabled = false;
                 #[cfg(feature = "experimental_pbr_pcss")]
-                {light.soft_shadow_size = None;}
+                {
+                    light.soft_shadow_size = None;
+                }
                 commands.entity(ent).try_remove::<ShadowFilteringMethod>();
             }
             ShadowQuality::Low => {
                 light.shadow_maps_enabled = true;
                 #[cfg(feature = "experimental_pbr_pcss")]
-                {light.soft_shadow_size = None;}
-                commands.entity(ent).try_insert(ShadowFilteringMethod::Hardware2x2);
+                {
+                    light.soft_shadow_size = None;
+                }
+                commands
+                    .entity(ent)
+                    .try_insert(ShadowFilteringMethod::Hardware2x2);
             }
             ShadowQuality::Medium => {
                 // default
                 light.shadow_maps_enabled = true;
                 #[cfg(feature = "experimental_pbr_pcss")]
-                {light.soft_shadow_size = None;}
+                {
+                    light.soft_shadow_size = None;
+                }
                 commands.entity(ent).try_insert(default_method);
             }
             ShadowQuality::High => {
@@ -237,7 +238,6 @@ fn apply_light_effect_settings(
                 // {light.soft_shadow_size = Some(0.02);}
                 commands.entity(ent).try_insert(default_method);
             }
-
         };
     }
 }

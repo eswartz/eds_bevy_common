@@ -7,13 +7,8 @@ pub struct CollidersPlugin;
 
 impl Plugin for CollidersPlugin {
     fn build(&self, app: &mut App) {
-        app
-            .init_resource::<BaseVhacdParameters>()
-            .add_systems(
-                FixedPreUpdate,
-                apply_colliders,
-            )
-        ;
+        app.init_resource::<BaseVhacdParameters>()
+            .add_systems(FixedPreUpdate, apply_colliders);
     }
 }
 
@@ -26,13 +21,13 @@ pub struct BaseVhacdParameters(pub VhacdParameters);
 impl Default for BaseVhacdParameters {
     fn default() -> Self {
         Self(VhacdParameters {
-            resolution: 256,          // Higher = more detail (but slower)
-            concavity: 0.001,         // Lower = more parts but better fit
-            max_convex_hulls: 64,     // Maximum number of convex parts
-            plane_downsampling: 4,    // Precision of plane search
-            convex_hull_downsampling: 4, // Precision of convex hull generation
-            alpha: 0.05,              // Bias toward symmetrical splits
-            beta: 0.05,               // Bias toward revolution axis splits
+            resolution: 256,                 // Higher = more detail (but slower)
+            concavity: 0.001,                // Lower = more parts but better fit
+            max_convex_hulls: 64,            // Maximum number of convex parts
+            plane_downsampling: 4,           // Precision of plane search
+            convex_hull_downsampling: 4,     // Precision of convex hull generation
+            alpha: 0.05,                     // Bias toward symmetrical splits
+            beta: 0.05,                      // Bias toward revolution axis splits
             convex_hull_approximation: true, // Approximate for speed
             fill_mode: FillMode::FloodFill {
                 detect_cavities: false,
@@ -45,14 +40,14 @@ impl Default for BaseVhacdParameters {
 #[reflect(Default)]
 #[type_path = "game"]
 pub enum ColliderKind {
-    TriMesh{ downscale: f32 },
+    TriMesh { downscale: f32 },
     ConvexHull,
-    VoxelizeMesh{ voxel_size: f32 },
+    VoxelizeMesh { voxel_size: f32 },
 }
 
 impl Default for ColliderKind {
     fn default() -> Self {
-        ColliderKind::TriMesh{ downscale: 1.0 }
+        ColliderKind::TriMesh { downscale: 1.0 }
     }
 }
 
@@ -74,7 +69,10 @@ impl LayerConfig {
         for ign in &self.ignores {
             filters &= !ign.to_bits();
         }
-        CollisionLayers { memberships, filters }
+        CollisionLayers {
+            memberships,
+            filters,
+        }
     }
 }
 
@@ -97,7 +95,6 @@ pub struct EnsureCollider {
     pub layer_config: LayerConfig,
 }
 
-
 #[derive(Component, Reflect)]
 #[component(storage = "SparseSet")]
 #[reflect(Component)]
@@ -114,8 +111,7 @@ fn apply_colliders(
     mesh_q: Query<&Mesh3d>,
 ) {
     for (ent, spawn) in ensure_collider_q.iter() {
-        if changed_collider_q.contains(ent) || vhacd.is_changed()
-        {
+        if changed_collider_q.contains(ent) || vhacd.is_changed() {
             apply_collider(
                 commands.entity(ent),
                 &vhacd,
@@ -127,10 +123,9 @@ fn apply_colliders(
 
         for kid in child_q.iter_descendants(ent) {
             if stop_collider_q.contains(kid) {
-                break
+                break;
             }
-            if changed_collider_q.contains(kid) || vhacd.is_changed()
-            {
+            if changed_collider_q.contains(kid) || vhacd.is_changed() {
                 apply_collider(
                     commands.entity(kid),
                     &vhacd,
@@ -151,15 +146,14 @@ fn apply_collider(
     mesh_q: &Query<&Mesh3d>,
 ) {
     let collider = match kind {
-        ColliderKind::TriMesh{ downscale } => {
+        ColliderKind::TriMesh { downscale } => {
             if downscale >= 1.0 {
-                ColliderConstructor::TrimeshFromMeshWithConfig(
-                    TrimeshFlags::FIX_INTERNAL_EDGES
-                )
+                ColliderConstructor::TrimeshFromMeshWithConfig(TrimeshFlags::FIX_INTERNAL_EDGES)
             } else {
                 let vhacd = &vhacd.0;
                 let resolution = ((vhacd.resolution as f32 * downscale).ceil() as u32).max(16);
-                let max_convex_hulls = ((vhacd.max_convex_hulls as f32 * downscale).ceil() as u32).max(16);
+                let max_convex_hulls =
+                    ((vhacd.max_convex_hulls as f32 * downscale).ceil() as u32).max(16);
                 let concavity = (vhacd.concavity as f32 / downscale / downscale).min(1.0);
                 ColliderConstructor::ConvexDecompositionFromMeshWithConfig(
                     // Apply base parameters but correct for some panic-inducing range errors.
@@ -170,24 +164,24 @@ fn apply_collider(
                         // convex_hull_downsampling: vhacd.convex_hull_downsampling.max(1),
                         max_convex_hulls,
                         ..vhacd.clone()
-                    }
+                    },
                 )
             }
         }
         ColliderKind::VoxelizeMesh { voxel_size } => {
             ColliderConstructor::VoxelizedTrimeshFromMesh {
                 voxel_size,
-                fill_mode: FillMode::FloodFill { detect_cavities: true },
+                fill_mode: FillMode::FloodFill {
+                    detect_cavities: true,
+                },
             }
         }
-        ColliderKind::ConvexHull => {
-            ColliderConstructor::ConvexHullFromMesh
-        }
+        ColliderKind::ConvexHull => ColliderConstructor::ConvexHullFromMesh,
     };
 
     if !mesh_q.contains(ent_commands.id()) {
         ent_commands.try_insert(ColliderConstructorHierarchy::new(collider));
-    } else{
+    } else {
         ent_commands.try_insert(collider);
     }
     ent_commands.try_insert(layer_config.to_collision_layers());

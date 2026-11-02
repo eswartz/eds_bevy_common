@@ -9,7 +9,9 @@ use std::path::PathBuf;
 /// and returns true if this looks like the base directory.
 ///
 #[cfg(not(target_arch = "wasm32"))]
-pub fn find_runtime_base_directory(match_dir: impl Fn(&Path) -> bool) -> Result<PathBuf, &'static str> {
+pub fn find_runtime_base_directory(
+    match_dir: impl Fn(&Path) -> bool,
+) -> Result<PathBuf, &'static str> {
     if let Ok(manifest_dir) = std::env::var("CARGO_MANIFEST_DIR") {
         // We're building. This file is likely in the source tree. Step up.
         for test in Path::new(&manifest_dir).ancestors() {
@@ -34,7 +36,7 @@ pub fn find_runtime_base_directory(match_dir: impl Fn(&Path) -> bool) -> Result<
     }
 
     let Some(exe_parent) = Path::new(&exe_path).parent() else {
-        return Err("no directory for argv[0]")
+        return Err("no directory for argv[0]");
     };
     let exe_dir = cwd.join(exe_parent);
     for test in exe_dir.ancestors() {
@@ -46,7 +48,9 @@ pub fn find_runtime_base_directory(match_dir: impl Fn(&Path) -> bool) -> Result<
 }
 
 #[cfg(target_arch = "wasm32")]
-pub fn find_runtime_base_directory(_match_dir: impl Fn(&Path) -> bool) -> Result<PathBuf, &'static str> {
+pub fn find_runtime_base_directory(
+    _match_dir: impl Fn(&Path) -> bool,
+) -> Result<PathBuf, &'static str> {
     // No possibility of running "outside" the build on web.
     Ok(Path::new(".").to_path_buf())
 }

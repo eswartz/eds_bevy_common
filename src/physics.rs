@@ -1,14 +1,14 @@
 //! Re-export our common Avian APIs.
-pub use avian3d::prelude::*;
 pub use avian3d::math::*;
+pub use avian3d::prelude::*;
 // pub use avian3d::PhysicsGizmos;
 // pub use avian3d::PhysicsTime;
 // pub use avian3d::PhysicsLayer;
 // pub use avian3d::Physics;
 // pub use avian3d::PhysicsTime as _;
 pub use avian3d::dynamics::rigid_body::LinearVelocity;
-pub use avian3d::dynamics::solver::SolverDiagnostics;
 pub use avian3d::dynamics::solver::SolverConfig;
+pub use avian3d::dynamics::solver::SolverDiagnostics;
 
 // Aaand avoid porting for a while until it's for sure (0.8.0 release).
 pub type Scalar = Real;

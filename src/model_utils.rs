@@ -1,10 +1,9 @@
-
 use std::collections::HashMap;
 
 use bevy::camera::primitives::Aabb;
-use bevy::prelude::*;
 use bevy::mesh::Indices;
 use bevy::mesh::MeshTrianglesError;
+use bevy::prelude::*;
 use rustc_hash::FxHashMap;
 
 // Turned off until we get consistent nalgebra crates
@@ -32,20 +31,23 @@ use rustc_hash::FxHashMap;
 //     }
 // }
 
-
 /// Maps each triangle from surface to appropriate side of box.
 /// This is so-called box mapping.
 pub fn generate_uv_box(vertices: &[[f32; 3]], triangles: &[[u32; 3]]) -> UvBox {
     let mut uv_box = UvBox::default();
     for (i, triangle) in triangles.iter().enumerate() {
         #[expect(clippy::get_first, reason = "0/1/2")]
-        let (Some(ta), Some(tb), Some(tc)) = (
-            triangle.get(0), triangle.get(1), triangle.get(2)) else { continue };
+        let (Some(ta), Some(tb), Some(tc)) = (triangle.get(0), triangle.get(1), triangle.get(2))
+        else {
+            continue;
+        };
         let (Some(va), Some(vb), Some(vc)) = (
             vertices.get(*ta as usize),
             vertices.get(*tb as usize),
             vertices.get(*tc as usize),
-        ) else { continue };
+        ) else {
+            continue;
+        };
         let a = Vec3::from_array(*va);
         let b = Vec3::from_array(*vb);
         let c = Vec3::from_array(*vc);
@@ -93,8 +95,8 @@ pub fn generate_uv_box(vertices: &[[f32; 3]], triangles: &[[u32; 3]]) -> UvBox {
 /// * The Mesh is missing position or index data.
 /// * The Mesh's position data has the wrong format (not `Float32x3`).
 pub fn mesh_triangle_indices(mesh: &Mesh) -> Result<Vec<[u32; 3]>, MeshTrianglesError> {
-    use wgpu::*;
     use bevy::mesh::Indices;
+    use wgpu::*;
 
     let Some(position_data) = mesh.attribute(Mesh::ATTRIBUTE_POSITION) else {
         return Err(MeshTrianglesError::PositionsFormat);
@@ -102,7 +104,9 @@ pub fn mesh_triangle_indices(mesh: &Mesh) -> Result<Vec<[u32; 3]>, MeshTriangles
 
     let Some(indices) = mesh.indices() else {
         // Assume just grouped by 3s.
-        return Ok((0u32..position_data.len() as u32).array_chunks::<3>().collect::<Vec<_>>());
+        return Ok((0u32..position_data.len() as u32)
+            .array_chunks::<3>()
+            .collect::<Vec<_>>());
     };
 
     let mut ret_vec = vec![];
@@ -110,57 +114,58 @@ pub fn mesh_triangle_indices(mesh: &Mesh) -> Result<Vec<[u32; 3]>, MeshTriangles
         PrimitiveTopology::TriangleList => {
             // When indices reference out-of-bounds vertex data, the triangle is omitted.
             // This implicitly truncates the indices to a multiple of 3.
-             match indices {
-                Indices::U16(vec) =>
-                    ret_vec.extend(vec.as_slice()
+            match indices {
+                Indices::U16(vec) => {
+                    ret_vec.extend(vec.as_slice().chunks_exact(3).flat_map(move |indices| {
+                        indices.iter().map(|i| *i as u32).array_chunks::<3>()
+                    }))
+                }
+                Indices::U32(vec) => ret_vec.extend(
+                    vec.as_slice()
                         .chunks_exact(3)
-                        .flat_map(move |indices| indices.iter().map(|i| *i as u32)
-                        .array_chunks::<3>())),
-                    Indices::U32(vec) =>
-                        ret_vec.extend(vec.as_slice()
-                        .chunks_exact(3)
-                        .flat_map(move |indices| indices.iter().copied()
-                        .array_chunks::<3>())),
+                        .flat_map(move |indices| indices.iter().copied().array_chunks::<3>()),
+                ),
             };
-
         }
 
         PrimitiveTopology::TriangleStrip => {
             // When indices reference out-of-bounds vertex data, the triangle is omitted.
             // If there aren't enough indices to make a triangle, then an empty vector will be
             // returned.
-            #[expect(clippy::indexing_slicing, reason ="we're using windows")]
+            #[expect(clippy::indexing_slicing, reason = "we're using windows")]
             match indices {
-                Indices::U16(vec) => {
-                    ret_vec.extend(vec.as_slice().windows(3).enumerate().flat_map(
-                        move |(i, indices)| {
+                Indices::U16(vec) => ret_vec.extend(
+                    vec.as_slice()
+                        .windows(3)
+                        .enumerate()
+                        .flat_map(move |(i, indices)| {
                             if i % 2 == 0 {
                                 [indices[0] as u32, indices[1] as u32, indices[2] as u32]
                             } else {
                                 [indices[1] as u32, indices[0] as u32, indices[2] as u32]
                             }
-                        },
-                    ).array_chunks::<3>())
-                }
-                Indices::U32(vec) => {
-                    ret_vec.extend(vec.as_slice().windows(3).enumerate().flat_map(
-                        move |(i, indices)| {
+                        })
+                        .array_chunks::<3>(),
+                ),
+                Indices::U32(vec) => ret_vec.extend(
+                    vec.as_slice()
+                        .windows(3)
+                        .enumerate()
+                        .flat_map(move |(i, indices)| {
                             if i % 2 == 0 {
                                 [indices[0], indices[1], indices[2]]
                             } else {
                                 [indices[1], indices[0], indices[2]]
                             }
-                        },
-                    ).array_chunks::<3>())
-                }
+                        })
+                        .array_chunks::<3>(),
+                ),
             };
         }
 
         _ => {
             return Err(MeshTrianglesError::WrongTopology);
         }
-
-
     };
 
     Ok(ret_vec)
@@ -171,28 +176,35 @@ pub fn mesh_triangle_indices(mesh: &Mesh) -> Result<Vec<[u32; 3]>, MeshTriangles
 /// Unmentioned sides get the nomimal mapping.
 pub fn unwrap_uvs_planar(mesh: &mut Mesh, scale: Vec3, side_corners: HashMap<SideClass, Rect>) {
     {
-        let Some(pv) = mesh.attribute(Mesh::ATTRIBUTE_POSITION) else { return };
+        let Some(pv) = mesh.attribute(Mesh::ATTRIBUTE_POSITION) else {
+            return;
+        };
         let Some(_) = pv.as_float3() else { return };
     }
 
     mesh.duplicate_vertices();
 
-    let Some(pos_values) = mesh.attribute(Mesh::ATTRIBUTE_POSITION) else { return };
-    let Some(pts) = pos_values.as_float3() else { return };
+    let Some(pos_values) = mesh.attribute(Mesh::ATTRIBUTE_POSITION) else {
+        return;
+    };
+    let Some(pts) = pos_values.as_float3() else {
+        return;
+    };
 
-    let Ok(tris) = mesh_triangle_indices(mesh) else { return };
+    let Ok(tris) = mesh_triangle_indices(mesh) else {
+        return;
+    };
 
     let uv_box = generate_uv_box(pts, &tris);
 
     let mut uvs = vec![Vec2::ZERO; uv_box.num_uvs()];
-    uv_box.assign_sides_to_faces_with(&mut uvs, scale, |side| *side_corners.get(&side).unwrap_or(&full(side)));
+    uv_box.assign_sides_to_faces_with(&mut uvs, scale, |side| {
+        *side_corners.get(&side).unwrap_or(&full(side))
+    });
 
     let indices = Indices::U32((0u32..pos_values.len() as u32).collect::<Vec<_>>());
 
-    mesh.insert_attribute(
-        Mesh::ATTRIBUTE_UV_0,
-        uvs,
-    );
+    mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, uvs);
 
     mesh.insert_indices(indices);
 }
@@ -218,12 +230,9 @@ pub enum SideClass {
 impl SideClass {
     fn restrict_to_plane(&self, v: Vec3) -> Vec2 {
         match self {
-            SideClass::NegX |
-            SideClass::PosX => v.yz(),
-            SideClass::NegY |
-            SideClass::PosY => v.zx(),
-            SideClass::NegZ |
-            SideClass::PosZ => v.xy(),
+            SideClass::NegX | SideClass::PosX => v.yz(),
+            SideClass::NegY | SideClass::PosY => v.zx(),
+            SideClass::NegZ | SideClass::PosZ => v.xy(),
         }
     }
 }
@@ -259,16 +268,28 @@ fn classify_side(normal: impl Into<Vec3>) -> SideClass {
 
     if normal.x.abs() >= longest {
         longest = normal.x.abs();
-        class = if normal.x >= 0.0 { SideClass::PosX } else { SideClass::NegX };
+        class = if normal.x >= 0.0 {
+            SideClass::PosX
+        } else {
+            SideClass::NegX
+        };
     }
 
     if normal.y.abs() > longest {
         longest = normal.y.abs();
-        class = if normal.y >= 0.0 { SideClass::PosY } else { SideClass::NegY };
+        class = if normal.y >= 0.0 {
+            SideClass::PosY
+        } else {
+            SideClass::NegY
+        };
     }
 
     if normal.z.abs() > longest {
-        class = if normal.z >= 0.0 { SideClass::PosZ } else { SideClass::NegZ };
+        class = if normal.z >= 0.0 {
+            SideClass::PosZ
+        } else {
+            SideClass::NegZ
+        };
     }
 
     class
@@ -299,7 +320,12 @@ fn full(_: SideClass) -> Rect {
 impl UvBox {
     /// Assign each side of the receiver to fill the provided UV coordinate space.
     ///  get_uv_range accepts a PlaneClass and a negative (true) / positive (false) flag.
-    pub fn assign_sides_to_faces_with(&self, uvs: &mut [Vec2], scale: Vec3, get_uv_range: impl Fn (SideClass) -> Rect) {
+    pub fn assign_sides_to_faces_with(
+        &self,
+        uvs: &mut [Vec2],
+        scale: Vec3,
+        get_uv_range: impl Fn(SideClass) -> Rect,
+    ) {
         self.assign_side_to_face(&self.nx, SideClass::NegX, scale.yz(), &get_uv_range, uvs);
         self.assign_side_to_face(&self.px, SideClass::PosX, scale.yz(), &get_uv_range, uvs);
         self.assign_side_to_face(&self.ny, SideClass::NegY, scale.xz(), &get_uv_range, uvs);
@@ -319,7 +345,8 @@ impl UvBox {
     }
 
     #[expect(clippy::indexing_slicing, reason = "we know the size")]
-    fn assign_side_to_face(&self,
+    fn assign_side_to_face(
+        &self,
         side_indices: &[usize],
         class: SideClass,
         scale: Vec2,
@@ -349,18 +376,15 @@ impl UvBox {
 
         let remap = |v: Vec2| -> Vec2 {
             match class {
-                SideClass::NegX |
-                SideClass::PosX => Vec2::new(
+                SideClass::NegX | SideClass::PosX => Vec2::new(
                     1.0 - ((v.x - min_x) * scale_x + rect.min.x),
                     1.0 - ((v.y - min_y) * scale_y + rect.min.y),
                 ),
-                SideClass::PosY |
-                SideClass::NegY => Vec2::new(
+                SideClass::PosY | SideClass::NegY => Vec2::new(
                     1.0 - ((v.x - min_x) * scale_x + rect.min.x),
                     1.0 - ((v.y - min_y) * scale_y + rect.min.y),
                 ),
-                SideClass::NegZ |
-                SideClass::PosZ => Vec2::new(
+                SideClass::NegZ | SideClass::PosZ => Vec2::new(
                     (v.x - min_x) * scale_x + rect.min.x,
                     1.0 - ((v.y - min_y) * scale_y + rect.min.y),
                 ),
@@ -379,56 +403,63 @@ impl UvBox {
 /// Manually construct the AABB for a given mesh under the given transform.
 pub fn get_mesh_aabb(mesh: &Mesh, xfrm: &Transform) -> Aabb {
     if let Some(pos_values) = mesh.attribute(Mesh::ATTRIBUTE_POSITION)
-    && let Some(pts) = pos_values.as_float3() {
+        && let Some(pts) = pos_values.as_float3()
+    {
         Aabb::enclosing(
-            pts
-            .iter()
-            .map(|pt| xfrm.transform_point(Vec3::new(pt[0], pt[1], pt[2]))))
-            .unwrap_or_default()
+            pts.iter()
+                .map(|pt| xfrm.transform_point(Vec3::new(pt[0], pt[1], pt[2]))),
+        )
+        .unwrap_or_default()
     } else {
         Aabb::default()
     }
 }
 
 pub fn convert_trimesh_to_obj(mesh: &avian3d::parry::shape::TriMesh) -> obj::ObjData {
+    use obj::Group;
+    use obj::IndexTuple;
     use obj::ObjData;
     use obj::Object;
-    use obj::Group;
     use obj::SimplePolygon;
-    use obj::IndexTuple;
 
     let polys = mesh
         .indices()
         .iter()
-        .map(|vs| SimplePolygon(vec![
-            IndexTuple(vs[0] as _, None, None),
-            IndexTuple(vs[1] as _, None, None),
-            IndexTuple(vs[2] as _, None, None),
-        ])).collect::<Vec<_>>();
+        .map(|vs| {
+            SimplePolygon(vec![
+                IndexTuple(vs[0] as _, None, None),
+                IndexTuple(vs[1] as _, None, None),
+                IndexTuple(vs[2] as _, None, None),
+            ])
+        })
+        .collect::<Vec<_>>();
 
     ObjData {
-        position: mesh.vertices().iter().map(|ps| [ps[0] as _, ps[1] as _, ps[2] as _]).collect::<Vec<_>>(),
-        objects: vec![
-            Object { name: "test".to_owned(), groups: vec![
-                Group {
-                    name: "test".to_owned(),
-                    index: 0,
-                    material: None,
-                    polys,
-                }
-            ]},
-        ],
-        .. default()
+        position: mesh
+            .vertices()
+            .iter()
+            .map(|ps| [ps[0] as _, ps[1] as _, ps[2] as _])
+            .collect::<Vec<_>>(),
+        objects: vec![Object {
+            name: "test".to_owned(),
+            groups: vec![Group {
+                name: "test".to_owned(),
+                index: 0,
+                material: None,
+                polys,
+            }],
+        }],
+        ..default()
     }
 }
 
 pub fn convert_bevy_mesh_to_obj(mesh: &Mesh) -> Result<obj::ObjData, BevyError> {
-    use obj::ObjData;
-    use obj::Object;
     use obj::Group;
-    use obj::SimplePolygon;
     use obj::IndexTuple;
+    use obj::ObjData;
     use obj::ObjMaterial;
+    use obj::Object;
+    use obj::SimplePolygon;
 
     let inds = mesh.indices().ok_or("need indexed Mesh")?;
     let uvs = if let Some(items) = mesh.attribute(Mesh::ATTRIBUTE_UV_0) {
@@ -436,46 +467,55 @@ pub fn convert_bevy_mesh_to_obj(mesh: &Mesh) -> Result<obj::ObjData, BevyError> 
             bevy::mesh::VertexAttributeValues::Float32x2(items) => Some(items),
             _ => None,
         }
-    } else { None };
-    let polys = inds.iter()
+    } else {
+        None
+    };
+    let polys = inds
+        .iter()
         .array_chunks::<3>()
-        .map(|vs| SimplePolygon(vec![
-            IndexTuple(vs[0], Some(vs[0]), Some(vs[0])),
-            IndexTuple(vs[1], Some(vs[1]), Some(vs[1])),
-            IndexTuple(vs[2], Some(vs[2]), Some(vs[2])),
-        ])).collect::<Vec<_>>();
-
+        .map(|vs| {
+            SimplePolygon(vec![
+                IndexTuple(vs[0], Some(vs[0]), Some(vs[0])),
+                IndexTuple(vs[1], Some(vs[1]), Some(vs[1])),
+                IndexTuple(vs[2], Some(vs[2]), Some(vs[2])),
+            ])
+        })
+        .collect::<Vec<_>>();
 
     Ok(ObjData {
-        position: mesh.attribute(Mesh::ATTRIBUTE_POSITION)
+        position: mesh
+            .attribute(Mesh::ATTRIBUTE_POSITION)
             .ok_or("expected Positions")?
             .as_float3()
             .ok_or("expected float3")?
             .to_vec(),
-            normal: mesh.attribute(Mesh::ATTRIBUTE_NORMAL)
+        normal: mesh
+            .attribute(Mesh::ATTRIBUTE_NORMAL)
             .ok_or("expected normals")?
             .as_float3()
             .ok_or("expected float3")?
             .to_vec(),
         texture: uvs.map_or(vec![], |uvs| uvs.to_vec()),
-        objects: vec![
-            Object { name: "test".to_owned(), groups: vec![
-                Group {
-                    name: "test".to_owned(),
-                    index: 0,
-                    material: Some(ObjMaterial::Ref("foo".to_string())),
-                    polys,
-                }
-            ]},
-        ],
-        .. default()
+        objects: vec![Object {
+            name: "test".to_owned(),
+            groups: vec![Group {
+                name: "test".to_owned(),
+                index: 0,
+                material: Some(ObjMaterial::Ref("foo".to_string())),
+                polys,
+            }],
+        }],
+        ..default()
     })
 }
 
 pub fn export_obj(path: impl Into<std::path::PathBuf>, data: obj::ObjData) -> anyhow::Result<()> {
     use obj::Obj;
 
-    let obj = Obj{ data, path: default() };
+    let obj = Obj {
+        data,
+        path: default(),
+    };
     let path = path.into();
     obj.save(&path).map_err(|e| anyhow::anyhow!("{e}"))?;
     info!("Wrote {path:?}");
@@ -491,7 +531,9 @@ impl SideSpans {
     fn remap(&self, pos: impl Into<Vec3>, normal: impl Into<Vec3>) -> Vec2 {
         let pos = pos.into();
         let side = classify_side(normal.into());
-        self.sides.get(&side).map_or(Vec2::default(), |s| s.remap(pos, side))
+        self.sides
+            .get(&side)
+            .map_or(Vec2::default(), |s| s.remap(pos, side))
     }
 }
 
@@ -523,18 +565,18 @@ impl SideSpan {
         let mut uv_min = Vec2::MAX;
         let mut uv_max = Vec2::MIN;
         for index in 0..self.uvs.len() {
-            let Some(pos) = self.pos.get(index) else { continue };
+            let Some(pos) = self.pos.get(index) else {
+                continue;
+            };
             let pos = side.restrict_to_plane(*pos);
-            let Some(uv) = self.uvs.get(index) else { continue };
-            if (pos.x <= pt.x && pos.x <= pt_min.x)
-            && (pos.y <= pt.y && pos.y <= pt_min.y)
-            {
+            let Some(uv) = self.uvs.get(index) else {
+                continue;
+            };
+            if (pos.x <= pt.x && pos.x <= pt_min.x) && (pos.y <= pt.y && pos.y <= pt_min.y) {
                 pt_min = pos;
                 uv_min = *uv;
             }
-            if (pos.x >= pt.x && pos.x >= pt_max.x)
-            && (pos.y >= pt.y && pos.y >= pt_max.y)
-            {
+            if (pos.x >= pt.x && pos.x >= pt_max.x) && (pos.y >= pt.y && pos.y >= pt_max.y) {
                 pt_max = pos;
                 uv_max = *uv;
             }
@@ -545,18 +587,28 @@ impl SideSpan {
         let uv_x_diff = uv_max.x - uv_min.x;
         let uv_y_diff = uv_max.y - uv_min.y;
         Vec2::new(
-            if x_diff > 0. { uv_min.x + uv_x_diff * (pt.x - pt_min.x) / x_diff } else { uv_min.x },
-            if y_diff > 0. { uv_min.y + uv_y_diff * (pt.y - pt_min.y) / y_diff } else { uv_min.y },
+            if x_diff > 0. {
+                uv_min.x + uv_x_diff * (pt.x - pt_min.x) / x_diff
+            } else {
+                uv_min.x
+            },
+            if y_diff > 0. {
+                uv_min.y + uv_y_diff * (pt.y - pt_min.y) / y_diff
+            } else {
+                uv_min.y
+            },
         )
     }
 }
 
 pub fn get_uv_maps(mesh: &Mesh) -> Result<(SideSpans, SideSpans), BevyError> {
-    let pos = mesh.attribute(Mesh::ATTRIBUTE_POSITION)
+    let pos = mesh
+        .attribute(Mesh::ATTRIBUTE_POSITION)
         .ok_or("expected Position")?
         .as_float3()
         .ok_or("expected Float3")?;
-    let normals = mesh.attribute(Mesh::ATTRIBUTE_NORMAL)
+    let normals = mesh
+        .attribute(Mesh::ATTRIBUTE_NORMAL)
         .ok_or("expected Normals")?
         .as_float3()
         .ok_or("expected Float3")?;
@@ -583,7 +635,9 @@ fn map_uvs(pos: &[[f32; 3]], normals: &[[f32; 3]], uvs: &[[f32; 2]]) -> SideSpan
     let mut side_spans = SideSpans::default();
     for (index, pt) in pos.iter().enumerate() {
         let pt: Vec3 = (*pt).into();
-        let Some(normal) = normals.get(index) else { continue };
+        let Some(normal) = normals.get(index) else {
+            continue;
+        };
         let side = classify_side(*normal);
         let side_span = side_spans.sides.entry(side).or_default();
         side_span.min = side_span.min.min(pt);
@@ -596,19 +650,26 @@ fn map_uvs(pos: &[[f32; 3]], normals: &[[f32; 3]], uvs: &[[f32; 2]]) -> SideSpan
     side_spans
 }
 
-pub fn update_uv_maps(mesh: &mut Mesh, (orig_uv0, orig_uv1): (SideSpans, SideSpans)) -> Result<(), BevyError> {
-    let pos = mesh.attribute(Mesh::ATTRIBUTE_POSITION)
+pub fn update_uv_maps(
+    mesh: &mut Mesh,
+    (orig_uv0, orig_uv1): (SideSpans, SideSpans),
+) -> Result<(), BevyError> {
+    let pos = mesh
+        .attribute(Mesh::ATTRIBUTE_POSITION)
         .ok_or("expected Position")?
         .as_float3()
         .ok_or("expected Float3")?;
-    let normals = mesh.attribute(Mesh::ATTRIBUTE_NORMAL)
+    let normals = mesh
+        .attribute(Mesh::ATTRIBUTE_NORMAL)
         .ok_or("expected Normals")?
         .as_float3()
         .ok_or("expected Float3")?;
     let mut uvs0: Vec<[f32; 2]> = vec![];
     let mut uvs1: Vec<[f32; 2]> = vec![];
 
-    if pos.len() != normals.len() { return Err("pos len != normal len".into()) };
+    if pos.len() != normals.len() {
+        return Err("pos len != normal len".into());
+    };
 
     #[expect(clippy::indexing_slicing, reason = "we checked")]
     for new_index in 0..pos.len() {
@@ -669,7 +730,8 @@ pub fn create_uvmapped_mesh_scaled(shape: impl Into<Mesh>, scale: Vec3) -> Mesh 
     // let x_span = Rect::new(0.0, 0.0, 1.0, 1.0);
     // let y_span = Rect::new(0.0, 0.0, 1.0, 1.0);
     // let z_span = Rect::new(0.0, 0.0, 1.0, 1.0);
-    unwrap_uvs_planar(&mut mesh,
+    unwrap_uvs_planar(
+        &mut mesh,
         scale,
         HashMap::from([
             (SideClass::NegX, nx_span),
@@ -678,7 +740,7 @@ pub fn create_uvmapped_mesh_scaled(shape: impl Into<Mesh>, scale: Vec3) -> Mesh 
             (SideClass::PosY, py_span),
             (SideClass::NegZ, nz_span),
             (SideClass::PosZ, pz_span),
-        ])
+        ]),
     );
 
     mesh.compute_smooth_normals();

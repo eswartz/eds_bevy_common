@@ -50,7 +50,7 @@ impl BetterPulse {
         Self {
             trigger_limit: 0,
             trigger_on_start: true,
-            actuation: 0.5 /* DEFAULT_ACTUATION */,
+            actuation: 0.5, /* DEFAULT_ACTUATION */
             time_kind: Default::default(),
             initial_delay: None,
             interval,
@@ -130,9 +130,20 @@ impl InputCondition for BetterPulse {
             // Anyway, if the time is zero, that means either (1) multiple fires per tick or (2) clock is paused.
             #[expect(deprecated)]
             let fire_time_elapsed = match self.time_kind {
-                TimeKind::Real => if time.real.elapsed().is_zero() { Duration::ZERO } else { fire_time_elapsed }
-                TimeKind::Auto |
-                TimeKind::Virtual => if time.auto.elapsed().is_zero() { Duration::ZERO } else { fire_time_elapsed },
+                TimeKind::Real => {
+                    if time.real.elapsed().is_zero() {
+                        Duration::ZERO
+                    } else {
+                        fire_time_elapsed
+                    }
+                }
+                TimeKind::Auto | TimeKind::Virtual => {
+                    if time.auto.elapsed().is_zero() {
+                        Duration::ZERO
+                    } else {
+                        fire_time_elapsed
+                    }
+                }
             };
 
             should_fire |= fire_time_elapsed >= pulse_time;

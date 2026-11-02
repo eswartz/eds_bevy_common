@@ -20,7 +20,7 @@ pub enum MidiMessage {
         ///
         channel: u8,
         ///
-        note: u8
+        note: u8,
     },
     /// Turn on the note on the given channel, with the given velocity (0=silent, 127=max).
     NoteOn {
@@ -29,7 +29,7 @@ pub enum MidiMessage {
         ///
         note: u8,
         ///
-        velocity: u8
+        velocity: u8,
     },
     /// Send a controller command.
     Controller {
@@ -38,14 +38,14 @@ pub enum MidiMessage {
         ///
         ctrl: u8,
         ///
-        data: u8
+        data: u8,
     },
     /// Change the program of the channel
     SetPatch {
         ///
         channel: u8,
         /// 1-based patch
-        patch: u8
+        patch: u8,
     },
     /// Initiate a pitch bend.
     PitchBend {
@@ -54,18 +54,49 @@ pub enum MidiMessage {
         ///
         data1: u8,
         ///
-        data2: u8
+        data2: u8,
     },
 }
 
 impl std::fmt::Debug for MidiMessage {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::NoteOff { channel, note } => write!(f, "NoteOff{{ channel={channel:2}, note={note:2} }}"),
-            Self::NoteOn { channel, note, velocity } => write!(f, "NoteOn {{ channel={channel:2}, note={note:2}, velocity={velocity} }}"),
-            Self::Controller { channel, ctrl, data } => f.debug_struct("Controller").field("channel", channel).field("ctrl", ctrl).field("data", data).finish(),
-            Self::SetPatch { channel, patch } => f.debug_struct("SetPatch").field("channel", channel).field("patch", patch).finish(),
-            Self::PitchBend { channel, data1, data2 } => f.debug_struct("PitchBend").field("channel", channel).field("data1", data1).field("data2", data2).finish(),
+            Self::NoteOff { channel, note } => {
+                write!(f, "NoteOff{{ channel={channel:2}, note={note:2} }}")
+            }
+            Self::NoteOn {
+                channel,
+                note,
+                velocity,
+            } => write!(
+                f,
+                "NoteOn {{ channel={channel:2}, note={note:2}, velocity={velocity} }}"
+            ),
+            Self::Controller {
+                channel,
+                ctrl,
+                data,
+            } => f
+                .debug_struct("Controller")
+                .field("channel", channel)
+                .field("ctrl", ctrl)
+                .field("data", data)
+                .finish(),
+            Self::SetPatch { channel, patch } => f
+                .debug_struct("SetPatch")
+                .field("channel", channel)
+                .field("patch", patch)
+                .finish(),
+            Self::PitchBend {
+                channel,
+                data1,
+                data2,
+            } => f
+                .debug_struct("PitchBend")
+                .field("channel", channel)
+                .field("data1", data1)
+                .field("data2", data2)
+                .finish(),
         }
     }
 }

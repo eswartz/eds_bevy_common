@@ -3,8 +3,8 @@
 use std::any::TypeId;
 use std::time::Duration;
 
-use bevy::prelude::*;
 use crate::physics::*;
+use bevy::prelude::*;
 
 #[cfg(feature = "input_bei")]
 use bevy_enhanced_input::prelude::*;
@@ -19,52 +19,45 @@ pub struct PlayerCameraPlugin;
 
 impl Plugin for PlayerCameraPlugin {
     fn build(&self, app: &mut App) {
-        app
-            .init_resource::<PlayerCameraSettings>()
+        app.init_resource::<PlayerCameraSettings>()
             .init_resource::<PlayerCameraViews>()
             .init_resource::<FovZoomState>()
-            .add_systems(
-                OnEnter(LevelState::Playing),
-                update_player_camera_render
-            )
-
+            .add_systems(OnEnter(LevelState::Playing), update_player_camera_render)
             .add_observer(on_player_camera_change)
             .add_observer(on_player_camera_zoom)
-
-            .add_systems(FixedPostUpdate,
-                (
-                    sync_world_camera_to_player,
-                    sync_view_camera_to_player,
-                )
-                .chain()
-                .after(PhysicsSystems::Writeback)
-                .before(TransformSystems::Propagate)
-                .run_if(not(is_menu_paused))
-                .run_if(is_game_active)
-                ,
+            .add_systems(
+                FixedPostUpdate,
+                (sync_world_camera_to_player, sync_view_camera_to_player)
+                    .chain()
+                    .after(PhysicsSystems::Writeback)
+                    .before(TransformSystems::Propagate)
+                    .run_if(not(is_menu_paused))
+                    .run_if(is_game_active),
             )
-            .add_systems(FixedUpdate,
+            .add_systems(
+                FixedUpdate,
                 decay_camera_zoom
-                .run_if(not(is_grabbing_item))
-                .run_if(not(is_menu_paused))
-                .run_if(not(debug_gui_wants_input))
-                .run_if(is_game_active)
-                ,
+                    .run_if(not(is_grabbing_item))
+                    .run_if(not(is_menu_paused))
+                    .run_if(not(debug_gui_wants_input))
+                    .run_if(is_game_active),
             )
-            .add_systems(PostUpdate,
+            .add_systems(
+                PostUpdate,
                 update_player_ui
-                .run_if(|gizmo_config: Res<GizmoConfigStore>| {
-                    // Safely access without a panic if no debug UI logged.
-                    if let Some((phys_gizmos, _)) = gizmo_config.get_config_dyn(&TypeId::of::<PhysicsGizmos>()) {
-                        phys_gizmos.enabled
-                    } else {
-                        false
-                    }
-                })
-                .run_if(not(is_menu_paused))
-                .run_if(in_state(OverlayState::Hidden)) //.or(in_state(OverlayState::DebugGuiVisible)))
-            )
-        ;
+                    .run_if(|gizmo_config: Res<GizmoConfigStore>| {
+                        // Safely access without a panic if no debug UI logged.
+                        if let Some((phys_gizmos, _)) =
+                            gizmo_config.get_config_dyn(&TypeId::of::<PhysicsGizmos>())
+                        {
+                            phys_gizmos.enabled
+                        } else {
+                            false
+                        }
+                    })
+                    .run_if(not(is_menu_paused))
+                    .run_if(in_state(OverlayState::Hidden)), //.or(in_state(OverlayState::DebugGuiVisible)))
+            );
     }
 }
 
@@ -160,17 +153,24 @@ impl OurCamera {
         &mut self,
         settings: &PlayerCameraSettings,
         mode: PlayerMode,
-        dt: f32, fwd: f32, strafe: f32, speed: f32
+        dt: f32,
+        fwd: f32,
+        strafe: f32,
+        speed: f32,
     ) {
-
         let sign_or_zero = |v: f32| -> i32 {
-            if v.abs() < 0.0001 { 0 } else { v.signum() as i32 }
+            if v.abs() < 0.0001 {
+                0
+            } else {
+                v.signum() as i32
+            }
         };
-        let move_toward = |ease: EaseFunction, src: f32, dst: f32, time: f32, timer: &mut f32| -> f32 {
-            *timer = (*timer + dt).min(time);
-            let t = *timer / time;
-            EasingCurve::new(src, dst, ease).sample_clamped(t)
-        };
+        let move_toward =
+            |ease: EaseFunction, src: f32, dst: f32, time: f32, timer: &mut f32| -> f32 {
+                *timer = (*timer + dt).min(time);
+                let t = *timer / time;
+                EasingCurve::new(src, dst, ease).sample_clamped(t)
+            };
         if sign_or_zero(self.roll_z_dir) != sign_or_zero(-strafe) {
             self.roll_z_timer = 0.;
             self.roll_z_dir = -strafe;
@@ -183,16 +183,18 @@ impl OurCamera {
                 0.0,
                 roll_angle_max * self.roll_z_dir,
                 settings.roll_angle_time.as_secs_f32(),
-                &mut self.roll_z_timer)
+                &mut self.roll_z_timer,
+            )
         } else {
             move_toward(
                 EaseFunction::ExponentialOut,
                 roll_angle_max * self.roll_z_ang.signum(),
                 0.0,
                 settings.roll_angle_time.as_secs_f32(),
-                &mut self.roll_z_timer)
-
-        }).clamp(-roll_angle_max, roll_angle_max);
+                &mut self.roll_z_timer,
+            )
+        })
+        .clamp(-roll_angle_max, roll_angle_max);
 
         if self.roll_z_dir == 0. && self.roll_z_ang.abs() < 0.0001 {
             self.roll_z_ang = 0.;
@@ -210,15 +212,18 @@ impl OurCamera {
                 0.0,
                 pitch_max * self.pitch_x_dir,
                 settings.pitch_angle_time.as_secs_f32(),
-                &mut self.pitch_x_timer)
+                &mut self.pitch_x_timer,
+            )
         } else {
             move_toward(
                 EaseFunction::ExponentialOut,
                 pitch_max * self.pitch_x_ang.signum(),
                 0.0,
                 settings.pitch_angle_time.as_secs_f32(),
-                &mut self.pitch_x_timer)
-        }).clamp(-pitch_max, pitch_max);
+                &mut self.pitch_x_timer,
+            )
+        })
+        .clamp(-pitch_max, pitch_max);
 
         if self.pitch_x_dir == 0. && self.pitch_x_ang.abs() < 0.0001 {
             self.pitch_x_ang = 0.;
@@ -233,7 +238,10 @@ impl OurCamera {
 
             if speed >= 0.25 {
                 let bob_max = speed * settings.bob_distance.abs();
-                self.bob_distance = (self.bob_timer * std::f32::consts::TAU / settings.bob_time.as_secs_f32()).sin() * bob_max;
+                self.bob_distance = (self.bob_timer * std::f32::consts::TAU
+                    / settings.bob_time.as_secs_f32())
+                .sin()
+                    * bob_max;
                 self.bob_timer += dt;
             } else {
                 self.bob_distance *= 0.5;
@@ -250,8 +258,19 @@ impl OurCamera {
 }
 
 pub fn sync_world_camera_to_player(
-    mut player_q: Single<(&GlobalTransform, &PlayerLook, &ColliderAabb, &mut Visibility), (With<OurPlayer>, Without<Camera3d>)>,
-    mut world_camera_q: Single<(&PlayerCamera, &mut Transform, &OurCamera), (With<Camera3d>, With<WorldCamera>)>,
+    mut player_q: Single<
+        (
+            &GlobalTransform,
+            &PlayerLook,
+            &ColliderAabb,
+            &mut Visibility,
+        ),
+        (With<OurPlayer>, Without<Camera3d>),
+    >,
+    mut world_camera_q: Single<
+        (&PlayerCamera, &mut Transform, &OurCamera),
+        (With<Camera3d>, With<WorldCamera>),
+    >,
     stationary_camera_transform: Res<StationaryCameraTransform>,
     time: Res<Time>,
 ) {
@@ -269,16 +288,13 @@ pub fn sync_world_camera_to_player(
 
             camera_xfrm.rotation = look.rotation
                 * Quat::from_rotation_z(cam.roll_z_ang)
-                * Quat::from_rotation_x(cam.pitch_x_ang)
-                ;
+                * Quat::from_rotation_x(cam.pitch_x_ang);
 
-            camera_xfrm.translation = eyes_pos
-                + camera_xfrm.rotation * Vec3::Y * cam.bob_distance;
+            camera_xfrm.translation = eyes_pos + camera_xfrm.rotation * Vec3::Y * cam.bob_distance;
         }
         CameraMode::ThirdPerson => {
             model_visibility.set_if_neq(Visibility::Inherited);
-            let cam_pos = eyes_pos
-                + look.rotation * Vec3::new(0.0, 1.0, 5.0);
+            let cam_pos = eyes_pos + look.rotation * Vec3::new(0.0, 1.0, 5.0);
             let new_xfrm = camera_xfrm.looking_at(eyes_pos, Vec3::Y);
             camera_xfrm.translation = camera_xfrm.translation.lerp(cam_pos, q);
             camera_xfrm.rotation = camera_xfrm.rotation.slerp(new_xfrm.rotation, q);
@@ -299,7 +315,7 @@ pub fn sync_view_camera_to_player(
     // WorldCamera + ViewerCamera can be on the same.
     mut params: ParamSet<(
         Single<&Transform, (With<Camera3d>, With<WorldCamera>, With<OurCamera>)>,
-        Single<&mut Transform, (With<Camera3d>, With<ViewerCamera>)>
+        Single<&mut Transform, (With<Camera3d>, With<ViewerCamera>)>,
     )>,
     settings: Res<PlayerCameraSettings>,
 ) {
@@ -311,7 +327,10 @@ pub fn sync_view_camera_to_player(
     view_camera_q.translation = camera_xfrm.translation;
 
     // Slowly align but don't tilt.
-    let target_rot = view_camera_q.rotation.lerp(camera_xfrm.rotation, settings.viewer_camera_align_time.as_secs_f32());
+    let target_rot = view_camera_q.rotation.lerp(
+        camera_xfrm.rotation,
+        settings.viewer_camera_align_time.as_secs_f32(),
+    );
     let (ex, ey, _ez) = target_rot.to_euler(default());
     let target_rot = Quat::from_euler(default(), ex, ey, 0.0);
     view_camera_q.rotation = target_rot;
@@ -341,15 +360,17 @@ pub fn on_player_camera_change(
     mut camera_q: Single<&mut PlayerCamera, (With<WorldCamera>, With<OurCamera>)>,
     mut commands: Commands,
 
-    is_grabbing_item: Option<Res<GrabbedItem>>
+    is_grabbing_item: Option<Res<GrabbedItem>>,
 ) {
     // HACK: we "know" zoom and move-while-grabbed use the same actions (new context!)
-    if is_grabbing_item.is_some() { return };
+    if is_grabbing_item.is_some() {
+        return;
+    };
 
     // Switch the PlayerMode.
     if views.0.is_empty() {
         warn!("no PlayerCameraViews");
-        return
+        return;
     }
 
     let new_index = if let Some(current) = views.0.iter().position(|x| *x == camera_q.0) {
@@ -391,15 +412,20 @@ pub fn on_player_camera_zoom(
     settings: Res<PlayerCameraSettings>,
     time: Res<Time>,
 
-    is_grabbing_item: Option<Res<GrabbedItem>>
+    is_grabbing_item: Option<Res<GrabbedItem>>,
 ) {
     // HACK: we "know" zoom and move-while-grabbed use the same actions (new context!)
-    if is_grabbing_item.is_some() { return };
+    if is_grabbing_item.is_some() {
+        return;
+    };
 
     if let zoom_camera = zoom_camera.get(event.action).unwrap()
-    && zoom_camera.length() > 0. {
+        && zoom_camera.length() > 0.
+    {
         let q = ops::exp(-time.delta_secs());
-        **fov_delta = fov_delta.lerp(**fov_delta + zoom_camera.y, q).clamp(-90.0, 90.0);
+        **fov_delta = fov_delta
+            .lerp(**fov_delta + zoom_camera.y, q)
+            .clamp(-90.0, 90.0);
         *zoom_state = FovZoomState::Zooming;
     } else {
         if *zoom_state == FovZoomState::Zooming {
@@ -422,7 +448,15 @@ pub fn hide_3d_camera(mut camera_q: Query<&mut Camera, (With<Camera3d>, With<Our
 }
 
 pub fn update_player_ui(
-    mut player_q: Query<(&PlayerMovement, &PlayerLook, &GlobalTransform, &ColliderAabb), With<OurPlayer>>,
+    mut player_q: Query<
+        (
+            &PlayerMovement,
+            &PlayerLook,
+            &GlobalTransform,
+            &ColliderAabb,
+        ),
+        With<OurPlayer>,
+    >,
     mut gizmos: Gizmos,
 ) {
     for (movement, look, transform, aabb) in player_q.iter_mut() {
@@ -430,11 +464,7 @@ pub fn update_player_ui(
         let world_pos = transform.translation();
         let head = player_eyes(world_pos, aabb, look);
         let normal = look.rotation * Vec3::NEG_Z;
-        gizmos.arrow(
-            head,
-            head + normal * 5.0,
-            Color::WHITE,
-        );
+        gizmos.arrow(head, head + normal * 5.0, Color::WHITE);
 
         if movement.state == MovementState::Grounded {
             let feet = player_feet(world_pos, aabb);
@@ -453,16 +483,17 @@ fn decay_camera_zoom(
     mut zoom_state: ResMut<FovZoomState>,
     mut fov_delta: ResMut<FovDelta>,
 
-    player_q: Query<(&PlayerMovement, &PlayerLook), With<OurPlayer>,>,
+    player_q: Query<(&PlayerMovement, &PlayerLook), With<OurPlayer>>,
 ) {
     // In a zoom? This is held for some time to avoid snap-back.
     if let FovZoomState::AtZoom(decay) = *zoom_state {
         if let Some((movement, look)) = player_q.iter().next() {
             // Did the user move or look away quickly?
             if movement.state.is_moving()
-            || look.rotation.angle_between(look.prev_rotation) > std::f32::consts::PI / 16.0 {
+                || look.rotation.angle_between(look.prev_rotation) > std::f32::consts::PI / 16.0
+            {
                 *zoom_state = FovZoomState::Unzooming;
-            } else if ! settings.fov_delta_hold_time.is_zero() {
+            } else if !settings.fov_delta_hold_time.is_zero() {
                 // Time to decay?
                 let decay = decay.saturating_sub(time.delta());
                 if decay.is_zero() {
@@ -476,14 +507,14 @@ fn decay_camera_zoom(
         }
     }
     if *zoom_state != FovZoomState::Unzooming {
-        return
+        return;
     }
 
     // Do we reset immediately?
     if settings.fov_delta_decay_time.is_zero() {
         **fov_delta = 0.;
         *zoom_state = FovZoomState::Inactive;
-        return
+        return;
     }
 
     // Else, slowly move back towards 0.

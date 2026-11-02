@@ -1,21 +1,16 @@
 //! Types and functions related to the [`Player`] entity.
 //!
-use bevy::asset::uuid::Uuid;
-use bevy::prelude::*;
 use crate::physics::*;
 use crate::prelude::*;
+use bevy::asset::uuid::Uuid;
+use bevy::prelude::*;
 
 // This matches the eye height of a Quake-like player. A small figure.
 pub const QUAKE_SCALE: Vec3 = Vec3::new(0.5, 1.5, 0.3);
 
-
 /// Get the local position of the player's feet relative to the given player transform.
 pub fn player_feet(world_pos: Vec3, aabb: &ColliderAabb) -> Vec3 {
-    Vec3::new(
-        world_pos.x,
-        aabb.min.y,
-        world_pos.z,
-    )
+    Vec3::new(world_pos.x, aabb.min.y, world_pos.z)
 }
 
 /// Get the local position of the player's eyes relative to the given player transform.
@@ -45,7 +40,6 @@ pub fn player_gun(rotation: &Quat, aabb: &ColliderAabb, eyes: Vec3, fwd_distance
     (eyes + Vec3::new(0., -dist, 0.)) + (rotation * Vec3::NEG_Z * fwd_distance)
 }
 
-
 /// Spawn (or respawn) a player entity into the world.
 ///
 /// This makes the physics colliders which work best for
@@ -57,7 +51,12 @@ pub fn player_gun(rotation: &Quat, aabb: &ColliderAabb, eyes: Vec3, fwd_distance
 /// world: the world.
 /// user_id: for multiplayer, a unique ID, else use [Uuid::default()].
 ///
-pub fn spawn_fps_player(world: &mut World, user_id: Uuid, player_scale: Vec3, initial_xfrm: Transform) -> Entity {
+pub fn spawn_fps_player(
+    world: &mut World,
+    user_id: Uuid,
+    player_scale: Vec3,
+    initial_xfrm: Transform,
+) -> Entity {
     let mut exist_ent = None;
     {
         let mut player_q = world.query::<(Entity, &Player)>();
@@ -82,64 +81,62 @@ pub fn spawn_fps_player(world: &mut World, user_id: Uuid, player_scale: Vec3, in
     let rounded_size = 0.125 as Scalar;
     let head_size = (player_scale.z as Scalar) - rounded_size;
     let compound_shape = Collider::compound(vec![
+        (Vector::ZERO, Quaternion::IDENTITY, body_shape),
         (
-            Vector::ZERO,
-            Quaternion::IDENTITY,
-            body_shape,
-        ),
-        (
-            Vector::new(0., (player_scale.y - player_scale.z * 2.0) as Scalar - head_size, 0.),
+            Vector::new(
+                0.,
+                (player_scale.y - player_scale.z * 2.0) as Scalar - head_size,
+                0.,
+            ),
             Quaternion::IDENTITY,
             Collider::round_cuboid(head_size, head_size, head_size, rounded_size),
         ),
-
     ]);
 
     let mode = world.get_resource::<PlayerMode>();
 
-    world.spawn((
-        Name::new("Player"),
-        DespawnOnExit(ProgramState::InGame),
-        (
-            Player(user_id),
-            PlayerMovement::default(),
-            PlayerLook::default(),
-
-            initial_xfrm,
-            Visibility::Inherited,  // needed if no Mesh*
-        ),
-        (
-            RigidBody::Dynamic,
-
+    world
+        .spawn((
+            Name::new("Player"),
+            DespawnOnExit(ProgramState::InGame),
             (
-                Mass(75.),
-                CenterOfMass(player_scale / 2.),
-                Restitution::new(0.25),
-                Friction::ZERO.with_dynamic_coefficient(0.0).with_static_coefficient(0.5),
+                Player(user_id),
+                PlayerMovement::default(),
+                PlayerLook::default(),
+                initial_xfrm,
+                Visibility::Inherited, // needed if no Mesh*
             ),
-
-            // Do not let physics modify rotation.
-            LockedAxes::new()
-                .lock_rotation_x()
-                .lock_rotation_y()
-                .lock_rotation_z(),
-
-            compound_shape.clone(),
-            default_player_collision_layers(),
-
-            // Try to avoid falling through trimesh floor.
-            CollisionMargin(0.01),
-            SweptCcd::default(),
-
-            // Avoid flying too much when e.g. colliding with a projectile.
-            MaxLinearSpeed(4096.0),
-
-            GravityScale(if mode.is_some_and(|m| *m == PlayerMode::Fps) { 1.0 } else { 0.0 }),
-
-            TransformInterpolation,
-        ),
-    ))
-    .id()
+            (
+                RigidBody::Dynamic,
+                (
+                    Mass(75.),
+                    CenterOfMass(player_scale / 2.),
+                    Restitution::new(0.25),
+                    Friction::ZERO
+                        .with_dynamic_coefficient(0.0)
+                        .with_static_coefficient(0.5),
+                ),
+                // Do not let physics modify rotation.
+                LockedAxes::new()
+                    .lock_rotation_x()
+                    .lock_rotation_y()
+                    .lock_rotation_z(),
+                compound_shape.clone(),
+                default_player_collision_layers(),
+                // Try to avoid falling through trimesh floor.
+                CollisionMargin(0.01),
+                SweptCcd::default(),
+                // Avoid flying too much when e.g. colliding with a projectile.
+                MaxLinearSpeed(4096.0),
+                GravityScale(if mode.is_some_and(|m| *m == PlayerMode::Fps) {
+                    1.0
+                } else {
+                    0.0
+                }),
+                TransformInterpolation,
+            ),
+        ))
+        .id()
 }
 
 /// If needed, add a child collider to the [Player] entity which
@@ -157,25 +154,31 @@ pub fn spawn_fps_player(world: &mut World, user_id: Uuid, player_scale: Vec3, in
 /// water/lava when standing above or near the edge.
 ///
 pub fn add_fps_foot_gameplay_collider(mut commands: Commands, player: Entity, player_scale: Vec3) {
-
     commands.entity(player).with_children(|b| {
         b.spawn((
             Name::new("Game Collider"),
             Transform::from_translation(Vec3::new(0., -player_scale.x * 0.05, -player_scale.x)),
-            Collider::cuboid(player_scale.x as Scalar, player_scale.y as Scalar, player_scale.x /* yes */ as Scalar),
-			CollisionLayers::new([GameLayer::Player], [GameLayer::Gameplay]),
+            Collider::cuboid(
+                player_scale.x as Scalar,
+                player_scale.y as Scalar,
+                player_scale.x /* yes */ as Scalar,
+            ),
+            CollisionLayers::new([GameLayer::Player], [GameLayer::Gameplay]),
             ActiveCollisionHooks::MODIFY_CONTACTS,
         ));
     });
-
 }
 
 pub fn default_player_collision_layers() -> CollisionLayers {
-    CollisionLayers::new(GameLayer::Player, [
-        GameLayer::Default, GameLayer::World,
-        // GameLayer::Gameplay, // set this on a child Game Collider does this
-        GameLayer::Projectiles,
+    CollisionLayers::new(
         GameLayer::Player,
-        GameLayer::Enemy,
-    ])
+        [
+            GameLayer::Default,
+            GameLayer::World,
+            // GameLayer::Gameplay, // set this on a child Game Collider does this
+            GameLayer::Projectiles,
+            GameLayer::Player,
+            GameLayer::Enemy,
+        ],
+    )
 }

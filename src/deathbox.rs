@@ -26,7 +26,10 @@ pub struct DeathboxFlags {
 
 impl Default for DeathboxFlags {
     fn default() -> Self {
-        Self { move_players: true, remove_spawns: true }
+        Self {
+            move_players: true,
+            remove_spawns: true,
+        }
     }
 }
 
@@ -35,7 +38,7 @@ impl DeathboxPlugin {
         DeathboxPlugin {
             flags: DeathboxFlags {
                 move_players: flag,
-                .. self.flags
+                ..self.flags
             },
         }
     }
@@ -43,7 +46,7 @@ impl DeathboxPlugin {
         DeathboxPlugin {
             flags: DeathboxFlags {
                 remove_spawns: flag,
-                .. self.flags
+                ..self.flags
             },
         }
     }
@@ -51,39 +54,31 @@ impl DeathboxPlugin {
 
 impl Plugin for DeathboxPlugin {
     fn build(&self, app: &mut App) {
-        app
-            .add_message::<HitDeathboxMessage>()
+        app.add_message::<HitDeathboxMessage>()
             .insert_resource(self.flags.clone())
             .add_systems(
                 FixedPostUpdate,
-                (
-                    check_out_of_bounds,
-                )
-                .before(TransformSystems::Propagate)
-                .after(PhysicsSystems::Writeback)
-                .run_if(not(is_user_paused))
-                .run_if(in_state(LevelState::Playing))
-                .run_if(in_state(ProgramState::InGame)),
+                (check_out_of_bounds,)
+                    .before(TransformSystems::Propagate)
+                    .after(PhysicsSystems::Writeback)
+                    .run_if(not(is_user_paused))
+                    .run_if(in_state(LevelState::Playing))
+                    .run_if(in_state(ProgramState::InGame)),
             )
             .add_systems(
                 PostUpdate,
-                (
-                    enforce_visibility
-                )
-                .run_if(not(is_user_paused))
-                .run_if(in_state(LevelState::Playing))
-                .run_if(in_state(ProgramState::InGame)),
+                (enforce_visibility)
+                    .run_if(not(is_user_paused))
+                    .run_if(in_state(LevelState::Playing))
+                    .run_if(in_state(ProgramState::InGame)),
             )
             .add_systems(
                 FixedUpdate,
-                (
-                    handle_out_of_bounds,
-                )
-                .run_if(not(is_user_paused))
-                .run_if(in_state(LevelState::Playing))
-                .run_if(in_state(ProgramState::InGame)),
-            )
-        ;
+                (handle_out_of_bounds,)
+                    .run_if(not(is_user_paused))
+                    .run_if(in_state(LevelState::Playing))
+                    .run_if(in_state(ProgramState::InGame)),
+            );
     }
 }
 
@@ -102,7 +97,7 @@ fn check_out_of_bounds(
 ) {
     let can_despawn = |ent| {
         if let Ok((_, after_opt)) = spawned_q.get(ent) {
-            return after_opt.is_none_or(|after| after.0.is_zero())
+            return after_opt.is_none_or(|after| after.0.is_zero());
         }
         false
     };
@@ -131,33 +126,34 @@ fn handle_out_of_bounds(
         match hit {
             HitDeathboxMessage::Player(entity) => {
                 if flags.move_players
-                && let Ok(xfrm) = player_q.get(*entity)
-                && let Some(dest_xfrm) = player_start_q.iter().next() {
+                    && let Ok(xfrm) = player_q.get(*entity)
+                    && let Some(dest_xfrm) = player_start_q.iter().next()
+                {
                     let xfrm_tween = Tween::new(
                         EaseMethod::EaseFunction(EaseFunction::BackOut),
                         Duration::from_secs_f32(0.5),
                         TransformPositionLens {
                             start: xfrm.translation,
                             end: dest_xfrm.translation,
-                        }
+                        },
                     );
-                    commands.entity(*entity).try_insert((
-                        TweenAnim::new(xfrm_tween).with_destroy_on_completed(true),
-                    ));
+                    commands
+                        .entity(*entity)
+                        .try_insert((TweenAnim::new(xfrm_tween).with_destroy_on_completed(true),));
                 }
             }
             HitDeathboxMessage::Spawned(entity) => {
                 if flags.remove_spawns {
-                    commands.entity(*entity).try_insert(DespawnAfter(Duration::from_secs(1)));
+                    commands
+                        .entity(*entity)
+                        .try_insert(DespawnAfter(Duration::from_secs(1)));
                 }
             }
         }
     }
 }
 
-fn enforce_visibility(
-    mut deathbox_q: Query<&mut Visibility, With<DeathboxCollider>>,
-) {
+fn enforce_visibility(mut deathbox_q: Query<&mut Visibility, With<DeathboxCollider>>) {
     // In avian3d 0.7.0-dev and earlier, toggling physics gizmo rendering makes this visible...
     // see https://github.com/avianphysics/avian/pull/981
     for mut vis in deathbox_q.iter_mut() {
