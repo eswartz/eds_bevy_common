@@ -7,9 +7,9 @@ use bevy::core_pipeline::Skybox;
 use bevy_asset_loader::prelude::*;
 use image::imageops::FilterType;
 
-use crate::prelude::WorldCamera;
-use crate::prelude::ConfigureBeforePlaying;
 use crate::prelude::CommonSkyboxAssets;
+use crate::prelude::ConfigureBeforePlaying;
+use crate::prelude::WorldCamera;
 
 use super::states_sets::ProgramState;
 use super::texutils::CubemapMapping;
@@ -22,23 +22,21 @@ pub struct SkyboxPlugin;
 
 impl Plugin for SkyboxPlugin {
     fn build(&self, app: &mut App) {
-        app
-            .init_resource::<SkyboxCache>()
+        app.init_resource::<SkyboxCache>()
             .add_systems(
                 PreUpdate,
-                    (
-                        check_load_skybox,
-                        check_load_reflection_probe.run_if(resource_exists::<SkyboxSetup>),
-                        check_skybox_setup.run_if(resource_exists::<SkyboxSetup>),
-                    )
+                (
+                    check_load_skybox,
+                    check_load_reflection_probe.run_if(resource_exists::<SkyboxSetup>),
+                    check_skybox_setup.run_if(resource_exists::<SkyboxSetup>),
+                )
                     .chain()
-                    .run_if(in_state(ProgramState::InGame))
+                    .run_if(in_state(ProgramState::InGame)),
             )
             .configure_loading_state(
                 LoadingStateConfig::new(ProgramState::Initializing)
-                    .load_collection::<CommonSkyboxAssets>()
-            )
-        ;
+                    .load_collection::<CommonSkyboxAssets>(),
+            );
     }
 }
 
@@ -54,7 +52,7 @@ impl Plugin for SkyboxPlugin {
 #[require(ConfigureBeforePlaying)]
 #[reflect(Component, Default)]
 #[type_path = "game"]
-pub struct SkyboxModel{
+pub struct SkyboxModel {
     /// The path to an [Image] asset (typically a `.ktx2` file).
     pub path: String,
     /// A loaded image. This is set automatically if needed, from [path].
@@ -91,7 +89,9 @@ pub struct SkyboxReflectionProbeModel {
 
 impl Default for SkyboxReflectionProbeModel {
     fn default() -> Self {
-        Self { brightness: bevy::prelude::light_consts::lux::FULL_DAYLIGHT }
+        Self {
+            brightness: bevy::prelude::light_consts::lux::FULL_DAYLIGHT,
+        }
     }
 }
 
@@ -132,8 +132,13 @@ struct SkyboxCache {
 }
 
 impl SkyboxCache {
-    pub fn get_openexr_skybox(&mut self, images: &mut Assets<Image>, source_image: Handle<Image>, quality: TextureQuality, mapping: CubemapMapping)
-    -> Result<Handle<Image>> {
+    pub fn get_openexr_skybox(
+        &mut self,
+        images: &mut Assets<Image>,
+        source_image: Handle<Image>,
+        quality: TextureQuality,
+        mapping: CubemapMapping,
+    ) -> Result<Handle<Image>> {
         let side_res = match quality {
             TextureQuality::Low => 256,
             TextureQuality::Medium => 512,
@@ -149,14 +154,18 @@ impl SkyboxCache {
 
         let Some(source_image) = images.get(&source_image) else {
             // This can persist for many frames...
-            return Ok(default())
+            return Ok(default());
         };
 
-        let resized_image = if let Some(dyn_image) = resize_for_quality(
-            source_image, side_res, side_res * 6, FilterType::Nearest) {
-            &Image::from_dynamic(dyn_image, true,
+        let resized_image = if let Some(dyn_image) =
+            resize_for_quality(source_image, side_res, side_res * 6, FilterType::Nearest)
+        {
+            &Image::from_dynamic(
+                dyn_image,
+                true,
                 // since we convert it again just below
-                RenderAssetUsages::MAIN_WORLD)
+                RenderAssetUsages::MAIN_WORLD,
+            )
         } else {
             // Don't resize or let any error propagate.
             source_image
@@ -168,7 +177,6 @@ impl SkyboxCache {
         Ok(skybox_image)
     }
 }
-
 
 fn check_skybox_setup(
     mut commands: Commands,
@@ -188,10 +196,7 @@ fn check_skybox_setup(
 /// make sure its image is loaded. Once loaded, convert it to a cubemap
 /// and apply to the camera, then remove the component.
 fn check_load_skybox(
-    mut params: ParamSet<(
-        Query<&mut SkyboxModel>,
-        Query<Entity, Changed<SkyboxModel>>
-    )>,
+    mut params: ParamSet<(Query<&mut SkyboxModel>, Query<Entity, Changed<SkyboxModel>>)>,
     cam_q: Query<Entity, With<WorldCamera>>,
     has_skybox_q: Query<Has<Skybox>>,
     mut commands: Commands,
@@ -202,7 +207,7 @@ fn check_load_skybox(
 ) -> Result {
     let Ok(cam) = cam_q.single() else {
         // Keep waiting.
-        return Ok(())
+        return Ok(());
     };
 
     let any_changed = !params.p1().is_empty();
@@ -211,7 +216,7 @@ fn check_load_skybox(
     let mut p0 = params.p0();
     let Some(model) = p0.iter_mut().next() else {
         // Keep waiting.
-        return Ok(())
+        return Ok(());
     };
 
     // Do we populate the components for skybox modeling?
@@ -221,12 +226,14 @@ fn check_load_skybox(
         commands.entity(cam).try_remove::<LightProbe>();
         commands.entity(cam).try_remove::<EnvironmentMapLight>();
         commands.insert_resource(SkyboxSetup::Finished);
-        return Ok(())
+        return Ok(());
     }
 
-    if let Ok(true) = has_skybox_q.get(cam) && !any_changed {
+    if let Ok(true) = has_skybox_q.get(cam)
+        && !any_changed
+    {
         // Already here and unchanged.
-        return Ok(())
+        return Ok(());
     }
 
     // Continue to await the asset loader. It may take a few frames.
@@ -236,7 +243,13 @@ fn check_load_skybox(
     } else {
         assets.load::<Image>(&model.path)
     };
-    let skybox_image = skyboxes.get_openexr_skybox(&mut images, image, quality, model.mapping)?;
+    let result = skyboxes.get_openexr_skybox(&mut images, image, quality, model.mapping);
+    if let Err(err) = result {
+        error!("failed to load skybox: {err}");
+        commands.insert_resource(SkyboxSetup::Finished);
+        return Ok(());
+    };
+    let skybox_image = result.unwrap();
 
     if skybox_image == Handle::default() {
         // Still waiting. Try again next tick.
@@ -251,19 +264,17 @@ fn check_load_skybox(
     });
 
     // Do we want a reflection probe?
-    let Some(SkyboxReflectionProbeModel{ brightness }) = model.with_reflection_probe else {
+    let Some(SkyboxReflectionProbeModel { brightness }) = model.with_reflection_probe else {
         // Nope, all done!
         commands.insert_resource(SkyboxSetup::Finished);
-        return Ok(())
+        return Ok(());
     };
 
     // Set up reflection probe machinery.
-    commands.entity(cam).try_insert((
-        ReflectionProbeModel{
-            image: skybox_image,
-            brightness,
-        },
-    ));
+    commands.entity(cam).try_insert((ReflectionProbeModel {
+        image: skybox_image,
+        brightness,
+    },));
     commands.insert_resource(SkyboxSetup::WaitingReflections);
     Ok(())
 }
@@ -286,25 +297,26 @@ fn check_load_reflection_probe(
     mut setup: ResMut<SkyboxSetup>,
 ) {
     use bevy::render::render_resource::*;
-    let Some((cam_entity, ReflectionProbeModel{ image, brightness })) = load_probe_q.iter().next() else {
+    let Some((cam_entity, ReflectionProbeModel { image, brightness })) = load_probe_q.iter().next()
+    else {
         *setup = SkyboxSetup::Finished;
-        return
+        return;
     };
 
     if *image == Handle::default() {
-        return
+        return;
     }
 
     if images.get(image).is_none() {
         // This can persist for many frames...
-        return
+        return;
     };
 
     // Make a solid diffuse map.
     let extents = Extent3d {
         width: 1,
         height: 1,
-        depth_or_array_layers: 6
+        depth_or_array_layers: 6,
     };
 
     const B: u8 = 255;
@@ -312,12 +324,7 @@ fn check_load_reflection_probe(
         extents,
         TextureDimension::D2,
         &[
-            B, B, B, 255,
-            B, B, B, 255,
-            B, B, B, 255,
-            B, B, B, 255,
-            B, B, B, 255,
-            B, B, B, 255,
+            B, B, B, 255, B, B, B, 255, B, B, B, 255, B, B, B, 255, B, B, B, 255, B, B, B, 255,
         ],
         TextureFormat::Rgba8UnormSrgb,
         RenderAssetUsages::RENDER_WORLD,
