@@ -1,17 +1,15 @@
 //! This defines the types representing "player input".
 //!
 //! This represents the state
-use std::f32::consts::TAU;
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
+use std::f32::consts::TAU;
 
 pub struct PlayerInputPlugin;
 
 impl Plugin for PlayerInputPlugin {
     fn build(&self, app: &mut App) {
-        app
-            .add_message::<PlayerInput>()
-        ;
+        app.add_message::<PlayerInput>();
     }
 }
 
@@ -41,19 +39,22 @@ pub enum PlayerInput {
     StopFire(Entity),
     /// Toggle crouching.
     ToggleCrouch(Entity),
+    /// Stop moving, e.g. when inputs are taken over.
+    StopMoving(Entity),
 }
 
 impl PlayerInput {
     pub fn player_entity(&self) -> Entity {
         match self {
-            PlayerInput::Move(entity, _) |
-            PlayerInput::BodyTurn(entity, _) |
-            PlayerInput::HeadTurn(entity, _) |
-            PlayerInput::TurnAround(entity) |
-            PlayerInput::Straighten(entity) |
-            PlayerInput::StartFire(entity) |
-            PlayerInput::StopFire(entity) |
-            PlayerInput::ToggleCrouch(entity) => *entity
+            PlayerInput::Move(entity, _)
+            | PlayerInput::BodyTurn(entity, _)
+            | PlayerInput::HeadTurn(entity, _)
+            | PlayerInput::TurnAround(entity)
+            | PlayerInput::Straighten(entity)
+            | PlayerInput::StartFire(entity)
+            | PlayerInput::StopFire(entity)
+            | PlayerInput::ToggleCrouch(entity)
+            | PlayerInput::StopMoving(entity) => *entity,
         }
     }
 }
@@ -156,7 +157,7 @@ impl PlayerBodyTurn {
 
     pub fn get_euler(&self) -> Vec3 {
         let to = |f: FloatFixedOne8| -> f32 { Into::<f32>::into(f) * TAU };
-        let (y, x, z) : (f32, f32, f32) = (to(self.1), to(self.0), to(self.2));
+        let (y, x, z): (f32, f32, f32) = (to(self.1), to(self.0), to(self.2));
         Vec3::new(x, y, z)
     }
 }
@@ -175,7 +176,7 @@ impl PlayerHeadTurn {
 
     pub fn get_euler(&self) -> Vec3 {
         let to = |f: FloatFixedOne8| -> f32 { Into::<f32>::into(f) * TAU };
-        let (y, x, z) : (f32, f32, f32) = (to(self.1), to(self.0), to(self.2));
+        let (y, x, z): (f32, f32, f32) = (to(self.1), to(self.0), to(self.2));
         Vec3::new(x, y, z)
     }
 }

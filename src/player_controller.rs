@@ -33,7 +33,13 @@ impl Plugin for PlayerControllerPlugin {
                     collect_player_input,
                 )
                     .run_if(is_context_active::<PlayerContext>)
-                    .run_if(not(is_dialog_active))
+                    .run_if(not(is_paused))
+                    .run_if(not(debug_gui_wants_direct_input)),
+            )
+            .add_systems(
+                FixedPreUpdate,
+                (reset_player_movement,)
+                    .run_if(not(is_context_active::<PlayerContext>))
                     .run_if(not(is_paused))
                     .run_if(not(debug_gui_wants_direct_input)),
             )
@@ -299,4 +305,8 @@ fn collect_player_input(
         debug!("release Fire");
         commands.write_message(PlayerInput::StopFire(*player_q));
     }
+}
+
+fn reset_player_movement(mut commands: Commands, player_q: Single<Entity, With<OurPlayer>>) {
+    commands.write_message(PlayerInput::StopMoving(*player_q));
 }

@@ -13,37 +13,37 @@ impl Plugin for PlayerMovementPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<StationaryCameraTransform>()
             .add_systems(
-            FixedPreUpdate,
-            (
-                clear_player_velocity
-                    .run_if(window_changed_focus.or_else(resource_changed::<PlayerMode>)),
-                process_player_input_movement,
-                // process_player_input_movement_for_fps
-                //     .run_if(not(is_cheating))
-                //     .run_if(resource_exists_and_equals(PlayerMode::Fps))
-                // ,
-                // process_player_input_movement_for_space
-                //     .run_if(not(is_cheating))
-                //     .run_if(resource_exists_and_equals(PlayerMode::Space))
-                // ,
-                process_player_input_look,
-                process_player_input_misc.run_if(not(is_grabbing_item)),
-                sync_player_movement,
+                FixedPreUpdate,
+                (
+                    clear_player_velocity
+                        .run_if(window_changed_focus.or_else(resource_changed::<PlayerMode>)),
+                    process_player_input_movement,
+                    // process_player_input_movement_for_fps
+                    //     .run_if(not(is_cheating))
+                    //     .run_if(resource_exists_and_equals(PlayerMode::Fps))
+                    // ,
+                    // process_player_input_movement_for_space
+                    //     .run_if(not(is_cheating))
+                    //     .run_if(resource_exists_and_equals(PlayerMode::Space))
+                    // ,
+                    process_player_input_look,
+                    process_player_input_misc.run_if(not(is_grabbing_item)),
+                    sync_player_movement,
+                )
+                    .chain()
+                    .before(TransformSystems::Propagate)
+                    .after(PhysicsSystems::Writeback)
+                    .run_if(not(is_paused))
+                    .run_if(in_state(GameplayState::Playing)),
             )
-                .chain()
-                .before(TransformSystems::Propagate)
-                .after(PhysicsSystems::Writeback)
-                .run_if(not(is_paused))
-                .run_if(in_state(GameplayState::Playing)),
-        )
-        .add_systems(
-            FixedPreUpdate,
-            (process_player_input_movement_for_cheats.run_if(is_cheating_or_paused),)
-                .chain()
-                .before(TransformSystems::Propagate)
-                .after(PhysicsSystems::Writeback)
-                .run_if(in_state(GameplayState::Playing)),
-        );
+            .add_systems(
+                FixedPreUpdate,
+                (process_player_input_movement_for_cheats.run_if(is_cheating_or_paused),)
+                    .chain()
+                    .before(TransformSystems::Propagate)
+                    .after(PhysicsSystems::Writeback)
+                    .run_if(in_state(GameplayState::Playing)),
+            );
     }
 }
 
@@ -451,8 +451,9 @@ pub struct PlayerInputParams<'w, 's> {
     // player_q: Query<'w, 's, Read<PlayerMovement>, With<Player>>,
     // projectile_q: Query<'w, 's, (), With<Projectile>>,
     // parent_q: Query<'w, 's, Read<ChildOf>>,
-
-    pub player_q: Query<'w, 's,
+    pub player_q: Query<
+        'w,
+        's,
         (
             Forces,
             lifetimeless::Write<PlayerMovement>,
@@ -472,7 +473,8 @@ pub struct PlayerInputParams<'w, 's> {
 
 /// Implement to
 pub trait PlayerInputHandler: Send + Sync + 'static {
-    fn handle(&mut self,
+    fn handle(
+        &mut self,
         entity: Entity,
         event: &PlayerInput,
         params: &PlayerInputParams<'_, '_>,
@@ -486,7 +488,6 @@ pub struct PlayerInputHandlers {
     pub space: Vec<Box<dyn PlayerInputHandler>>,
     pub scripted: Vec<Box<dyn PlayerInputHandler>>,
 }
-
 
 pub fn process_player_input_movement(
     mut params: PlayerInputParams,
@@ -503,7 +504,7 @@ pub fn process_player_input_movement(
         let res = params.player_q.get_mut(player_entity);
 
         let Ok((mut forces, mut movement, mut look, mut transform)) = res else {
-            continue
+            continue;
         };
 
         let input_settings = &*params.input_settings;
@@ -519,6 +520,14 @@ pub fn process_player_input_movement(
                 // Ignore.
             }
 
+            PlayerInput::StopMoving(_) => {
+                let move_scale = 1.0;
+                movement.had_jump_event = false;
+                let decay = (-0.5 * dt / input_settings.movement_decay_time_secs / move_scale).exp()
+                    as Scalar;
+
+                vel = Vector::new(vel.x * decay, vel.y, vel.z * decay);
+            }
             PlayerInput::Move(_, input) => {
                 instant_thrust.x =
                     Into::<f32>::into(input.right_left) * input_settings.move_scale.x;
@@ -558,7 +567,7 @@ pub fn process_player_input_movement(
                         let (y, z, _) = transform.rotation.to_euler(EulerRot::YZX);
                         Quat::from_euler(EulerRot::YZX, y, z, 0.)
                     }
-                    PlayerMode::Space => transform.rotation
+                    PlayerMode::Space => transform.rotation,
                 };
                 let mut dir_velocity = move_rotation * instant_thrust * movement.velocity_ramp;
 
@@ -766,18 +775,10 @@ pub fn process_player_input_movement_for_cheats(
 impl PlayerInputHandlers {
     pub fn new() -> Self {
         Self {
-            common: vec![
-
-            ],
-            fps: vec![
-
-            ],
-            space: vec![
-
-            ],
-            scripted: vec![
-
-            ],
+            common: vec![],
+            fps: vec![],
+            space: vec![],
+            scripted: vec![],
         }
     }
 }
@@ -865,6 +866,7 @@ pub fn process_player_input_misc(
             PlayerInput::Move(..) => (),
             PlayerInput::HeadTurn(..) => (),
             PlayerInput::BodyTurn(..) => (),
+            PlayerInput::StopMoving(..) => (),
         }
     }
 }
