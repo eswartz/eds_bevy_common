@@ -503,8 +503,8 @@ fn compute_gains(pan: f32) -> (f32, f32) {
     }
 }
 
-/// Given a cue (with its own idea of panning and volume), compute the
-/// spatially mapped linear volume and -1..1 panning.
+/// For a sound with a given linear distance (to a listener)
+/// compute the spatially mapped linear volume and -1..1 panning.
 fn compute_distance_panning_values(
     offset: Vec3,
     default_damping_distance: f32,
@@ -550,11 +550,12 @@ fn update_synth_distances(
 
     let rot_inv = listener_xfrm.rotation().inverse();
 
-    synth_q.par_iter().for_each(|(synth, xfrm)| {
-        let emitter_pos = xfrm.translation();
+    synth_q.par_iter().for_each(|(synth, gxfrm)| {
+        let emitter_pos = gxfrm.translation();
         let listener_emitter_offs = emitter_pos - listener_pos;
 
-        // Attenuation and panning from distance and position.
+        // Attenuation and panning from distance and position,
+        // in listener space, inverting the rotation.
         let sound_offs: Vec3 = rot_inv * listener_emitter_offs;
 
         let (volume_scale, panning) = compute_distance_panning_values(sound_offs, 25.0);
