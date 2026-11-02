@@ -208,7 +208,7 @@ fn collect_player_look(
     primary_window: Query<&Window, With<PrimaryWindow>>,
 
     look_axis_player: Single<&Action<Look>, With<ActionOf<PlayerContext>>>,
-    look_axis_dialog: Single<&Action<Look>, With<ActionOf<DialogContext>>>,
+    look_axis_dialog: Option<Single<&Action<Look>, With<ActionOf<DialogContext>>>>,
     turn_around_events: Single<
         &ActionEvents,
         (With<Action<TurnAround>>, With<ActionOf<PlayerContext>>),
@@ -240,7 +240,9 @@ fn collect_player_look(
     let mut instant_head_turn = Vec3::ZERO;
 
     if allow_mouse {
-        let look_axis = if overlay_state.is_modal_dialog() {
+        let look_axis = if overlay_state.is_modal_dialog()
+            && let Some(look_axis_dialog) = look_axis_dialog
+        {
             *look_axis_dialog
         } else {
             *look_axis_player
