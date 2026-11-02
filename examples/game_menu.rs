@@ -1,5 +1,6 @@
 //! This is a demo program showing the integration of various "ebc" features,
 //! focusing on a game menu.
+use bevy::render::renderer::RenderDevice;
 use eds_bevy_common::prelude::*;
 
 use avian3d::PhysicsPlugins;
@@ -15,6 +16,7 @@ use bevy_seedling::spatial::SpatialListener3D;
 #[cfg(feature = "bevy_skein")]
 use bevy_skein::SkeinPlugin;
 
+use std::sync::Arc;
 use std::time::Duration;
 use strum::VariantArray;
 
@@ -39,6 +41,7 @@ fn main() -> AppExit {
             ..default()
         },
     )
+    .add_systems(Startup, setup_adapter)
     .add_plugins(AppPlugin)
     .add_plugins(ActionPlugin)
     .add_plugins(CommonSoundSamplerPlugin)
@@ -106,6 +109,12 @@ fn main() -> AppExit {
     }
 
     app.run()
+}
+
+fn setup_adapter(device: Res<RenderDevice>) {
+    device.wgpu_device().on_uncaptured_error(Arc::new(|err| {
+        error!("{err}");
+    }));
 }
 
 #[cfg(feature = "input_bei")]
