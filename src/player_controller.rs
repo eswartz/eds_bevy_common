@@ -28,11 +28,10 @@ impl Plugin for PlayerControllerPlugin {
             app.add_systems(
                 FixedPreUpdate,
                 (
-                    collect_player_movement,
+                    collect_player_movement.run_if(is_context_active::<PlayerContext>),
                     collect_player_look,
-                    collect_player_input,
+                    collect_player_input.run_if(is_context_active::<PlayerContext>),
                 )
-                    .run_if(is_context_active::<PlayerContext>)
                     .run_if(not(is_paused))
                     .run_if(not(debug_gui_wants_direct_input)),
             )
@@ -40,8 +39,7 @@ impl Plugin for PlayerControllerPlugin {
                 FixedPreUpdate,
                 (reset_player_movement,)
                     .run_if(not(is_context_active::<PlayerContext>))
-                    .run_if(not(is_paused))
-                    .run_if(not(debug_gui_wants_direct_input)),
+                    .run_if(not(is_paused)),
             )
             .add_observer(on_toggle_crouch);
         }
@@ -209,7 +207,8 @@ fn center_mouse(
 fn collect_player_look(
     primary_window: Query<&Window, With<PrimaryWindow>>,
 
-    look_axis: Single<&Action<Look>, (With<Action<Look>>, With<ActionOf<PlayerContext>>)>,
+    look_axis_player: Single<&Action<Look>, With<ActionOf<PlayerContext>>>,
+    look_axis_dialog: Single<&Action<Look>, With<ActionOf<DialogContext>>>,
     turn_around_events: Single<
         &ActionEvents,
         (With<Action<TurnAround>>, With<ActionOf<PlayerContext>>),
@@ -220,6 +219,7 @@ fn collect_player_look(
 
     settings: Res<PlayerControllerSettings>,
     player_q: Single<Entity, With<OurPlayer>>,
+    overlay_state: Res<State<OverlayState>>,
     gui_state: Res<GuiState>,
     mut writer: MessageWriter<PlayerInput>,
 ) {
@@ -231,13 +231,20 @@ fn collect_player_look(
     }
 
     // Only accept player-look movement in debug mode if right MB held.
+    let prevent_normal_look =
+        gui_state.is_debug_ui_inspector_visible() || overlay_state.is_modal_dialog();
     let alt_fire = mouse_button_events.pressed(MouseButton::Right);
-    let ignore_mouse = gui_state.is_debug_ui_inspector_visible() && !alt_fire;
+    let allow_mouse = !prevent_normal_look || alt_fire;
 
     let mut instant_body_turn = Vec3::ZERO;
     let mut instant_head_turn = Vec3::ZERO;
 
-    if !ignore_mouse {
+    if allow_mouse {
+        let look_axis = if overlay_state.is_modal_dialog() {
+            *look_axis_dialog
+        } else {
+            *look_axis_player
+        };
         // Note: swap axes here.  From mouse, "Y" is up/down in userland, "X" is left/right.
         instant_body_turn.y = (if settings.invert_turn_x { 1.0 } else { -1.0 })
             * (settings.turn_scale.x * look_axis.x).to_radians();

@@ -473,6 +473,21 @@ pub fn assign_stock_dialog_actions(mut commands: Commands, include: impl Bundle 
             GamepadButton::RightTrigger2,
         ],
     ));
+
+    // Looking is allowed
+    commands.spawn((
+        include.clone(),
+        Action::<actions::Look>::new(),
+        Bindings::spawn((
+            Spawn((Binding::mouse_motion(), Scale::new(Vec3::splat(1.0)))),
+            Axial::right_stick().with((
+                DeadZone::default(),
+                Scale::new(Vec3::splat(100.0)),
+                Negate::y(),
+                SmoothNudge::default(),
+            )),
+        )),
+    ));
 }
 
 /// Add Action entities for the common player actions.
