@@ -88,7 +88,26 @@ impl Default for VideoSettings {
     }
 }
 
-#[derive(Debug, Default, Clone, Copy, PartialEq, Reflect)]
+#[derive(
+    Component,
+    Reflect,
+    EnumIter,
+    EnumString,
+    VariantArray,
+    Display,
+    FromRepr,
+    Debug,
+    Default,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    Hash,
+    PartialOrd,
+    Ord,
+    Serialize,
+    Deserialize,
+)]
 #[reflect(Default, Clone)]
 #[type_path = "game"]
 pub enum OrderIndependentTransparencyQuality {
