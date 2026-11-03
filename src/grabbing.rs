@@ -380,7 +380,7 @@ fn process_grab_commands(
                     commands.entity(entity).try_insert((
                         Grabbed,
                         LockedAxes::ROTATION_LOCKED,
-                        // RigidBody:: Kinematic, // avoid going through world
+                        // RigidBody::Static,
                         GravityScale(0.),
                         if let Some(layers) = layers_opt {
                             // Do not collide with the player.
@@ -445,10 +445,10 @@ fn process_grab_commands(
                     }
 
                     if is_rigid && let Some(vel) = vel {
-                        // ent_commands.try_remove::<Sleeping>();
                         ent_commands.try_insert(LinearVelocity(*vel));
                     }
 
+                    ent_commands.try_remove::<Sleeping>();
                     ent_commands.try_remove::<TransformInterpolation>();
 
                     styler.remove_from(ent_commands);
@@ -552,14 +552,14 @@ fn move_grabbed_item(
             && let Some(mut forces) = forces_opt
         {
             // Convert movement in world space to an effective impulse.
-            // We directly set the linear velocity so it will move
-            // in sync with the camera movement.
+            // We directly set the linear velocity because we locked
+            // the axes and want it to move in sync with the camera.
             *forces.linear_velocity_mut() = new_vel;
             *forces.angular_velocity_mut() = default();
         } else {
             // Non-physical, just move.
             item_xfrm.translation +=
-                item_global_xfrm.rotation().inverse() * new_vel * time.delta_secs().min(1.0);
+                /* item_global_xfrm.rotation().inverse() * */ new_vel * time.delta_secs().min(1.0);
         }
 
         grabbed.movement += movement;
