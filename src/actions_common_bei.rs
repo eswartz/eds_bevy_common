@@ -25,7 +25,11 @@ impl Plugin for ActionPlugin {
             // All the time!
             .add_systems(FixedUpdate, handle_escape)
             .add_systems(Last, mask_and_unmask_inputs)
-            .add_systems(Last, toggle_context.run_if(state_changed::<OverlayState>))
+            .add_systems(
+                Last,
+                toggle_context
+                    .run_if(state_changed::<OverlayState>.or_eager(resource_changed::<GuiState>)),
+            )
             .add_observer(handle_pause_gameplay)
             .add_observer(handle_toggle_physics)
             .add_observer(handle_toggle_physics_gizmos)
@@ -724,7 +728,6 @@ fn mask_and_unmask_inputs(
             sources.mouse_buttons = false;
             sources.mouse_motion = false;
             sources.mouse_wheel = false;
-            sources.keyboard = kbd_busy;
             *count = 0;
         }
     } else {
@@ -733,11 +736,11 @@ fn mask_and_unmask_inputs(
                 sources.mouse_buttons = true;
                 sources.mouse_motion = true;
                 sources.mouse_wheel = true;
-                sources.keyboard = true;
             } else {
                 // Wait for debounce.
                 *count += 1;
             }
         }
     }
+    sources.keyboard = !kbd_busy;
 }
