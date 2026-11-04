@@ -18,7 +18,10 @@ pub struct AudioCommonPlugin;
 impl Plugin for AudioCommonPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(SeedlingPlugins)
-            .insert_resource(AudioContextConfig(FirewheelConfig { ..default() }))
+            .insert_resource(AudioContextConfig(FirewheelConfig {
+                immediate_event_capacity: 1024,
+                ..default()
+            }))
             .configure_loading_state(
                 LoadingStateConfig::new(ProgramState::Initializing)
                     .load_collection::<CommonFxAssets>(),

@@ -128,25 +128,25 @@ impl OrderIndependentTransparencyQuality {
         Some(match self {
             OrderIndependentTransparencyQuality::Off => return None,
             OrderIndependentTransparencyQuality::Low => OrderIndependentTransparencySettings {
-                sorted_fragment_max_count: 4,
+                sorted_fragment_max_count: 8,
                 fragments_per_pixel_average: 2.0,
                 alpha_threshold: 0.0,
                 ..default()
             },
             OrderIndependentTransparencyQuality::Medium => OrderIndependentTransparencySettings {
-                sorted_fragment_max_count: 8,
+                sorted_fragment_max_count: 12,
                 fragments_per_pixel_average: 4.0,
                 alpha_threshold: 0.0,
                 ..default()
             },
             OrderIndependentTransparencyQuality::High => OrderIndependentTransparencySettings {
-                sorted_fragment_max_count: 16,
+                sorted_fragment_max_count: 24,
                 fragments_per_pixel_average: 6.0,
                 alpha_threshold: 0.0,
                 ..default()
             },
             OrderIndependentTransparencyQuality::Ultra => OrderIndependentTransparencySettings {
-                sorted_fragment_max_count: 24,
+                sorted_fragment_max_count: 64,
                 fragments_per_pixel_average: 8.0,
                 alpha_threshold: 0.0,
                 ..default()
