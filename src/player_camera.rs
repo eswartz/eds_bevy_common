@@ -107,7 +107,7 @@ impl Default for PlayerCameraSettings {
 }
 
 /// Current zooming state.
-#[derive(Resource, Debug, Default, Reflect, PartialEq)]
+#[derive(Resource, Debug, Default, Reflect, PartialEq, Clone, Copy)]
 #[reflect(Resource, Default)]
 #[type_path = "game"]
 pub enum FovZoomState {
@@ -402,39 +402,6 @@ pub fn update_player_camera_render(
     }
 }
 
-#[cfg(feature = "input_bei")]
-pub fn on_player_camera_zoom(
-    event: On<Fire<Zoom>>,
-    zoom_camera: Query<&Action<Zoom>, With<ActionOf<PlayerContext>>>,
-
-    mut fov_delta: ResMut<FovDelta>,
-    mut zoom_state: ResMut<FovZoomState>,
-    settings: Res<PlayerCameraSettings>,
-    time: Res<Time>,
-
-    is_grabbing_item: Option<Res<GrabbedItem>>,
-) {
-    // HACK: we "know" zoom and move-while-grabbed use the same actions (new context!)
-    if is_grabbing_item.is_some() {
-        return;
-    };
-
-    if let zoom_camera = zoom_camera.get(event.action).unwrap()
-        && zoom_camera.length() > 0.
-    {
-        let q = ops::exp(-time.delta_secs());
-        **fov_delta = fov_delta
-            .lerp(**fov_delta + zoom_camera.y, q)
-            .clamp(-90.0, 90.0);
-        *zoom_state = FovZoomState::Zooming;
-    } else {
-        if *zoom_state == FovZoomState::Zooming {
-            // No longer zooming, reset eventually.
-            *zoom_state = FovZoomState::AtZoom(settings.fov_delta_hold_time)
-        }
-    }
-}
-
 pub fn show_3d_camera(mut camera_q: Query<&mut Camera, (With<Camera3d>, With<OurCamera>)>) {
     for mut camera in camera_q.iter_mut() {
         camera.is_active = true;
@@ -477,16 +444,54 @@ pub fn update_player_ui(
     }
 }
 
+#[cfg(feature = "input_bei")]
+pub fn on_player_camera_zoom(
+    event: On<Fire<Zoom>>,
+    zoom_camera: Query<&Action<Zoom>, With<ActionOf<PlayerContext>>>,
+
+    mut fov_delta: ResMut<FovDelta>,
+    mut zoom_state: ResMut<FovZoomState>,
+    settings: Res<PlayerCameraSettings>,
+    time: Res<Time>,
+
+    is_grabbing_item: Option<Res<GrabbedItem>>,
+) {
+    // HACK: we "know" zoom and move-while-grabbed use the same actions (new context!)
+    if is_grabbing_item.is_some() {
+        return;
+    };
+
+    if let zoom_camera = zoom_camera.get(event.action).unwrap()
+        && zoom_camera.length() > 0.
+    {
+        let q = ops::exp(-time.delta_secs());
+        **fov_delta = fov_delta
+            .lerp(**fov_delta + zoom_camera.y, q)
+            .clamp(-90.0, 90.0);
+        *zoom_state = FovZoomState::Zooming;
+    }
+}
+
 fn decay_camera_zoom(
     settings: Res<PlayerCameraSettings>,
     time: Res<Time>,
+    zoom_camera: Query<&Action<Zoom>, With<ActionOf<PlayerContext>>>,
     mut zoom_state: ResMut<FovZoomState>,
     mut fov_delta: ResMut<FovDelta>,
 
     player_q: Query<(&PlayerMovement, &PlayerLook), With<OurPlayer>>,
 ) {
-    // In a zoom? This is held for some time to avoid snap-back.
-    if let FovZoomState::AtZoom(decay) = *zoom_state {
+    // Re-query
+    let zoom_length = if let Ok(zoom_camera) = zoom_camera.single() {
+        zoom_camera.length()
+    } else {
+        0.0
+    };
+    if zoom_length == 0.0 && *zoom_state == FovZoomState::Zooming {
+        // No longer zooming, reset eventually.
+        *zoom_state = FovZoomState::AtZoom(settings.fov_delta_hold_time)
+    } else if let FovZoomState::AtZoom(decay) = *zoom_state {
+        // In a zoom? This is held for some time to avoid snap-back.
         if let Some((movement, look)) = player_q.iter().next() {
             // Did the user move or look away quickly?
             if movement.state.is_moving()
