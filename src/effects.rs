@@ -49,6 +49,10 @@ impl ShrinkAndDisappear {
     pub fn with_ease_function(self, func: EaseFunction) -> Self {
         Self { func, ..self }
     }
+
+    pub fn with_time_secs(self, time: f32) -> Self {
+        Self { time, ..self }
+    }
 }
 
 fn shrink_and_disappear(
