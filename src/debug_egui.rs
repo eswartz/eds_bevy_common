@@ -16,7 +16,7 @@ use fuzzy_matcher::skim::SkimMatcherV2;
 
 use crate::{
     prelude::*,
-    world_load_save::{fetch_saveable_entities, save_world_state},
+    world_load_save::{SavedResources, fetch_saveable_entities, save_world_state},
 };
 
 use super::gui::GuiState;
@@ -330,9 +330,12 @@ pub fn update_egui_inspector_ui(
                     ui.checkbox(&mut show_tree, RichText::new("As Tree"));
                     ui.checkbox(&mut show_all, RichText::new("All"))
                         .on_hover_text("When unset, hides entities without Names, which are usually behind-the-scenes entities.");
-                    ui.separator();
-                    if ui.button("Save").clicked() {
-                        save_state = true;
+
+                    if world.contains_resource::<SavedResources>() {
+                        ui.separator();
+                        if ui.button("Save").clicked() {
+                            save_state = true;
+                        }
                     }
                 });
             });
