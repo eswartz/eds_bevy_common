@@ -451,7 +451,6 @@ pub fn on_player_camera_zoom(
 
     mut fov_delta: ResMut<FovDelta>,
     mut zoom_state: ResMut<FovZoomState>,
-    settings: Res<PlayerCameraSettings>,
     time: Res<Time>,
 
     is_grabbing_item: Option<Res<GrabbedItem>>,
