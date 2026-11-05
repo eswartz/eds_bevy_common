@@ -278,6 +278,7 @@ fn handle_menu_into(
     let current = *overlay_state.get();
     let to_enter: OverlayState = ***go_into_in_menu_request;
     if current == to_enter {
+        commands.remove_resource::<GoIntoMenuRequest>();
         return;
     }
 
