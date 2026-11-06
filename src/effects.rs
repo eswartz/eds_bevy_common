@@ -68,7 +68,7 @@ fn shrink_and_disappear(
         let orig_scale = sad.orig_scale.as_ref().unwrap().clone();
 
         // Note, it's backwards, as we count down.
-        let curve = EasingCurve::new(0.0, orig_scale.max_element(), sad.func);
+        let curve = EasingCurve::new(0.0, 1.0, sad.func);
         sad.time = (sad.time - time.delta_secs()).max(0.0);
 
         let new_scale_mag = curve.sample_clamped(sad.time);
