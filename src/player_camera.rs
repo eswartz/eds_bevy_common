@@ -387,6 +387,7 @@ pub fn update_player_camera_render(
     mut commands: Commands,
     camera_q: Single<&mut PlayerCamera, (With<WorldCamera>, With<OurCamera>)>,
     player_q: Single<Entity, (With<OurPlayer>, With<Collider>)>,
+    mut video_settings: ResMut<VideoSettings>,
 ) {
     let player_ent = *player_q;
     if camera_q.0 == CameraMode::FirstPerson {
@@ -400,6 +401,8 @@ pub fn update_player_camera_render(
     } else {
         commands.entity(player_ent).try_remove::<DebugRender>();
     }
+
+    video_settings.set_changed();
 }
 
 pub fn show_3d_camera(mut camera_q: Query<&mut Camera, (With<Camera3d>, With<OurCamera>)>) {

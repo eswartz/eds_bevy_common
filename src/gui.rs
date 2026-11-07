@@ -1120,6 +1120,7 @@ fn reset_instructions(mut commands: Commands) {
 
 /// Hide instructions when menu or dialog is up.
 fn update_instructions_ui(
+    mut commands: Commands,
     overlay: Res<State<OverlayState>>,
     gui_area: GuiAreaMarkerLocator,
     mut vis_q: Query<&mut Visibility>,
@@ -1130,6 +1131,9 @@ fn update_instructions_ui(
             *vis = if overlay.is_hidden() && instructions.is_some() {
                 Visibility::Inherited
             } else {
+                if overlay.is_modal_dialog() {
+                    commands.remove_resource::<InstructionText>();
+                }
                 Visibility::Hidden
             };
         }
