@@ -948,7 +948,7 @@ fn on_focused_interact_fire(
     if menu_item_q.contains(entity) {
         commands.write_message(MenuActionMessage::Activate(entity));
     } else {
-        warn!("no MenuItem");
+        // warn!("no MenuItem");
     }
 }
 
