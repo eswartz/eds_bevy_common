@@ -44,3 +44,19 @@ impl AreaContent {
         }
     }
 }
+
+/// Marks water.
+#[derive(Component, Reflect, Default, Clone)]
+#[reflect(Component, Clone, Default)]
+#[type_path = "game"]
+pub struct Water;
+
+/// Report change in area.
+#[derive(Message, Reflect, Clone)]
+#[reflect(Message, Clone)]
+#[type_path = "game"]
+pub struct AreaChanged {
+    pub entity: Entity,
+    pub from_area: AreaContent,
+    pub to_area: AreaContent,
+}

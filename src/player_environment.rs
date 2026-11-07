@@ -7,9 +7,10 @@ pub struct PlayerEnvironmentPlugin;
 
 impl Plugin for PlayerEnvironmentPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(
+        app.add_message::<AreaChanged>().add_systems(
             FixedPreUpdate,
             (
+                update_player_area,
                 check_player_environment_fps.run_if(resource_exists_and_equals(PlayerMode::Fps)),
                 check_player_environment_space
                     .run_if(resource_exists_and_equals(PlayerMode::Space)),
@@ -20,6 +21,31 @@ impl Plugin for PlayerEnvironmentPlugin {
                 .run_if(not(is_paused))
                 .run_if(in_state(GameplayState::Playing)),
         );
+    }
+}
+
+pub(crate) fn update_player_area(
+    mut player_q: Query<(Entity, &mut PlayerMovement), With<Player>>,
+    collisions: Collisions,
+    water_q: Query<&Water>,
+    mut writer: MessageWriter<AreaChanged>,
+) {
+    for (player_ent, mut movement) in player_q.iter_mut() {
+        let mut area = AreaContent::Air;
+        for c in collisions.entities_colliding_with(player_ent) {
+            if water_q.contains(c) {
+                area = AreaContent::Water;
+                break;
+            }
+        }
+        if movement.area != area {
+            writer.write(AreaChanged {
+                entity: player_ent,
+                from_area: movement.area,
+                to_area: area,
+            });
+            movement.area = area;
+        }
     }
 }
 
