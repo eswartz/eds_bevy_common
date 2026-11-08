@@ -352,7 +352,7 @@ pub fn assign_stock_common_actions(mut commands: Commands, include: impl Bundle 
         Action::<actions::PauseGameplay>::new(),
         bindings![
             KeyCode::Pause,
-            KeyCode::KeyP.with_mod_keys(ModKeys::CONTROL),
+            KeyCode::KeyP.with_mod_keys(MOD_CTRL_COMMAND),
             GamepadButton::Mode,
         ],
     ));
@@ -360,8 +360,8 @@ pub fn assign_stock_common_actions(mut commands: Commands, include: impl Bundle 
         include.clone(),
         Action::<actions::PauseScripting>::new(),
         bindings![
-            KeyCode::Pause.with_mod_keys(ModKeys::SHIFT),
-            KeyCode::KeyP.with_mod_keys(ModKeys::SHIFT | ModKeys::CONTROL),
+            KeyCode::Pause.with_mod_keys(MOD_CTRL_COMMAND | ModKeys::SHIFT),
+            KeyCode::KeyP.with_mod_keys(MOD_CTRL_COMMAND | ModKeys::SHIFT),
         ],
     ));
     commands.spawn((
