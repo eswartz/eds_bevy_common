@@ -1,6 +1,7 @@
 use bevy::core_pipeline::oit::OrderIndependentTransparencySettings;
 use bevy::pbr::ScreenSpaceTransmission;
 use bevy::prelude::*;
+use bevy::render::view::ColorGrading;
 use serde::Deserialize;
 use serde::Serialize;
 use strum_macros::Display;
@@ -72,6 +73,7 @@ pub struct VideoSettings {
     pub shadow_quality: ShadowQuality,
     pub glass_quality: GlassQuality,
     pub oit_settings: OrderIndependentTransparencyQuality,
+    pub exposure: f32,
 }
 
 impl Default for VideoSettings {
@@ -84,6 +86,7 @@ impl Default for VideoSettings {
             shadow_quality: Default::default(),
             glass_quality: GlassQuality::Off,
             oit_settings: OrderIndependentTransparencyQuality::default(),
+            exposure: 0.0,
         }
     }
 }
@@ -331,6 +334,7 @@ fn apply_camera_settings(
 fn apply_effect_settings(
     mut commands: Commands,
     camera_q: Query<Entity, With<Camera3d>>, // all cameras
+    mut color_q: Query<&mut ColorGrading>,
     video_settings: Res<VideoSettings>,
 ) {
     info!("Setting up effects {video_settings:?}");
@@ -410,6 +414,10 @@ fn apply_effect_settings(
                     quality: ScreenSpaceTransmissionQuality::Ultra,
                 });
             }
+        }
+
+        if let Ok(mut grading) = color_q.get_mut(camera_ent) {
+            grading.global.exposure = video_settings.exposure;
         }
     }
 
