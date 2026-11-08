@@ -173,7 +173,7 @@ bevy_trenchbroom = { version = "0.15", optional = true, default-features = false
 ] }
 
 # bevy_mod_outline = { version = "0.13", optional = true }
-bevy_mod_outline = { git = "https://github.com/Eventhra-Studio/bevy_mod_outline.git", branch = "master", optional = true }
+bevy_mod_outline = { git = "https://github.com/komadori/bevy_mod_outline.git", branch = "master", optional = true }
 
 # bevy_tweening = "0.16.0"
 bevy_tweening = { git = "https://github.com/djeedai/bevy_tweening.git", branch = "main" }
