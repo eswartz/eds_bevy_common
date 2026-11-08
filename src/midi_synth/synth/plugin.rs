@@ -64,6 +64,8 @@ pub struct MidiSynthsPaused(pub Arc<AtomicBool>);
 
 /// Parameters for midi synthesis.
 #[derive(Clone, Copy, Debug, PartialEq, Reflect, Serialize, Deserialize)]
+#[reflect(Clone, Default)]
+#[type_path = "game"]
 pub struct MidiSynthParams {
     /// Number of channels (1 or 2).
     pub channel_count: u8,

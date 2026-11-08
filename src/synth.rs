@@ -188,8 +188,8 @@ impl SynthMessage {
 /// various [SynthEvent]s. Its entity is passed along in SynthEvents.
 /// The client will farm the events out to actual MidiSynths, based on
 /// the user's CPU capacity.
-#[derive(Component, Reflect)]
-#[reflect(Component)]
+#[derive(Component, Reflect, Default)]
+#[reflect(Component, Default)]
 #[type_path = "game"]
 pub struct MidiSynthProxy {
     pub params: MidiSynthParams,
