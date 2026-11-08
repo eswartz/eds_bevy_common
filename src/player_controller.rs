@@ -128,7 +128,7 @@ fn collect_player_movement(
 
     let speed = if !(*accel_events).is_empty() {
         Speed::Fast
-    } else if !(*crouch_events).is_empty() {
+    } else if *mode == PlayerMode::Fps && !(*crouch_events).is_empty() {
         Speed::Slow
     } else {
         Speed::Normal
@@ -140,6 +140,10 @@ fn collect_player_movement(
 
     if jump_events.contains(ActionEvents::START | ActionEvents::FIRE) {
         instant_thrust.y += ctrl_settings.move_scale.y;
+    } else if *mode == PlayerMode::Space
+        && crouch_events.contains(ActionEvents::START | ActionEvents::FIRE)
+    {
+        instant_thrust.y -= ctrl_settings.move_scale.y;
     }
 
     let (player, vel) = *player_vel_q;
@@ -167,10 +171,14 @@ fn on_toggle_crouch(
     event: On<Start<Crouch>>,
     context_q: Query<&ActionOf<PlayerContext>>,
     player_q: Single<Entity, With<OurPlayer>>,
+    player_mode: Res<PlayerMode>,
     mut writer: MessageWriter<PlayerInput>,
 ) {
+    let player = *player_q;
     if context_q.contains(event.action) {
-        writer.write(PlayerInput::ToggleCrouch(*player_q));
+        if *player_mode == PlayerMode::Fps {
+            writer.write(PlayerInput::ToggleCrouch(player));
+        }
     }
 }
 

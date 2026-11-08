@@ -17,15 +17,12 @@ impl Plugin for PlayerMovementPlugin {
                 (
                     clear_player_velocity
                         .run_if(window_changed_focus.or_else(resource_changed::<PlayerMode>)),
-                    process_player_input_movement,
-                    // process_player_input_movement_for_fps
-                    //     .run_if(not(is_cheating))
-                    //     .run_if(resource_exists_and_equals(PlayerMode::Fps))
-                    // ,
-                    // process_player_input_movement_for_space
-                    //     .run_if(not(is_cheating))
-                    //     .run_if(resource_exists_and_equals(PlayerMode::Space))
-                    // ,
+                    process_player_input_movement_for_fps
+                        //     .run_if(not(is_cheating))
+                        .run_if(resource_exists_and_equals(PlayerMode::Fps)),
+                    process_player_input_movement_for_space
+                        //     .run_if(not(is_cheating))
+                        .run_if(resource_exists_and_equals(PlayerMode::Space)),
                     process_player_input_look,
                     process_player_input_misc.run_if(not(is_grabbing_item)),
                     sync_player_movement,
@@ -489,15 +486,10 @@ pub struct PlayerInputHandlers {
     pub scripted: Vec<Box<dyn PlayerInputHandler>>,
 }
 
-pub fn process_player_input_movement(
+pub fn process_player_input_movement_for_fps(
     mut params: PlayerInputParams,
-    // input_settings: Res<PlayerInputSettings>,
-    // handlers: Res<PlayerInputHandlers>,
     mut inputs: MessageReader<PlayerInput>,
-    mode: Option<Res<PlayerMode>>,
 ) {
-    let player_mode = mode.map_or(PlayerMode::Fps, |mode| *mode);
-
     let dt = params.time.delta_secs();
     for input in inputs.read() {
         let player_entity = input.player_entity();
@@ -562,12 +554,9 @@ pub fn process_player_input_movement(
                     + input_settings.velocity_ramp_scale * move_scale)
                     .clamp(0.0, 1.0);
 
-                let move_rotation = match player_mode {
-                    PlayerMode::Fps => {
-                        let (y, z, _) = transform.rotation.to_euler(EulerRot::YZX);
-                        Quat::from_euler(EulerRot::YZX, y, z, 0.)
-                    }
-                    PlayerMode::Space => transform.rotation,
+                let move_rotation = {
+                    let (y, z, _) = transform.rotation.to_euler(EulerRot::YZX);
+                    Quat::from_euler(EulerRot::YZX, y, z, 0.)
                 };
                 let mut dir_velocity = move_rotation * instant_thrust * movement.velocity_ramp;
 
@@ -686,6 +675,121 @@ pub fn process_player_input_movement(
 
         // Add this force's contribution afterwards.
         forces.apply_linear_impulse(jump_impulse);
+
+        if movement.state.is_on_surface() {
+            let eff_speed: f32 = vel.xz().length();
+            if eff_speed > input_settings.base_xz_speed as f32 {
+                movement.state = MovementState::Running;
+            } else if eff_speed >= input_settings.base_xz_speed as f32 / 2.0 {
+                movement.state = MovementState::Walking;
+            } else {
+                movement.state = MovementState::Grounded;
+            }
+        }
+    }
+}
+
+pub fn process_player_input_movement_for_space(
+    mut params: PlayerInputParams,
+    mut inputs: MessageReader<PlayerInput>,
+) {
+    let dt = params.time.delta_secs();
+    for input in inputs.read() {
+        let player_entity = input.player_entity();
+        let res = params.player_q.get_mut(player_entity);
+
+        let Ok((mut forces, mut movement, mut look, mut transform)) = res else {
+            continue;
+        };
+
+        let input_settings = &*params.input_settings;
+
+        let mut vel = forces.linear_velocity();
+
+        let mut instant_thrust = Vec3::ZERO;
+        let mut overall_speed = input_settings.base_xz_speed as f32;
+
+        match input {
+            PlayerInput::Move(..) if movement.state == MovementState::Scripted => {
+                // Ignore.
+            }
+
+            PlayerInput::StopMoving(_) => {
+                let move_scale = 1.0;
+                movement.had_jump_event = false;
+                let decay = (-0.5 * dt / input_settings.movement_decay_time_secs / move_scale).exp()
+                    as Scalar;
+
+                vel = Vector::new(vel.x * decay, vel.y * decay, vel.z * decay);
+            }
+            PlayerInput::Move(_, input) => {
+                instant_thrust.x =
+                    Into::<f32>::into(input.right_left) * input_settings.move_scale.x;
+                instant_thrust.y = Into::<f32>::into(input.up_down) * input_settings.move_scale.y;
+                instant_thrust.z =
+                    Into::<f32>::into(input.forward_back) * input_settings.move_scale.z;
+
+                instant_thrust = instant_thrust.clamp_length_max(1.0);
+                let move_scale = match input.speed {
+                    Speed::Fast => input_settings.accelerate_scale,
+                    Speed::Slow | Speed::Crawl => input_settings.crouch_scale,
+                    Speed::Normal => 1.0,
+                };
+                overall_speed *= move_scale;
+
+                if instant_thrust == Vec3::ZERO {
+                    movement.velocity_ramp = 0.0;
+                }
+                movement.velocity_ramp = (movement.velocity_ramp
+                    + input_settings.velocity_ramp_scale * move_scale)
+                    .clamp(0.0, 1.0);
+
+                let move_rotation = transform.rotation;
+                let dir_velocity = move_rotation * instant_thrust * movement.velocity_ramp;
+
+                let dir_velocity = dir_velocity * Vec3::splat(overall_speed);
+                if dir_velocity.length_squared() > 0.01 {
+                    let asc = input_settings.air_scale as Scalar;
+                    vel.x = (dir_velocity.x as Scalar) * asc;
+                    vel.z = (dir_velocity.z as Scalar) * asc;
+                    vel.y = (dir_velocity.y as Scalar) * 2.0 * asc;
+                } else {
+                    // Apply friction while touching surface.
+                    if movement.state.is_on_surface() {
+                        let decay = (-0.5 * dt
+                            / input_settings.movement_decay_time_secs
+                            / move_scale)
+                            .exp() as Scalar;
+
+                        vel = Vector::new(vel.x * decay, vel.y * decay, vel.z * decay);
+                    }
+                }
+            }
+
+            PlayerInput::HeadTurn(..)
+            | PlayerInput::BodyTurn(..)
+            | PlayerInput::TurnAround(..)
+            | PlayerInput::Straighten(_)
+            | PlayerInput::ToggleCrouch(..)
+            | PlayerInput::StartFire(_)
+            | PlayerInput::StopFire(_) => {
+                // Ignore.
+            }
+        }
+
+        // Apply any scripted movement.
+        movement.apply_turn(dt, Vec3::ZERO, &mut transform);
+        look.apply_turn(dt, Vec3::ZERO);
+
+        // Clamp speed.
+        let clamped_vel = if vel.length() < 0.1 {
+            movement.velocity_ramp = 0.0;
+            Vector3::splat(0.0)
+        } else {
+            vel.clamp_length_max(input_settings.max_xz_speed as Scalar)
+        };
+
+        *forces.linear_velocity_mut() = clamped_vel;
 
         if movement.state.is_on_surface() {
             let eff_speed: f32 = vel.xz().length();
