@@ -172,11 +172,9 @@ bevy_trenchbroom = { version = "0.15", optional = true, default-features = false
     "physics-integration",
 ] }
 
-# bevy_mod_outline = { version = "0.13", optional = true }
-bevy_mod_outline = { git = "https://github.com/komadori/bevy_mod_outline.git", branch = "master", optional = true }
+bevy_mod_outline = { version = "0.14", optional = true }
 
-# bevy_tweening = "0.16.0"
-bevy_tweening = { git = "https://github.com/djeedai/bevy_tweening.git", branch = "main" }
+bevy_tweening = "0.17.0"
 
 log = { version = "0.4", features = ["max_level_debug"] }
 tracing = { version = "0.1", features = ["max_level_debug"] }
