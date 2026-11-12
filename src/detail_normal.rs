@@ -36,21 +36,9 @@ struct DetailNormalExtension {
     #[sampler(102)]
     #[texture(103)]
     normal_texture: Handle<Image>,
-
-    // // Web examples WebGL2 support: structs must be 16 byte aligned.
-    // #[cfg(feature = "webgl2")]
-    // #[uniform(100)]
-    // _webgl2_padding_8b: u32,
-    // #[cfg(feature = "webgl2")]
-    // #[uniform(100)]
-    // _webgl2_padding_12b: u32,
-    // #[cfg(feature = "webgl2")]
-    // #[uniform(100)]
-    #[reflect(ignore)]
-    _webgl2_padding_12b: u32,
 }
 
-const SHADER_ASSET_PATH: &str = "common://shaders/normal_detail.wgsl";
+const SHADER_ASSET_PATH: &str = "common://shaders/normal_detail.wesl";
 
 impl MaterialExtension for DetailNormalExtension {
     fn fragment_shader() -> bevy::shader::ShaderRef {
@@ -77,8 +65,6 @@ impl AssignDetailNormal {
             uv_scale: self.uv_scale,
             blend: self.blend,
             normal_texture: assets.load(&self.asset_path),
-
-            _webgl2_padding_12b: default(),
         }
     }
 }
@@ -100,7 +86,7 @@ fn handle_assign_detail_normals(
             Entity,
             &AssignDetailNormal,
             Option<&MeshMaterial3d<StandardMaterial>>,
-            Option<&CustomMaterialNormalExtension>,
+            Option<&mut CustomMaterialNormalExtension>,
         ),
         (
             Without<SplitIntoCubes>,
