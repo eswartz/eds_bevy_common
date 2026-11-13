@@ -4,7 +4,11 @@ use bevy::prelude::*;
 
 use crate::prelude::*;
 
+/// Gamepad button used for toggling menu.
 pub const GAMEPAD_BUTTON_MENU: GamepadButton = GamepadButton::Start;
+
+/// Keycode used for toggling debug UI.
+pub const DEBUG_UI_KEYCODE: KeyCode = KeyCode::Backquote;
 
 /// Handle Escape, which is handled differently outside and inside
 /// a modal GUI context (in-game, independent of e.g. the egui BIE).

@@ -19,8 +19,6 @@ use crate::{
     world_load_save::{SavedResources, fetch_saveable_entities, save_world_state},
 };
 
-use super::gui::GuiState;
-
 /// This uses bevy-inspector-egui. If you don't add
 /// `EguiPlugin` and/or `DefaultInspectorConfigPlugin` yourself,
 /// this plugin will do so with default settings.
@@ -61,6 +59,9 @@ impl Plugin for DebugPlugin {
         }
         if !app.is_plugin_added::<DefaultInspectorConfigPlugin>() {
             app.add_plugins(DefaultInspectorConfigPlugin);
+        }
+        if !app.is_plugin_added::<DevGuiPlugin>() {
+            app.add_plugins(DevGuiPlugin::default());
         }
 
         app.init_resource::<DebugEguiCamera>()
@@ -173,7 +174,7 @@ pub fn setup_egui_style(mut q: Query<(&mut EguiContext, Option<&PrimaryEguiConte
 
 pub fn update_egui_settings_ui(
     mut contexts: EguiContexts,
-    mut in_state: ResMut<GuiState>,
+    mut in_state: ResMut<DevGuiState>,
     debug_layout: Res<DebugLayout>,
 ) {
     let Ok(ctx) = contexts.ctx_mut() else { return };
@@ -200,7 +201,7 @@ pub fn update_egui_settings_ui(
                 ui.checkbox(&mut state.show_stats, "Always Show Stats")
                     .on_hover_text("Show stats overlay even during play.");
                 ui.checkbox(&mut state.show_inspector, "Show World Inspector")
-                    .on_hover_text("Show World Inspector.");
+                    .on_hover_text("Show the tree of items in the World. While open, this blocks mouse use for the game; use right mouse for that.");
                 ui.add_enabled_ui(state.show_inspector, |ui| {
                     ui.indent("inspector", |ui| {
                         ui.checkbox(&mut state.show_inspector_always, "Always Show")

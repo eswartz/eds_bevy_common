@@ -16,6 +16,7 @@ pub use crate::deathbox::*;
 pub use crate::debug_egui::*;
 pub use crate::despawn_on_reset::*;
 pub use crate::detail_normal::*;
+pub use crate::dev_gui::*;
 pub use crate::effects::*;
 pub use crate::flashlight::*;
 pub use crate::gui::*;

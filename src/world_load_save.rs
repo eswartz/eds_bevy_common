@@ -44,7 +44,7 @@ impl Default for SavedResources {
             TypeId::of::<GrabbingBehavior>(),
             TypeId::of::<UiFontPath>(),
             // TypeId::of::<UiFont>(),
-            TypeId::of::<GuiState>(),
+            TypeId::of::<DevGuiState>(),
             // TypeId::of::<PauseState>(),
             TypeId::of::<PhysicsPaused>(),
             TypeId::of::<StatusVisible>(),

@@ -33,6 +33,7 @@ pub mod audio;
 #[cfg(feature = "input_bei")]
 pub mod bei_better_pulse;
 pub mod debug_egui;
+pub mod dev_gui;
 pub mod gui;
 pub mod lifecycle;
 pub mod menus_common;

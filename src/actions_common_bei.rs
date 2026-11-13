@@ -23,17 +23,18 @@ impl Plugin for ActionPlugin {
             .add_input_context::<DialogContext>()
             .add_input_condition::<BetterPulse>()
             // All the time!
-            .add_systems(FixedUpdate, handle_escape)
+            .add_systems(Update, handle_escape)
             .add_systems(Last, mask_and_unmask_inputs)
             .add_systems(
                 Last,
-                toggle_context
-                    .run_if(state_changed::<OverlayState>.or_eager(resource_changed::<GuiState>)),
+                toggle_context.run_if(
+                    state_changed::<OverlayState>
+                        .or_eager(resource_exists_and_changed::<DevGuiState>),
+                ),
             )
             .add_observer(handle_pause_gameplay)
             .add_observer(handle_toggle_physics)
             .add_observer(handle_toggle_physics_gizmos)
-            .add_observer(handle_debug_ui)
             .add_observer(handle_full_screen)
             .add_observer(handle_mute);
     }
@@ -94,10 +95,10 @@ pub mod actions {
     #[action_output(bool)]
     pub struct Menu;
 
-    /// Indicate toggle of debug UI.
-    #[derive(InputAction)]
-    #[action_output(bool)]
-    pub struct DebugUi;
+    // /// Indicate toggle of debug UI.
+    // #[derive(InputAction)]
+    // #[action_output(bool)]
+    // pub struct DebugUi;
 
     /// Toggle fullscreen.
     #[derive(InputAction)]
@@ -296,19 +297,20 @@ pub(crate) fn handle_toggle_physics(
 }
 pub(crate) fn handle_toggle_physics_gizmos(
     _event: On<Start<actions::TogglePhysicsGizmos>>,
-    mut gui_state: ResMut<GuiState>,
+    mut gui_state: If<ResMut<DevGuiState>>,
 ) {
     gui_state.show_physics_gizmos ^= true;
 }
 
-pub(crate) fn handle_debug_ui(
-    _event: On<Start<actions::DebugUi>>,
-    mut commands: Commands,
-    mut gui_state: ResMut<GuiState>,
-) {
-    gui_state.enabled = dev_tools_enabled() && !gui_state.enabled;
-    commands.write_message(GrabCursor(!gui_state.show_cursor()));
-}
+// This is done in dev_gui since it acts inside and outside egui
+// pub(crate) fn handle_debug_ui(
+//     _event: On<Start<actions::DebugUi>>,
+//     mut commands: Commands,
+//     mut gui_state: ResMut<DevGuiState>,
+// ) {
+//     gui_state.enabled = dev_tools_enabled() && !gui_state.enabled;
+//     commands.write_message(GrabCursor(!gui_state.show_cursor()));
+// }
 
 pub(crate) fn handle_full_screen(
     _event: On<Complete<actions::FullScreen>>,
@@ -384,11 +386,11 @@ pub fn assign_stock_common_actions(mut commands: Commands, include: impl Bundle 
             KeyCode::NumpadEnter.with_mod_keys(ModKeys::ALT),
         ],
     ));
-    commands.spawn((
-        include.clone(),
-        Action::<actions::DebugUi>::new(),
-        bindings![KeyCode::Backquote,],
-    ));
+    // commands.spawn((
+    //     include.clone(),
+    //     Action::<actions::DebugUi>::new(),
+    //     bindings![DEBUG_UI_KEYCODE,],
+    // ));
 
     commands.spawn((
         include.clone(),

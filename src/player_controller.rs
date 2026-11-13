@@ -187,7 +187,7 @@ fn on_toggle_crouch(
 fn center_mouse(
     mut primary_window: Query<(&mut Window, &CursorOptions), With<PrimaryWindow>>,
     settings: Res<PlayerControllerSettings>,
-    gui_state: Res<GuiState>,
+    gui_state: Res<DevGuiState>,
     overlay_state: Res<State<OverlayState>>,
 ) {
     let Ok((mut window, cursor)) = primary_window.single_mut() else {
@@ -228,7 +228,7 @@ fn collect_player_look(
     settings: Res<PlayerControllerSettings>,
     player_q: Single<Entity, With<OurPlayer>>,
     overlay_state: Res<State<OverlayState>>,
-    gui_state: Res<GuiState>,
+    gui_state: Res<DevGuiState>,
     mut writer: MessageWriter<PlayerInput>,
 ) {
     let Ok(window) = primary_window.single() else {
@@ -239,8 +239,7 @@ fn collect_player_look(
     }
 
     // Only accept player-look movement in debug mode if right MB held.
-    let prevent_normal_look =
-        gui_state.is_debug_ui_inspector_visible() || overlay_state.is_modal_dialog();
+    let prevent_normal_look = gui_state.show_cursor() || overlay_state.is_modal_dialog();
     let alt_fire = mouse_button_events.pressed(MouseButton::Right);
     let allow_mouse = !prevent_normal_look || alt_fire;
 

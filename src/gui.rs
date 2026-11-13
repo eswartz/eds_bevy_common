@@ -34,7 +34,6 @@ impl Plugin for GuiPlugin {
             app.add_plugins(bevy_tweening::TweeningPlugin);
         }
         app
-        .insert_resource(GuiState::default())
         .insert_resource(UiFont(default()))
         .insert_resource(InstructionsTimeout(Duration::from_secs(3)))
 
@@ -56,7 +55,6 @@ impl Plugin for GuiPlugin {
         )
         .add_systems(OnEnter(ProgramState::InGame),
             (
-                update_gui_state,    // initialize
                 ensure_font_assets,
                 grab_cursor_for_game,
                 setup_gui_nodes,
@@ -98,10 +96,6 @@ impl Plugin for GuiPlugin {
             check_grab_focus_state.run_if(in_state(ProgramState::InGame))
         )
 
-        .add_systems(
-            FixedUpdate,
-            update_gui_state.run_if(resource_changed::<GuiState>),
-        )
         .add_systems(
             Update,
             (
@@ -385,53 +379,6 @@ impl Default for GrabState {
     }
 }
 
-/// Flags
-#[derive(Resource, Debug, Clone, PartialEq, Reflect)]
-#[reflect(Resource)]
-#[type_path = "game"]
-pub struct GuiState {
-    pub enabled: bool,
-    pub show_stats: bool,
-    pub show_inspector: bool,
-    /// Show inspector even if !enabled.
-    pub show_inspector_always: bool,
-    pub show_physics_gizmos: bool,
-    pub show_player_status: bool,
-}
-
-impl Default for GuiState {
-    fn default() -> Self {
-        Self {
-            enabled: false,
-            show_stats: false,
-            show_inspector: true,
-            show_inspector_always: false,
-            show_physics_gizmos: false,
-            show_player_status: false,
-        }
-    }
-}
-
-impl GuiState {
-    pub fn is_debug_ui_inspector_visible(&self) -> bool {
-        self.show_inspector_always || (self.enabled && self.show_inspector)
-    }
-    pub fn show_cursor(&self) -> bool {
-        self.enabled || self.show_inspector_always
-    }
-    pub fn center_cursor(&self) -> bool {
-        !self.enabled
-    }
-}
-
-pub fn is_debug_ui_enabled(gui_state: Option<Res<GuiState>>) -> bool {
-    gui_state.is_some_and(|g| g.enabled)
-}
-
-pub fn is_debug_ui_inspector_visible(gui_state: Option<Res<GuiState>>) -> bool {
-    gui_state.is_some_and(|g| g.is_debug_ui_inspector_visible())
-}
-
 /// Tells whether we're in a mode where the [GameStatusArea] is displayed.
 #[derive(Resource, Debug, Clone, PartialEq)]
 pub(crate) struct StatusVisible(pub bool);
@@ -443,32 +390,10 @@ pub(crate) struct GrabState {
     options: CursorOptions,
 }
 
-fn update_gui_state(
-    state: Res<GuiState>,
-    fps_visible: Option<ResMut<StatsOverlayVisible>>,
-    status_visible: Option<ResMut<StatusVisible>>,
-    mut gizmo_config: ResMut<GizmoConfigStore>,
-) {
-    if let Some(mut fps_visible) = fps_visible {
-        fps_visible.0 = state.show_stats || state.enabled;
-    }
-    if let Some(mut status_visible) = status_visible {
-        status_visible.0 = state.show_player_status;
-    }
-
-    if let Some(physics_gizmos) = gizmo_config.get_config_mut::<PhysicsGizmos>() {
-        let was_enabled = physics_gizmos.0.enabled;
-        if was_enabled != state.show_physics_gizmos {
-            // Only trigger on actual change,
-            // to avoid avian3d::debug_render::change_mesh_visibility
-            // showing everything without recourse.
-            physics_gizmos.0.enabled = state.show_physics_gizmos;
-        }
-    }
-}
-
-fn grab_cursor_for_game(mut commands: Commands, gui_state: Res<GuiState>) {
-    commands.write_message(GrabCursor(!gui_state.show_cursor()));
+fn grab_cursor_for_game(mut commands: Commands, gui_state: Option<Res<DevGuiState>>) {
+    commands.write_message(GrabCursor(
+        gui_state.is_none_or(|gui_state| !gui_state.show_cursor()),
+    ));
 }
 
 fn ungrab_cursor_for_overlay(mut commands: Commands) {
@@ -482,7 +407,7 @@ fn check_grab_focus_state(
     mut focused: MessageReader<WindowFocused>,
     mouse_buttons: Res<ButtonInput<MouseButton>>,
     overlay_state: Res<State<OverlayState>>,
-    gui_state: ResMut<GuiState>,
+    gui_state: ResMut<DevGuiState>,
     mut grab_state: ResMut<GrabState>,
     window_cursor_options: Single<&mut CursorOptions, With<PrimaryWindow>>,
 

@@ -67,7 +67,7 @@ fn main() -> AppExit {
     .add_plugins(PlayerMovementPlugin)
     .add_plugins(PlayerControllerPlugin)
     .add_plugins(PlayerEnvironmentPlugin)
-    .insert_resource(GuiState {
+    .insert_resource(DevGuiState {
         show_stats: true,
         ..default()
     })
