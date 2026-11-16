@@ -104,8 +104,8 @@ fn blend_udn(n1: vec3<f32>, n2: vec3<f32>, blend: f32) -> vec3<f32>
 fn blend_rnm(n1: vec3<f32>, n2: vec3<f32>, blend: f32) -> vec3<f32>
 {
     let t = vec3<f32>(n1.xy, n1.z + 1);
-    let u = vec3<f32>(-n2.xy * blend, n2.z);
-    let r = t * dot(t, u) - u * t.z;
+    let u = vec3<f32>(-n2.xy, n2.z);
+    let r = t * dot(t, u) - u * t.z * blend;
     return normalize(r);
 }
 

@@ -1,25 +1,27 @@
 use crate::prelude::*;
 use avian3d::debug_render::PhysicsGizmos;
-use bevy::{input::keyboard::Key, prelude::*};
+use bevy::prelude::*;
 
 use super::states_sets::ProgramState;
 
-// Included by DebugPlugin, but you can override to change the debug KeyCode.
-pub struct DevGuiPlugin {
-    pub debug_key_code: KeyCode,
-}
+#[derive(Resource, Reflect)]
+#[reflect(Resource)]
+#[type_path = "game"]
+pub struct DevGuiKeyCode(pub KeyCode);
 
-impl Default for DevGuiPlugin {
+impl Default for DevGuiKeyCode {
     fn default() -> Self {
-        Self {
-            debug_key_code: KeyCode::Backquote,
-        }
+        Self(KeyCode::Backquote)
     }
 }
+
+// Included by DebugPlugin, but you can override to change the debug KeyCode.
+pub struct DevGuiPlugin;
 
 impl Plugin for DevGuiPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(DevGuiState::default())
+            .init_resource::<DevGuiKeyCode>()
             .add_systems(
                 OnEnter(ProgramState::InGame),
                 update_gui_state, // initialize
@@ -93,10 +95,9 @@ pub(crate) fn handle_debug_ui_toggle(
     mut commands: Commands,
     mut gui_state: If<ResMut<DevGuiState>>,
     key_codes: Res<ButtonInput<KeyCode>>,
-    keys: Res<ButtonInput<Key>>,
+    gui_code: Res<DevGuiKeyCode>,
 ) {
-    dbg!(keys.get_just_pressed().collect::<Vec<_>>());
-    if key_codes.just_pressed(DEBUG_UI_KEYCODE)
+    if key_codes.just_pressed(gui_code.0)
         && !key_codes.any_pressed([
             // KeyCode::ShiftLeft,      // i.e. for tilde
             KeyCode::ShiftRight, // allow for other key layouts

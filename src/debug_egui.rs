@@ -61,7 +61,7 @@ impl Plugin for DebugPlugin {
             app.add_plugins(DefaultInspectorConfigPlugin);
         }
         if !app.is_plugin_added::<DevGuiPlugin>() {
-            app.add_plugins(DevGuiPlugin::default());
+            app.add_plugins(DevGuiPlugin);
         }
 
         app.init_resource::<DebugEguiCamera>()
