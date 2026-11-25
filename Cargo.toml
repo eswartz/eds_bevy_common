@@ -355,7 +355,7 @@ type_complexity = "allow"
 too_many_arguments = "allow"
 
 [patch-crates.io]
-bevy_seedling = { git = "https://github.com/eswartz/bevy_seedling-fork.git", branch = "bevy-0.20" }
+# bevy_seedling = { git = "https://github.com/eswartz/bevy_seedling-fork.git", branch = "bevy-0.20" }
 # firewheel = { git = "https://github.com/eswartz/Firewheel-fork.git", branch = "bevy-0.20" }
 #
 # firewheel = { git = "https://github.com/BillyDM/Firewheel", rev = "fdf9fbb", optional = true }
