@@ -104,7 +104,7 @@ pub fn spawn_fps_player(
                 PlayerMovement::default(),
                 PlayerLook::default(),
                 initial_xfrm,
-                Visibility::Inherited, // needed if no Mesh*
+                Visibility::Inherited, // needed if no Mesh
             ),
             (
                 RigidBody::Dynamic,
@@ -116,17 +116,15 @@ pub fn spawn_fps_player(
                         .with_dynamic_coefficient(0.0)
                         .with_static_coefficient(0.5),
                 ),
-                // Do not let physics modify rotation.
-                LockedAxes::new()
-                    .lock_rotation_x()
-                    .lock_rotation_y()
-                    .lock_rotation_z(),
+                // We are Dynamic but supply the rotation kinematically.
+                LockedAxes::ROTATION_LOCKED,
                 compound_shape.clone(),
                 default_player_collision_layers(),
                 // Try to avoid falling through trimesh floor.
                 CollisionMargin(0.01),
                 SweptCcd::default(),
-                // Avoid flying too much when e.g. colliding with a projectile.
+                // Avoid flying too much when e.g. colliding with a projectile,
+                // but still allow very fast movement.
                 MaxLinearSpeed(4096.0),
                 GravityScale(if mode.is_some_and(|m| *m == PlayerMode::Fps) {
                     1.0
@@ -169,16 +167,13 @@ pub fn add_fps_foot_gameplay_collider(mut commands: Commands, player: Entity, pl
     });
 }
 
+/// Get the [CollisionLayers] for a player character entity.
+/// Does not include `GameLayer::Player` or `GameLayer::Gameplay` colliders by default.
 pub fn default_player_collision_layers() -> CollisionLayers {
-    CollisionLayers::new(
-        GameLayer::Player,
-        [
-            GameLayer::Default,
-            GameLayer::World,
-            // GameLayer::Gameplay, // set this on a child Game Collider does this
-            GameLayer::Projectiles,
-            GameLayer::Player,
-            GameLayer::Enemy,
-        ],
-    )
+    LayerConfig::on(GameLayer::Player)
+        .with_ignores(&[
+            GameLayer::Player,   // other ones
+            GameLayer::Gameplay, // see above
+        ])
+        .to_collision_layers()
 }

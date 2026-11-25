@@ -51,20 +51,51 @@ impl Default for ColliderKind {
     }
 }
 
+/// Defines the layers in a script-friendly way and by
+/// defining exclusion filtering (`ignores`) to prevent
+/// requiring user script maintain an ever-growing list of things.
 #[derive(Reflect, Debug, Clone)]
 #[reflect(Default)]
 #[type_path = "game"]
 pub struct LayerConfig {
-    /// Which layer the mesh lives in.
-    layer: GameLayer,
+    /// Primary layer the item lives in.
+    pub layer: GameLayer,
 
-    /// Which layers the mesh does *not* interact with.
-    ignores: Vec<GameLayer>,
+    /// Additional layers the item lives in.
+    pub extra_layers: Vec<GameLayer>,
+
+    /// Which layers the item does *not* interact with.
+    pub ignores: Vec<GameLayer>,
+}
+
+impl LayerConfig {
+    pub fn on(layer: GameLayer) -> Self {
+        Self {
+            layer,
+            extra_layers: vec![],
+            ignores: vec![],
+        }
+    }
+    pub fn with_extra_layers(self, extra_layers: Vec<GameLayer>) -> Self {
+        Self {
+            extra_layers,
+            ..self
+        }
+    }
+    pub fn with_ignores(self, ignores: &[GameLayer]) -> Self {
+        Self {
+            ignores: ignores.to_vec(),
+            ..self
+        }
+    }
 }
 
 impl LayerConfig {
     pub fn to_collision_layers(&self) -> CollisionLayers {
-        let memberships = LayerMask(self.layer.to_bits());
+        let mut memberships: LayerMask = self.layer.into();
+        for lay in &self.extra_layers {
+            memberships |= lay.to_bits();
+        }
         let mut filters: LayerMask = GameLayer::all_bits().into();
         for ign in &self.ignores {
             filters &= !ign.to_bits();
@@ -80,7 +111,8 @@ impl Default for LayerConfig {
     fn default() -> Self {
         Self {
             layer: GameLayer::World,
-            ignores: default(),
+            extra_layers: vec![],
+            ignores: vec![],
         }
     }
 }
@@ -101,6 +133,13 @@ pub struct EnsureCollider {
 #[type_path = "game"]
 struct EnsureColliderStop;
 
+/// Monitor any modified/added [EnsureCollider] components and
+/// use [apply_collider] to update the tree of entities,
+/// which is the first [EnsureColliderStop] found in a given
+/// row of the tree.
+///
+/// Notwithstanding the name, these components are retained
+/// and act as a "live component" for driving the otherwise difficult-to-access bits..
 fn apply_colliders(
     mut commands: Commands,
     ensure_collider_q: Query<(Entity, &EnsureCollider)>,

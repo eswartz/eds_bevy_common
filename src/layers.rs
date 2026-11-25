@@ -2,7 +2,7 @@ use crate::physics::*;
 /// Common render and physics layers.
 use bevy::prelude::*;
 
-#[derive(PhysicsLayer, Clone, Copy, Debug, Default, Reflect)]
+#[derive(PhysicsLayer, Clone, Copy, Debug, Default, Reflect, Hash, PartialEq, Eq)]
 #[reflect(Default)]
 #[type_path = "game"]
 pub enum GameLayer {
@@ -19,11 +19,13 @@ pub enum GameLayer {
     /// (This may be set on a child collider of [crate::Player]
     /// when interacting with e.g. tiles / buttons / etc.)
     Gameplay,
-    /// Layer 4 (16) - temporary bullets/projectiles/etc.
+    /// Layer 4 (16) - bullets/projectiles/etc.
     /// Assumes [crate::Projectile] component.
     Projectiles,
-    /// Layer 5 (32) - enemy entities.
-    Enemy,
+    /// Layer 5 (32) - entities which are considered "characters" (was "Enemy")
+    Npc,
+    /// Layer 6 (64) - entities that happen to have a collider but not relevant to gameplay physics.
+    Decoration,
 }
 
 /// Used implicitly by all entities without a `RenderLayers` component.

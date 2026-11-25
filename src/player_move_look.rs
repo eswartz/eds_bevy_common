@@ -1,4 +1,5 @@
-/// Server-side player movement.
+//! Server-side player movement, which applies [PlayerInput] to the
+//! [PlayerMove] and [PlayerLook] components.
 use std::time::Duration;
 
 use bevy::ecs::system::{SystemParam, lifetimeless};
