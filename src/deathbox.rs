@@ -139,6 +139,7 @@ fn handle_out_of_bounds(
                     );
                     commands
                         .entity(*entity)
+                        .insert(LinearVelocity::ZERO)
                         .try_insert((TweenAnim::new(xfrm_tween).with_destroy_on_completed(true),));
                 }
             }
