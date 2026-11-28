@@ -40,6 +40,7 @@ impl Default for BaseVhacdParameters {
 #[reflect(Default)]
 #[type_path = "game"]
 pub enum ColliderKind {
+    None,
     TriMesh { downscale: f32 },
     ConvexHull,
     VoxelizeMesh { voxel_size: f32 },
@@ -185,6 +186,7 @@ fn apply_collider(
     mesh_q: &Query<&Mesh3d>,
 ) {
     let collider = match kind {
+        ColliderKind::None => return,
         ColliderKind::TriMesh { downscale } => {
             if downscale >= 1.0 {
                 ColliderConstructor::TrimeshFromMeshWithConfig(TrimeshFlags::FIX_INTERNAL_EDGES)
